@@ -43,6 +43,21 @@ void Binary::Elf::LoadFile(void)
     if(elf_memmap == MAP_FAILED)
         ERROR(std::runtime_error("mmap failed"));
 
-    elf_ehdr = (Elf64_Ehdr *)elf_memmap;
-    CheckType()
+    elf_ehdr = (Ehdr *)elf_memmap;
+    if(VerifyElf() == false)
+        ERROR(std::invalid_argument("File is not an elf binary"));
+    u8 *m = (u8 *)elf_ehdr;
+    elf_phdr = (Phdr *)&m[elf_ehdr->e_phoff];
+    elf_shdr = (Shdr *)&m[elf_ehdr->e_shoff];
+}
+
+bool Binary::Elf::VerifyElf(void) const
+{
+    if(elf_ehdr->e_ident[0] != 0x7f || elf_ehdr->e_ident[1] != 'E' ||
+            elf_ehdr->e_ident[2] != 'L' || elf_ehdr->e_ident[4] != 'F')
+    {
+        return false;
+    }
+
+    return true;
 }

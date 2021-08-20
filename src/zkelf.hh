@@ -1,8 +1,8 @@
 #ifndef ZKINJECT_HH
 #define ZKINJECT_HH
 
+#include "zktypes.hh"
 #include <cstdint>
-#include <elf.h>
 #include <sys/types.h>
 
 namespace Binary{
@@ -13,13 +13,13 @@ namespace Binary{
             /* memory mapped elf binary */
             void *elf_memmap;
             /* load address of elf */
-            uint64_t elf_baseaddr;
+            u64 elf_baseaddr;
             /* elf header */
-            Elf64_Ehdr *elf_ehdr;
+            Ehdr *elf_ehdr;
             /* elf program header table */
-            Elf64_Phdr *elf_phdr;
+            Phdr *elf_phdr;
             /* elf section header table */
-            Elf64_Shdr *elf_shdr;
+            Shdr *elf_shdr;
 
         public:
             const char *elf_pathname;
@@ -29,7 +29,7 @@ namespace Binary{
             Elf(const char *pathname);
             void OpenElf(void);
             void LoadFile(void);
-            bool CheckFlags(uint16_t);
+            bool VerifyElf(void) const;
     };
 };
 
