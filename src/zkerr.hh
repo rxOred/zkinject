@@ -8,7 +8,7 @@
 #undef NDEBUG
 
 #ifdef EXEPTIONS
-    #define ERROR(ex) throw(ex)
+    #define ERROR(ex) throw ex
 #else 
     #define ERROR(ex) (ex), std::abort()
 #endif
