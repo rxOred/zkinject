@@ -30,6 +30,19 @@ namespace Binary{
             void OpenElf(void);
             void LoadFile(void);
             bool VerifyElf(void) const;
+            void RemoveMap(void);
+
+            /* commonly used stuff with infectors */
+            int FindSegmentbyAttr(u32 type, u32 flags) const;
+    };
+
+    /* text padding infection */
+    class TextPaddingInfection : public Elf{
+        private:
+            void *tpi_shellcode;
+
+        public:
+            void FindFreeSpace(int size) const;
     };
 };
 

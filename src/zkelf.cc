@@ -1,7 +1,8 @@
 #include "zkelf.hh"
 #include "zkerr.hh"
 #include "zktypes.hh"
-#include <elf.h>
+#include <iostream>
+#include <exception>
 #include <string.h>
 #include <fcntl.h>
 #include <assert.h>
@@ -17,7 +18,16 @@ Binary::Elf::Elf()
 Binary::Elf::Elf(const char *pathname)
     :elf_memmap(nullptr), elf_pathname(pathname), elf_ehdr(nullptr),
     elf_phdr(nullptr), elf_shdr(nullptr), elf_size(0), elf_baseaddr(0)
-{}
+{
+    try{
+        OpenElf();
+        LoadFile();
+    } catch (std::exception& e) {
+        std::cerr << e.what();
+        RemoveMap();
+        std::abort();
+    }
+}
 
 void Binary::Elf::OpenElf(void)
 {
@@ -25,11 +35,11 @@ void Binary::Elf::OpenElf(void)
 
     elf_fd = open(elf_pathname, O_RDONLY);
     if(elf_fd < 0)
-        ERROR(std::runtime_error("open failed"));
+        ERROR(std::runtime_error("open failed\n"));
 
     struct stat st;
     if(fstat(elf_fd, &st) < 0)
-        ERROR(std::runtime_error("fstat failed"));
+        ERROR(std::runtime_error("fstat failed\n"));
 
     elf_size = st.st_size;
 }
@@ -41,11 +51,11 @@ void Binary::Elf::LoadFile(void)
     elf_memmap = mmap(elf_memmap, elf_size, PROT_READ | PROT_WRITE, 
             MAP_PRIVATE, elf_fd, 0);
     if(elf_memmap == MAP_FAILED)
-        ERROR(std::runtime_error("mmap failed"));
+        ERROR(std::runtime_error("mmap failed\n"));
 
     elf_ehdr = (Ehdr *)elf_memmap;
-    if(VerifyElf() == false)
-        ERROR(std::invalid_argument("File is not an elf binary"));
+    assert(VerifyElf() != false && "File is not an Elf binary");
+
     u8 *m = (u8 *)elf_ehdr;
     elf_phdr = (Phdr *)&m[elf_ehdr->e_phoff];
     elf_shdr = (Shdr *)&m[elf_ehdr->e_shoff];
@@ -60,4 +70,33 @@ bool Binary::Elf::VerifyElf(void) const
     }
 
     return true;
+}
+
+void Binary::Elf::RemoveMap(void)
+{
+    assert(elf_memmap != nullptr && "memory is not mapped to unmap");
+    if(munmap(elf_memmap, elf_size) < 0)
+        ERROR(std::runtime_error("munmap failed"));
+
+    elf_memmap = nullptr;
+}
+
+int Binary::Elf::FindSegmentbyAttr(u32 type, u32 flags) const
+{
+    for(int i = 0; i < elf_ehdr->e_phnum; i++){
+        if(elf_phdr[i].p_type == type && elf_phdr[i].p_flags == flags){
+            return i;
+        }
+    }
+
+    return 0;
+}
+
+
+void Binary::TextPaddingInfection::FindFreeSpace(int size) const
+{
+    bool text_found = false;
+    for(int i = 0; i < elf_ehdr->e_phnum; i++){
+        if(elf_phdr[i].p_type)
+    }
 }
