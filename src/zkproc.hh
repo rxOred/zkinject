@@ -2,7 +2,10 @@
 #define ZKPROC_HH
 
 #include "zktypes.hh"
+#include "zkexcept.hh"
 #include <sys/types.h>
+#include <stdlib.h>
+#include <assert.h>
 
 #define PATHSZ  64
 #define ADDRSZ  16
