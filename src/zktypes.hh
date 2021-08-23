@@ -15,8 +15,10 @@ typedef uint8_t u8;
     typedef Elf64_Phdr  Phdr;
     typedef Elf64_Shdr  Shdr;
     typedef Elf64_Dyn   Dynamic;
+    typedef Elf64_Sym   Symtab;
+    typedef char *      Strtab;
     typedef Elf64_Nhdr  Note;
-    typedef Elf64_Rela  Rela;
+    typedef Elf64_Rela  Relocation;
     typedef Elf64_Addr  Addr;
     #define ADDR_LEN    16
 #elif(__i386__)
@@ -26,7 +28,7 @@ typedef uint8_t u8;
     typedef Elf32_Shdr  Shdr;
     typedef Elf32_Dyn   Dynamic;
     typedef Elf32_Nhdr  Note;
-    typedef Elf32_Rela  Rela;
+    typedef Elf32_Rela  Relocation;
     typedef Elf32_Addr  Addr;
     #define ADDR_LEN    8
 #endif

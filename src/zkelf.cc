@@ -16,7 +16,7 @@ int Binary::PatchAddress(u8 *buffer, size_t len, u8 *addr, u8 *magic)
 
 Binary::Elf::Elf()
     :elf_memmap(nullptr), elf_pathname(nullptr), elf_baseaddr(0), 
-    elf_ehdr(nullptr), elf_phdr(nullptr), elf_shdr(nullptr), elf_size(0)
+    elf_ehdr(nullptr), elf_phdr(nullptr), elf_shdr(nullptr), elf_size(0), elf
 {}
 
 Binary::Elf::Elf(const char *pathname)
@@ -79,6 +79,10 @@ void Binary::Elf::LoadFile(void)
     u8 *m = (u8 *)elf_ehdr;
     elf_phdr = (Phdr *)&m[elf_ehdr->e_phoff];
     elf_shdr = (Shdr *)&m[elf_ehdr->e_shoff];
+
+    /* symbol table and string table */
+    int symtab_index = GetSectionIndexByName(".symtab");
+    if
 }
 
 bool Binary::Elf::VerifyElf(void) const
@@ -88,8 +92,12 @@ bool Binary::Elf::VerifyElf(void) const
     {
         return false;
     }
-
     return true;
+}
+
+u16 Binary::Elf::GetElfType(void) const
+{
+    return elf_ehdr->e_type;
 }
 
 void Binary::Elf::RemoveMap(void)
@@ -101,17 +109,25 @@ void Binary::Elf::RemoveMap(void)
     elf_memmap = nullptr;
 }
 
-int Binary::Elf::FindSegmentbyAttr(u32 type, u32 flags) const
+int Binary::Elf::GetegmentbyAttr(u32 type, u32 flags) const
 {
     for(int i = 0; i < elf_ehdr->e_phnum; i++){
         if(elf_phdr[i].p_type == type && elf_phdr[i].p_flags == flags){
             return i;
         }
     }
+        
     return -1;
 }
 
-int Binary::Elf::GetSectionIndexByName(const char *name) const
+int Binary::Elf::GetSectionbyAttr(u32 type, u32 flags) const
+{
+
+}
+
+/* duh you cant get a segment by name */
+
+int Binary::Elf::GetSectionIndexbyName(const char *name) const
 {
     char *memmap = (char *)elf_memmap;
     char *shstrtab = &memmap[elf_shdr[elf_ehdr->e_shstrndx].sh_offset];
@@ -121,6 +137,11 @@ int Binary::Elf::GetSectionIndexByName(const char *name) const
         }
     }
     return -1;
+}
+
+int Binary::Elf::GetSymbolbyName(const char *name) const
+{
+
 }
 
 void *Binary::Elf::ElfRead(off_t readoff, size_t size) const
@@ -175,7 +196,7 @@ void Binary::TextPaddingInfection::SetPayload(u8 *payload, size_t
     /* total size of shellcode should be payload_sz - MAGIC_LEN + ADDR_LEN
      */
     tpi_payload_sz = payload_sz - MAGIC_LEN + ADDR_LEN;
-    tpi_payload = realloc(payload, tpi_payload_sz, (sizeof(u8)));
+    tpi_payload = realloc(payload, tpi_payload_sz * (sizeof(u8)));
     if(tpi_payload == nullptr)
         ERROR(std::bad_alloc());
 }
@@ -183,11 +204,11 @@ void Binary::TextPaddingInfection::SetPayload(u8 *payload, size_t
 off_t Binary::TextPaddingInfection::FindFreeSpace(void)
 {
     /* text segment has permission bits set to read and exec */
-    int text_index = FindSegmentbyAttr(PT_LOAD, PF_X | PF_R);
+    int text_index = GetSegmentbyAttr(PT_LOAD, PF_X | PF_R);
     assert(text_index != -1 && "text segment not found");
 
     /* data segment has permission bits set to read and write */
-    int data_index = FindSegmentbyAttr(PT_LOAD, PF_W | PF_R);
+    int data_index = GetSegmentbyAttr(PT_LOAD, PF_W | PF_R);
     assert(data_index != -1 && "data segment not found");
 
     assert(text_index + 1 == data_index);

@@ -24,26 +24,18 @@ namespace Binary{
 
     class Elf {
         protected:
-            int     elf_fd;
+            int elf_fd;
             /* memory mapped elf binary */
-            void    *elf_memmap;
+            void *elf_memmap;
             /* load address of elf */
-            u64     elf_baseaddr;
+            u64 elf_baseaddr;
             /* elf header */
-            Ehdr    *elf_ehdr;
+            Ehdr *elf_ehdr;
             /* elf program header table */
-            Phdr    *elf_phdr;
+            Phdr *elf_phdr;
             /* elf section header table */
-            Shdr    *elf_shdr;
-            /* elf symbol table */
-            Symtab  *elf_symtab;
-            /* elf symbol string table */
-            Strtab  *elf_strtab;            
-            /* elf dynamic symbol table optional */
-            Dynamic *elf_dyn;
-            /* elf dynamic symtab optional */
-            Symtab  *elf_dynsym;
-            Strtab  *elf_dynstr;
+            Shdr *elf_shdr;
+
         public:
             const char *elf_pathname;
             size_t elf_size;
@@ -57,8 +49,7 @@ namespace Binary{
             void RemoveMap(void);
 
             /* commonly used stuff with infectors */
-            u16 GetElfType(void) const;
-            int GetSegmentbyAttr(u32 type, u32 flags) const;
+            int FindSegmentbyAttr(u32 type, u32 flags) const;
             int GetSectionIndexByName(const char *name) const;
             void *ElfRead(off_t readoff, size_t size) const;
             void ElfWrite(void *buffer, off_t writeoff, size_t 
