@@ -39,3 +39,11 @@ void Binary::Hooking::LoadRelocations(void)
     }
     h_relocdyn = (Relocation *)&memmap[elf_shdr[relocdyn_index].sh_offset];
 }
+
+void Binary::Hooking::HookFunction(){
+
+}
+
+void Binary::Hooking::UnhookFuction(){
+
+}
