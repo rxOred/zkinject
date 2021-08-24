@@ -18,18 +18,11 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#define SYMTAB_INDEX    0
-#define DYNSYM_INDEX    1
-#define STRTAB_INDEX    2
-#define DYNSTR_INDEX    3
-#define SHSTRTAB_INDEX  4
-#define DYNAMIC_INDEX   5
+#define PAGE_SIZE   sysconf(_SC_PAGESIZE);
 
 namespace Binary{
     /* class which defines important parts of an elf binary */
     class Elf {
-        private:
-            int elf_indexes[6];
         protected:
             int     elf_fd;
             /* memory mapped elf binary */
@@ -52,6 +45,13 @@ namespace Binary{
             Symtab  *elf_dynsym;
             /* elf dynamic string table optional */
             Strtab  elf_dynstr;
+
+            enum {
+                SYMTAB_INDEX = 0, STRTAB_INDEX, SHSTRTAB_INDEX, DYNAMIC_INDEX,
+                DYNSYM_INDEX, DYNSTR_INDEX, SIZE,
+            };
+
+            int elf_indexes[SIZE];
         public:
             const char *elf_pathname;
             size_t  elf_size;
@@ -96,6 +96,18 @@ namespace Binary{
             void InjectPayload(off_t writeoff) const;
     };
 
+    /* shared library hooking with GOT/PLT redirections */
+    class Hooking : public Elf{
+        private:
+            Addr    h_fakeaddr;
+            Addr    h_origaddr;
+            Relocation  *h_relocplt;
+            Relocation  *h_relocdyn;
+        public:
+            Hooking(const char *target);
+            ~Hooking();
+            void LoadRelocations(void);
+    };
     void PatchAddress(u8 *buffer, size_t len, u8 *addr, u8 *magic);
 };
 
