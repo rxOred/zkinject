@@ -17,10 +17,13 @@ typedef uint8_t u8;
     typedef Elf64_Shdr  Shdr;
     typedef Elf64_Dyn   Dynamic;
     typedef Elf64_Sym   Symtab;
-    typedef char *      Strtab;
     typedef Elf64_Nhdr  Note;
     typedef Elf64_Rela  Relocation;
     typedef Elf64_Addr  Addr;
+
+    #define RELOC_TYPE  SHT_RELA
+    #define RELOC_PLT   ".rela.plt"
+    #define RELOC_DYN   ".rela.dyn"
     #define ADDR_LEN    16
 #elif(__i386__)
 
@@ -28,11 +31,18 @@ typedef uint8_t u8;
     typedef Elf32_Phdr  Phdr;
     typedef Elf32_Shdr  Shdr;
     typedef Elf32_Dyn   Dynamic;
+    typedef Elf32_Sym   Symtab;
     typedef Elf32_Nhdr  Note;
-    typedef Elf32_Rela  Relocation;
+    typedef Elf32_Rel   Relocation;
     typedef Elf32_Addr  Addr;
+
+    #define RELOC_TYPE  SHT_REL
+    #define RELOC_PLT   ".rel.plt"
+    #define RELOC_DYN   ".rel.dyn"
     #define ADDR_LEN    8
 #endif
+
+typedef char *      Strtab;
 
 /* macros and struff */
 #define MAGIC_LEN   2   /* for magic numbers */
