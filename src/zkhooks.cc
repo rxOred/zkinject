@@ -1,5 +1,5 @@
 #include "zkhooks.hh"
-#include <sys/mman.h>
+#include "zkproc.hh"
 
 /* API for PLT / GOT redirection */
 Hooks::ElfGotPltHook::ElfGotPltHook(const char *pathname)
@@ -62,9 +62,9 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
              * by dereferencing that value, we can get original load address of 
              * func_name symbol/function
              */
-            //h_origaddr = (void *)(*(Addr *)(((Addr)base_addr) + h_relocplt[i]
-            //            .r_offset));
-            Addr *addr = ((Addr *)(((Addr)base_addr) + (Addr)h_relocplt[i].r_offset));
+            Addr *addr = ((Addr *)(((Addr)base_addr) + (Addr)h_relocplt[i].
+                        r_offset));
+            h_origaddr = (void *)(*addr);
             *(addr) = (Addr)h_fakeaddr;
             break;
         }
@@ -107,4 +107,17 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
 void Hooks::ElfGotPltHook::UnhookFuction()
 {
 
+}
+
+Addr Hooks::ElfGotPltHook::GetModuleBaseAddress(const char *module_name) const
+{
+    Addr address;
+    Process::Proc proc(0);
+    try{
+        address = proc.GetModuleBaseAddress(module_name);
+    }catch(zkexcept::proc_file_error& e){
+        std::cerr << e.what();
+        std::exit(1);
+    }
+    return address;
 }
