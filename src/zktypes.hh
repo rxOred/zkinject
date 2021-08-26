@@ -25,6 +25,11 @@ typedef uint8_t u8;
     #define RELOC_PLT   ".rela.plt"
     #define RELOC_DYN   ".rela.dyn"
     #define ADDR_LEN    16
+
+    #ifndef ELF_R_SYM
+    #define ELF_R_SYM     ELF64_R_SYM
+    #endif /* ELF_R_SYM */
+
 #elif(__i386__)
 
     typedef Elf32_Ehdr  Ehdr;
@@ -40,7 +45,12 @@ typedef uint8_t u8;
     #define RELOC_PLT   ".rel.plt"
     #define RELOC_DYN   ".rel.dyn"
     #define ADDR_LEN    8
-#endif
+
+    #ifndef ELF_R_SYM
+    #define ELF_R_SYM   ELF32_R_SYM
+    #endif /* ELF_R_SYM */
+
+#endif /* (__x86_64__) */
 
 typedef char *      Strtab;
 
