@@ -1,5 +1,4 @@
 #include "zkelf.hh"
-#include "zkexcept.hh"
 
 void Binary::PatchAddress(u8 *buffer, size_t len, u8 *addr, u8 *magic)
 {
@@ -32,9 +31,6 @@ Binary::Elf::Elf(const char *pathname)
         LoadFile();
         return;
     } catch (std::exception& e) {
-        std::cerr << e.what();
-        std::exit(1);
-    } catch (zkexcept::file_not_found_error& e){
         std::cerr << e.what();
         std::exit(1);
     }
@@ -75,7 +71,7 @@ void Binary::Elf::LoadFile(void)
         throw std::runtime_error("mmap failed\n");
 
     elf_ehdr = (Ehdr *)elf_memmap;
-    assert(VerifyElf() != false && "File is not an Elf binary");
+    assert(VerifyElf() != true && "File is not an Elf binary");
 
     u8 *m = (u8 *)elf_ehdr;
     elf_phdr = (Phdr *)&m[elf_ehdr->e_phoff];
@@ -127,8 +123,8 @@ void Binary::Elf::LoadDynamicData(void)
 
 bool Binary::Elf::VerifyElf(void) const
 {
-    if(elf_ehdr->e_ident[0] != 0x7f || elf_ehdr->e_ident[1] != 'E' ||
-            elf_ehdr->e_ident[2] != 'L' || elf_ehdr->e_ident[4] != 'F')
+    if(elf_ehdr->e_ident[0] != 0x7f || elf_ehdr->e_ident[1] != 0x45 ||
+            elf_ehdr->e_ident[2] != 0x4c || elf_ehdr->e_ident[4] != 0x46)
     {
         return false;
     }
@@ -173,7 +169,7 @@ int Binary::Elf::GetSectionIndexbyAttr(u32 type, u32 flags) const
 
 int Binary::Elf::GetSectionIndexbyName(const char *name) const
 {
-    if(elf_ehdr->e_shstrndx)
+    if(elf_ehdr->e_shstrndx == 0)
         throw zkexcept::stripped_binary_error("section header string    \
                 table not found");
     Strtab memmap = (Strtab)elf_memmap;
