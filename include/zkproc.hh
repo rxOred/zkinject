@@ -1,11 +1,16 @@
 #ifndef ZKPROC_HH
 #define ZKPROC_HH
 
-#include <zktypes.hh>
-#include <zkexcept.hh>
+#include "zktypes.hh"
+#include "zkexcept.hh"
 #include <sys/types.h>
-#include <stdlib.h>
 #include <assert.h>
+#include <cstdio>
+#include <fstream>
+#include <new>
+#include <sched.h>
+#include <string>
+#include <string.h>
 
 #define PATH_LEN  64
 
@@ -19,9 +24,9 @@ namespace Process {
         protected:
             int     proc_id;
             Addr    proc_baseaddr;
-            void SetMapPath(pid_t pid);
-            void SetMemPath(pid_t pid);
-            void SetCmdline(pid_t pid);
+            void    SetMapPath(pid_t pid);
+            void    SetMemPath(pid_t pid);
+            void    SetCmdline(pid_t pid);
         public:
             char    *proc_mappath;
             char    *proc_mempath;
@@ -29,11 +34,11 @@ namespace Process {
 
             Proc();
             Proc(pid_t pid);
+            ~Proc();
             void SetProcessId(pid_t pid);
             pid_t GetProcessId(void) const;
-            Addr GetLoadAddress(void);
-
-            
+            Addr GetBaseAddress(void);
+            Addr GetModuleBaseAddress(const char *module_name);
     };
 };
 
