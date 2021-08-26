@@ -25,7 +25,7 @@ Process::Proc::Proc(pid_t pid)
     SetCmdline(pid);
 }
 
-Addr Process::Proc::GetLoadAddress(void) const
+Addr Process::Proc::GetLoadAddress(void)
 {
     assert(proc_mappath != nullptr && "map path is not set");
 

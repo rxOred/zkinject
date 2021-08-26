@@ -31,7 +31,7 @@ namespace Process {
             Proc(pid_t pid);
             void SetProcessId(pid_t pid);
             pid_t GetProcessId(void) const;
-            Addr GetLoadAddress(void) const;
+            Addr GetLoadAddress(void);
 
             
     };
