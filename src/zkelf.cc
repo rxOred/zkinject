@@ -1,4 +1,6 @@
 #include "zkelf.hh"
+#include "zkexcept.hh"
+#include "zktypes.hh"
 
 void Binary::PatchAddress(u8 *buffer, size_t len, u8 *addr, u8 *magic)
 {
@@ -197,7 +199,8 @@ int Binary::Elf::GetSymbolIndexbyName(const char *name)
 int Binary::Elf::GetDynSymbolIndexbyName(const char *name)
     const
 {
-    assert(elf_indexes[DYNSYM_INDEX] != 0 && "dynamic sections are not parsed\n");
+    assert(elf_indexes[DYNSYM_INDEX] != 0 && 
+            "dynamic sections are not parsed\n");
     int index = elf_indexes[DYNSTR_INDEX];
     for(int i = 0; i < elf_shdr[index].sh_size / sizeof(Symtab); i++){
         if(strcmp(&elf_dynstr[elf_dynsym[i].st_name], name) == 0){
@@ -230,3 +233,4 @@ void Binary::Elf::ElfWrite(void *buffer, off_t writeoff, size_t size)
         _buffer[i] = memmap[i];
     }
 }
+

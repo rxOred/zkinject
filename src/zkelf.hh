@@ -1,5 +1,5 @@
-#ifndef ZKINJECT_HH
-#define ZKINJECT_HH
+#ifndef ZKELF_HH
+#define ZKELF_HH
 
 #include "zkexcept.hh"
 #include "zktypes.hh"
@@ -106,4 +106,4 @@ namespace Binary{
 
 };
 
-#endif /* ZKINJECT_HH */
+#endif /* ZKELF_HH */
