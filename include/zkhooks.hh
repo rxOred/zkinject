@@ -1,7 +1,9 @@
-#include <zkelf.hh>
-#include <zkproc.hh>
-#include <zktypes.hh>
-#include <zkexcept.hh>
+#ifndef ZKHOOKS_HH
+#define ZKHOOKS_HHH
+
+#include "zkelf.hh"
+#include "zktypes.hh"
+#include "zkexcept.hh"
 #include <sched.h>
 
 namespace Hooks {
@@ -27,8 +29,11 @@ namespace Hooks {
         public:
             ElfGotPltHook(const char *pathname);
             void LoadRelocations(void);
+            Addr GetModuleBaseAddress(const char *module_name) const;
             void HookFunc(const char *func_name, void *replace_addr, void *
                     base_addr);
             void UnhookFuction();
     };
 }
+
+#endif /* ZKHOOKS_HH */
