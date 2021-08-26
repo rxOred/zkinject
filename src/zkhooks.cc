@@ -1,10 +1,10 @@
-#include "zkelf.hh"
+#include "zkhooks.hh"
+#include "zkexcept.hh"
+#include "zktypes.hh"
 
 /* API for PLT / GOT redirection */
-
-Binary::Hooking::Hooking(const char *target)
-    :Elf(target), h_fakeaddr(0), h_origaddr(0), h_relocdyn(nullptr),
-    h_relocplt(nullptr)
+Hooks::ElfGotPltHook::ElfGotPltHook(const char *pathname)
+    :Binary::Elf(pathname), h_relocplt_index(0), h_relocplt(nullptr)
 {
     u16 type = GetElfType();
     if(type != ET_DYN)
@@ -14,36 +14,88 @@ Binary::Hooking::Hooking(const char *target)
     LoadRelocations();
 }
 
-void Binary::Hooking::LoadRelocations(void)
+void Hooks::ElfGotPltHook::LoadRelocations(void)
 {
-    int relocplt_index = 0, relocdyn_index = 0;
     try{
-        relocplt_index = GetSectionIndexbyName(RELOC_PLT);
+        h_relocplt_index = GetSectionIndexbyName(RELOC_PLT);
     } catch(zkexcept::section_not_found_error& e){
-        relocplt_index = GetSectionIndexbyAttr(RELOC_TYPE, SHF_ALLOC | SHF_INFO_LINK);
+        h_relocplt_index = GetSectionIndexbyAttr(RELOC_TYPE, SHF_ALLOC | 
+                SHF_INFO_LINK);
         /* NOTE find out what is `I` in readelf -S output for rela.plt in */
         std::cerr << e.what();
         RemoveMap();
         std::abort();
     }
     u8 *memmap = (u8 *)elf_memmap;
-    h_relocplt = (Relocation *)&memmap[elf_shdr[relocplt_index].sh_offset];
+    h_relocplt = (Relocation *)&memmap[elf_shdr[h_relocplt_index].sh_offset];
     try{
-        relocdyn_index = GetSectionIndexbyName(RELOC_DYN);
+        h_relocdyn_index = GetSectionIndexbyName(RELOC_DYN);
     } catch(zkexcept::section_not_found_error& e){
-        relocdyn_index = GetSectionIndexbyAttr(RELOC_TYPE, SHF_ALLOC);
-        //find out what is AI in rela.plt
+        h_relocplt_index = GetSectionIndexbyAttr(RELOC_TYPE, SHF_ALLOC);
         std::cerr << e.what();
         RemoveMap();
         std::abort();
     }
-    h_relocdyn = (Relocation *)&memmap[elf_shdr[relocdyn_index].sh_offset];
+    h_relocdyn = (Relocation *)&memmap[elf_shdr[h_relocdyn_index].sh_offset];
 }
 
-void Binary::Hooking::HookFunction(){
+void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
+        void *base_addr)
+{
+    assert((h_relocplt_index != 0 && h_relocdyn_index != 0) && "relocation      \
+            section indexes are not set");
+    h_fakeaddr = (Addr)fake_addr;
+    try{
+        h_symindex = GetDynSymbolIndexbyName(func_name);
+    } catch (zkexcept::symbol_not_found_error& e){
+        std::cerr << e.what();
+        std::exit(1);
+    }
 
+    /* for position independant binaries */
+    for (int i = 0; i < elf_shdr[h_relocplt_index].sh_size / sizeof(Relocation)
+            ; i++){
+        if(h_symindex == ELF_R_SYM(h_relocplt[i].r_info)){
+            /*
+             * convert void *base_addr to Addr *base_addr, add r_offset to it, 
+             * basically result will point to global offset table's entry for 
+             * func_name function's address (resolved or not).
+             * by dereferencing that value, we can get original load address of 
+             * func_name symbol/function
+             */
+            h_origaddr = (Addr)(*(((Addr *)base_addr) + h_relocplt[i].r_offset));
+            *(((Addr *)base_addr) + h_relocplt[i].r_offset) = h_fakeaddr;
+            break;
+        }
+    }
+
+    /* for position dependant -m32 binaries */
+    for (int i = 0; i < elf_shdr[h_relocdyn_index].sh_size / sizeof(Relocation);
+            i++){
+        if(h_symindex == ELF_R_SYM(h_relocdyn[i].r_info)){
+            /*
+             * now, since rel.dyn section could contain many entries for same 
+             * symbol index, we should break just after the first match and 
+             * we cant directly get the address like before because r_offset
+             * contains the offset the linker should patch.
+             */
+
+            /*
+             * position dependant code usually implements relocations with
+             * R_XXX_PC32 reloaction type, which uses relative addresses.
+             * algorithm for resolving those type of relocations is S + A - P,
+             * where S = symbols load address, A = addend, P = offset where 
+             * relocation applies. call occurs with result of above expression
+             * + rip.
+             */
+            Addr p = (Addr)*(((Addr *)base_addr) + h_relocdyn[i].r_offset));
+            Addr s = 
+            break;
+        }
+    }
 }
 
-void Binary::Hooking::UnhookFuction(){
+void Hooks::ElfGotPltHook::UnhookFuction()
+{
 
 }

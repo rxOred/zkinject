@@ -1,22 +1,39 @@
 #include "zkproc.hh"
+#include "zktypes.hh"
+#include <sched.h>
 
-Process::Proc::Proc()
-    :proc_pathname(nullptr), proc_id(0)
+void Process::Proc::SetProcessId(pid_t pid)
+{
+    proc_id = pid;
+}
+
+pid_t Process::Proc::GetProcessId(void) const
+{
+    return proc_id;
+}
+
+/* useless whats below this comment */
+Process::Proc::Proc(void)
+    :proc_id(0), proc_baseaddr(0)
 {}
 
 Process::Proc::Proc(pid_t pid)
-    :proc_pathname(nullptr), proc_id(pid)
-{}
+    :proc_id(pid), proc_baseaddr(0)
+{
+    SetMapPath(pid);
+    SetMemPath(pid);
+    SetCmdline(pid);
+}
 
 Addr Process::Proc::GetLoadAddress(void) const
 {
-    assert(proc_pathname != nullptr && "pathname is not set");
+    assert(proc_mappath != nullptr && "map path is not set");
 
-    u64 base_addr = 0;
-    char addr_buf[ADDRSZ];
+    Addr baseaddr;
+    char addr_buf[ADDR_LEN];
     char *p = addr_buf;
 
-    FILE *fh = fopen(proc_pathname, "r");
+    FILE *fh = fopen(proc_mappath, "r");
     if(!fh)
         throw zkexcept::file_not_found_error();
 
@@ -24,19 +41,20 @@ Addr Process::Proc::GetLoadAddress(void) const
         *p = fgetc(fh);
         assert(std::isalnum(*p) && "Invalid /proc file");
     }
-    sscanf(addr_buf, "%lx", &base_addr);
-    return base_addr;
+    sscanf(addr_buf, "%lx", &baseaddr);
+    proc_baseaddr = baseaddr;
+    return proc_baseaddr;
 }
 
-void Process::Proc::SetPathname(pid_t pid)
+void Process::Proc::SetMapPath(pid_t pid)
 {
     if(proc_id == 0)
         proc_id = pid;
 
-    proc_pathname = (char *)calloc(sizeof(char), PATHSZ);
-    if(proc_pathname == nullptr)
+    proc_mappath = (char *)calloc(sizeof(char), PATH_LEN);
+    if(proc_mappath == nullptr)
         throw std::bad_alloc();
 
-    std::sprintf(proc_pathname, "/proc/%d/maps", proc_id);
-    assert(proc_pathname != nullptr && "pathname is not set");
+    std::sprintf(proc_mappath, "/proc/%d/maps", proc_id);
+    assert(proc_mappath != nullptr && "pathname is not set");
 }
