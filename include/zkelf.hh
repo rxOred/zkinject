@@ -1,8 +1,8 @@
 #ifndef ZKELF_HH
 #define ZKELF_HH
 
-#include <zkexcept.hh>
-#include <zktypes.hh>
+#include "zkexcept.hh"
+#include "zktypes.hh"
 #include <cstddef>
 #include <cstdlib>
 #include <cstdint>
