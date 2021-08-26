@@ -1,6 +1,5 @@
 #include "zkhooks.hh"
-#include "zkexcept.hh"
-#include "zktypes.hh"
+#include <sys/mman.h>
 
 /* API for PLT / GOT redirection */
 Hooks::ElfGotPltHook::ElfGotPltHook(const char *pathname)
@@ -44,7 +43,7 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
 {
     assert((h_relocplt_index != 0 && h_relocdyn_index != 0) && "relocation      \
             section indexes are not set");
-    h_fakeaddr = (Addr)fake_addr;
+    h_fakeaddr = fake_addr;
     try{
         h_symindex = GetDynSymbolIndexbyName(func_name);
     } catch (zkexcept::symbol_not_found_error& e){
@@ -63,8 +62,10 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
              * by dereferencing that value, we can get original load address of 
              * func_name symbol/function
              */
-            h_origaddr = (Addr)(*(((Addr *)base_addr) + h_relocplt[i].r_offset));
-            *(((Addr *)base_addr) + h_relocplt[i].r_offset) = h_fakeaddr;
+            //h_origaddr = (void *)(*(Addr *)(((Addr)base_addr) + h_relocplt[i]
+            //            .r_offset));
+            Addr *addr = ((Addr *)(((Addr)base_addr) + (Addr)h_relocplt[i].r_offset));
+            *(addr) = (Addr)h_fakeaddr;
             break;
         }
     }
@@ -88,8 +89,16 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
              * relocation applies. call occurs with result of above expression
              * + rip.
              */
-            Addr p = (Addr)*(((Addr *)base_addr) + h_relocdyn[i].r_offset));
-            Addr s = 
+            void *p = (void *)(((Addr *)base_addr) + h_relocdyn[i].r_offset);
+            /* getting S */
+            if(h_origaddr == 0 && h_fakeaddr == 0){
+                /* origaddr =       | p |       +   | *p |     +  | addend | */
+                h_origaddr = (void *)((Addr *)p + (*(Addr *)p) + sizeof(u32));
+
+                if(mprotect(p, sizeof(Addr), PROT_READ | PROT_WRITE) < 0)
+                    throw zkexcept::permission_denied();
+                *(Addr *)p = (Addr)((Addr)fake_addr - ((Addr)p + sizeof(u32)));
+            }
             break;
         }
     }

@@ -1,6 +1,7 @@
 #include "zkelf.hh"
 #include "zkproc.hh"
 #include "zktypes.hh"
+#include "zkexcept.hh"
 #include <sched.h>
 
 namespace Hooks {
@@ -9,8 +10,8 @@ namespace Hooks {
         /* all basic things related to hooking */
         protected:
             int     h_symindex;
-            Addr    h_origaddr;
-            Addr    h_fakeaddr;
+            void    *h_origaddr;
+            void    *h_fakeaddr;
     };
 
     class ElfGotPltHook : public Hook, Binary::Elf{
