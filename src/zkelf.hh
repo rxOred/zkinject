@@ -70,6 +70,7 @@ namespace Binary{
             int GetSegmentIndexbyAttr(u32 type, u32 flags) const;
             int GetSectionIndexbyAttr(u32 tyoe, u32 flags) const;
             int GetSymbolIndexbyName(const char *name) const;
+            int GetDynSymbolIndexbyName(const char *name) const;
             int GetSectionIndexbyName(const char *name) const;
             void *ElfRead(off_t readoff, size_t size) const;
             void ElfWrite(void *buffer, off_t writeoff, size_t size) const;
@@ -96,19 +97,13 @@ namespace Binary{
             void InjectPayload(off_t writeoff) const;
     };
 
-    /* shared library hooking with GOT/PLT redirections */
-    class Hooking : public Elf{
-        private:
-            Addr    h_fakeaddr;
-            Addr    h_origaddr;
-            Relocation  *h_relocplt;
-            Relocation  *h_relocdyn;
-        public:
-            Hooking(const char *target);
-            ~Hooking();
-            void LoadRelocations(void);
-    };
+    /* data segment infection */
+
+    /* reverse text padding infection */
+
+    /* patch addresses and shit */
     void PatchAddress(u8 *buffer, size_t len, u8 *addr, u8 *magic);
+
 };
 
 #endif /* ZKINJECT_HH */

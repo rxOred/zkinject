@@ -1,4 +1,5 @@
 #include "zkelf.hh"
+#include "zkexcept.hh"
 
 void Binary::PatchAddress(u8 *buffer, size_t len, u8 *addr, u8 *magic)
 {
@@ -32,12 +33,10 @@ Binary::Elf::Elf(const char *pathname)
         return;
     } catch (std::exception& e) {
         std::cerr << e.what();
-        RemoveMap();
-        std::abort();
+        std::exit(1);
     } catch (zkexcept::file_not_found_error& e){
         std::cerr << e.what();
-        RemoveMap();
-        std::abort();
+        std::exit(1);
     }
 }
 
@@ -89,8 +88,7 @@ void Binary::Elf::LoadFile(void)
         elf_indexes[SYMTAB_INDEX] = symtab_index;
     } catch (zkexcept::section_not_found_error& e){
         std::cerr << e.what();
-        RemoveMap();
-        std::abort();
+        std::exit(1);
     }
     u8 *memmap = (u8 *)elf_memmap;
     elf_symtab = (Symtab *)&memmap[elf_shdr[symtab_index].sh_offset];
@@ -107,8 +105,7 @@ void Binary::Elf::LoadDynamicData(void)
         elf_indexes[DYNAMIC_INDEX] = dynamic_index;
     } catch (zkexcept::section_not_found_error& e){
         std::cerr << e.what();
-        RemoveMap();
-        std::abort();
+        std::exit(1);
     }
 
     u8 *memmap = (u8 *)elf_memmap;
@@ -122,8 +119,7 @@ void Binary::Elf::LoadDynamicData(void)
         elf_indexes[DYNSYM_INDEX] = dynsym_index;
     } catch (zkexcept::section_not_found_error& e){
         std::cerr << e.what();
-        RemoveMap();
-        std::abort();
+        std::exit(1);
     }
 
     elf_dynsym = (Symtab *)&memmap[elf_shdr[dynsym_index].sh_offset];
@@ -194,9 +190,21 @@ int Binary::Elf::GetSymbolIndexbyName(const char *name)
     const
 {
     int index = elf_indexes[SYMTAB_INDEX];
-    for(int i = 0; i < elf_shdr[index].sh_size / 
-            sizeof(Symtab); i++){
+    for(int i = 0; i < elf_shdr[index].sh_size / sizeof(Symtab); i++){
         if(strcmp(&elf_strtab[elf_symtab[i].st_name], name) == 0){
+            return i;
+        }
+    }
+    throw zkexcept::symbol_not_found_error();
+}
+
+int Binary::Elf::GetDynSymbolIndexbyName(const char *name)
+    const
+{
+    assert(elf_indexes[DYNSYM_INDEX] != 0 && "dynamic sections are not parsed\n");
+    int index = elf_indexes[DYNSTR_INDEX];
+    for(int i = 0; i < elf_shdr[index].sh_size / sizeof(Symtab); i++){
+        if(strcmp(&elf_dynstr[elf_dynsym[i].st_name], name) == 0){
             return i;
         }
     }
