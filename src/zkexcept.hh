@@ -63,6 +63,13 @@ namespace zkexcept {
         symbol_not_found_error() : runtime_error("symbol not found\n")
         {}
     };
+
+    struct permission_denied : public std::runtime_error{
+        permission_denied(const char *what) : runtime_error(what)
+        {}
+        permission_denied() : runtime_error("permission denied\n")
+        {}
+    };
 }
 
 #endif /* ZKEXCEPT_HH */
