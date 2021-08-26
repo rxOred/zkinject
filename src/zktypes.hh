@@ -10,7 +10,7 @@ typedef uint16_t u16;
 typedef uint8_t u8;
 
 /* architecture specific types */
-#if defined(__x86_64__)
+#if defined(__x86_64__) || defined (__aarch64__)
 
     typedef Elf64_Ehdr  Ehdr;
     typedef Elf64_Phdr  Phdr;
