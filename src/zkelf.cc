@@ -83,15 +83,15 @@ void Binary::Elf::LoadFile(void)
     int symtab_index = 0;
     try{
         symtab_index = GetSectionIndexbyName(".symtab");
-        elf_indexes[SYMTAB_INDEX] = symtab_index;
+        elf_indexes[ELF_SYMTAB_INDEX] = symtab_index;
     } catch (zkexcept::section_not_found_error& e){
         std::cerr << e.what();
         std::exit(1);
     }
     u8 *memmap = (u8 *)elf_memmap;
     elf_symtab = (Symtab *)&memmap[elf_shdr[symtab_index].sh_offset];
-    elf_indexes[STRTAB_INDEX] = elf_shdr[symtab_index].sh_link;
-    elf_strtab = (Strtab)&memmap[elf_shdr[elf_indexes[STRTAB_INDEX]].
+    elf_indexes[ELF_STRTAB_INDEX] = elf_shdr[symtab_index].sh_link;
+    elf_strtab = (Strtab)&memmap[elf_shdr[elf_indexes[ELF_STRTAB_INDEX]].
         sh_offset];
 }
 
@@ -100,7 +100,7 @@ void Binary::Elf::LoadDynamicData(void)
     int dynamic_index = 0;
     try{
         dynamic_index = GetSectionIndexbyName(".dynamic");
-        elf_indexes[DYNAMIC_INDEX] = dynamic_index;
+        elf_indexes[ELF_DYNAMIC_INDEX] = dynamic_index;
     } catch (zkexcept::section_not_found_error& e){
         std::cerr << e.what();
         std::exit(1);
@@ -108,13 +108,13 @@ void Binary::Elf::LoadDynamicData(void)
 
     u8 *memmap = (u8 *)elf_memmap;
     elf_dynamic = (Dynamic *)&memmap[elf_shdr[dynamic_index].sh_offset];
-    elf_indexes[DYNSTR_INDEX] = elf_shdr[dynamic_index].sh_link;
-    elf_dynstr = (Strtab) &memmap[elf_shdr[elf_indexes[DYNSTR_INDEX]].
+    elf_indexes[ELF_DYNSTR_INDEX] = elf_shdr[dynamic_index].sh_link;
+    elf_dynstr = (Strtab) &memmap[elf_shdr[elf_indexes[ELF_DYNSTR_INDEX]].
         sh_offset];
     int dynsym_index = 0;
     try{
         dynsym_index = GetSectionIndexbyName(".dynsym");
-        elf_indexes[DYNSYM_INDEX] = dynsym_index;
+        elf_indexes[ELF_DYNSYM_INDEX] = dynsym_index;
     } catch (zkexcept::section_not_found_error& e){
         std::cerr << e.what();
         std::exit(1);
@@ -187,7 +187,7 @@ int Binary::Elf::GetSectionIndexbyName(const char *name) const
 int Binary::Elf::GetSymbolIndexbyName(const char *name)
     const
 {
-    int index = elf_indexes[SYMTAB_INDEX];
+    int index = elf_indexes[ELF_SYMTAB_INDEX];
     for(int i = 0; i < elf_shdr[index].sh_size / sizeof(Symtab); i++){
         if(strcmp(&elf_strtab[elf_symtab[i].st_name], name) == 0){
             return i;
@@ -199,9 +199,9 @@ int Binary::Elf::GetSymbolIndexbyName(const char *name)
 int Binary::Elf::GetDynSymbolIndexbyName(const char *name)
     const
 {
-    assert(elf_indexes[DYNSYM_INDEX] != 0 && 
+    assert(elf_indexes[ELF_DYNSYM_INDEX] != 0 && 
             "dynamic sections are not parsed\n");
-    int index = elf_indexes[DYNSTR_INDEX];
+    int index = elf_indexes[ELF_DYNSTR_INDEX];
     for(int i = 0; i < elf_shdr[index].sh_size / sizeof(Symtab); i++){
         if(strcmp(&elf_dynstr[elf_dynsym[i].st_name], name) == 0){
             return i;
@@ -233,4 +233,3 @@ void Binary::Elf::ElfWrite(void *buffer, off_t writeoff, size_t size)
         _buffer[i] = memmap[i];
     }
 }
-
