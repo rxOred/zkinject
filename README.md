@@ -14,3 +14,5 @@ Future plans
 - Userland hooks with ptrace
 - Process image reconstruction
 - note section infections
+
+when will this thing be completed? totally depend on 'when will i finish my homework/assignments'.
