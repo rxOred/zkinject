@@ -61,15 +61,14 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
              * func_name function's address (resolved or not).
              * by dereferencing that value, we can get original load address of 
              * func_name symbol/function
-             */
+             */ 
             Addr *addr = ((Addr *)(((Addr)base_addr) + (Addr)h_relocplt[i].
                         r_offset));
-            h_origaddr = (void *)(*addr);
+            //h_origaddr = (void *)*addr;
             *(addr) = (Addr)h_fakeaddr;
             break;
         }
     }
-
     /* for position dependant -m32 binaries */
     for (int i = 0; i < elf_shdr[h_relocdyn_index].sh_size / sizeof(Relocation);
             i++){
@@ -91,7 +90,7 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
              */
             void *p = (void *)(((Addr *)base_addr) + h_relocdyn[i].r_offset);
             /* getting S */
-            if(h_origaddr == 0 && h_fakeaddr == 0){
+            if(h_origaddr == 0){
                 /* origaddr =       | p |       +   | *p |     +  | addend | */
                 h_origaddr = (void *)((Addr *)p + (*(Addr *)p) + sizeof(u32));
 
@@ -106,7 +105,8 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
 
 void Hooks::ElfGotPltHook::UnhookFuction()
 {
-
+    //make this thing usefull
+    puts("hello");
 }
 
 Addr Hooks::ElfGotPltHook::GetModuleBaseAddress(const char *module_name) const
@@ -114,7 +114,7 @@ Addr Hooks::ElfGotPltHook::GetModuleBaseAddress(const char *module_name) const
     Addr address;
     Process::Proc proc(0);
     try{
-        address = proc.GetModuleBaseAddress(module_name);
+        address = proc.GetModuleBaseAddress(module_name); 
     }catch(zkexcept::proc_file_error& e){
         std::cerr << e.what();
         std::exit(1);
