@@ -1,3 +1,7 @@
 build/
 *.so
 *.a
+*.o
+example.cc
+*.pc.in
+vgcore.*
