@@ -1,6 +1,9 @@
 #include "zkproc.hh"
 #include <cstdio>
-
+#include <new>
+#include <sched.h>
+#include <iostream>
+#include <sstream>
 void Process::Proc::SetProcessId(pid_t pid)
 {
     proc_id = pid;
@@ -14,9 +17,9 @@ pid_t Process::Proc::GetProcessId(void) const
 Process::Proc::Proc(pid_t pid)
     :proc_id(pid), proc_baseaddr(0)
 {
-    SetMapPath(pid);
-    SetMemPath(pid);
-    SetCmdline(pid);
+    SetMapPath();
+    SetMemPath();
+    SetCmdline();
 }
 
 Process::Proc::~Proc()
@@ -26,16 +29,42 @@ Process::Proc::~Proc()
     if(proc_cmdline) free(proc_cmdline);
 }
 
-void Process::Proc::SetMapPath(pid_t pid)
+void Process::Proc::SetMapPath(void)
 {
     proc_mappath = (char *) calloc(PATH_LEN, sizeof(char));
     if(proc_mappath == nullptr)
         throw std::bad_alloc();
 
-    if(pid == 0){
+    if(proc_id == 0){
         sprintf(proc_mappath, "/proc/self/maps");
     } else {
-        sprintf(proc_mappath, MAPPATH, pid);
+        sprintf(proc_mappath, MAPPATH, proc_id);
+    }
+}
+
+void Process::Proc::SetMemPath(void)
+{
+    proc_mempath = (char *) calloc(PATH_LEN, sizeof(char));
+    if(proc_mempath == nullptr)
+        throw std::bad_alloc();
+
+    if(proc_id == 0){
+        sprintf(proc_mempath, "/proc/self/maps");
+    } else {
+        sprintf(proc_mempath, MEMPATH, proc_id);
+    }
+}
+
+void Process::Proc::SetCmdline(void)
+{
+    proc_cmdline = (char *) calloc(PATH_LEN, sizeof(char));
+    if(proc_cmdline == nullptr)
+        throw std::bad_alloc();
+
+    if(proc_id == 0){
+        sprintf(proc_cmdline, "/proc/self/maps");
+    } else {
+        sprintf(proc_cmdline, CMDLINE, proc_id);
     }
 }
 
@@ -63,21 +92,28 @@ Addr Process::Proc::GetBaseAddress(void)
 Addr Process::Proc::GetModuleBaseAddress(const char *module_name)
 {
     assert(proc_mappath != nullptr && "map path is not set");
-    char addr_buf[ADDR_LEN];
+    char *addr_buf = (char *)calloc(sizeof(char), ADDR_LEN + 1);
+    if(addr_buf == nullptr)
+        throw std::bad_alloc();
+
     std::ifstream fh(proc_mappath);
-    std::string line;
-    const char *_line = nullptr;
+    std::string line, word;
+    const char *_word = nullptr;
 
     while(std::getline(fh, line)){
-        _line = line.c_str();
-        for(int i = 0; i < strlen(_line); i++){
-            if(strcmp(&_line[i], module_name) == 0){
+        std::stringstream ss(line);
+
+        while(std::getline(ss, word, ' ')){
+            _word = word.c_str();
+            if(strcmp(_word, module_name) == 0){
                 for(int j = 0; j < ADDR_LEN; j++){
-                    addr_buf[j] = _line[j];
-                    Addr address;
-                    sscanf(addr_buf, "%lx", &address);
-                    return address;
+                    addr_buf[j] = line[j];
                 }
+                addr_buf[ADDR_LEN] = '\0';
+                Addr address = 0;
+                sscanf(addr_buf, "%lx", &address);
+                free(addr_buf);
+                return address;
             }
         }
     }
