@@ -46,12 +46,17 @@ namespace Binary{
             /* elf dynamic string table optional */
             Strtab  elf_dynstr;
 
-            enum {
-                SYMTAB_INDEX = 0, STRTAB_INDEX, SHSTRTAB_INDEX, DYNAMIC_INDEX,
-                DYNSYM_INDEX, DYNSTR_INDEX, SIZE,
+            enum ELF_SHDR_TABLE{
+                ELF_SYMTAB_INDEX,
+                ELF_STRTAB_INDEX,
+                ELF_SHSTRTAB_INDEX, 
+                ELF_DYNAMIC_INDEX,
+                ELF_DYNSYM_INDEX,
+                ELF_DYNSTR_INDEX, 
+                ELF_INDEX_TABLE_SIZE,
             };
 
-            int elf_indexes[SIZE];
+            int elf_indexes[ELF_INDEX_TABLE_SIZE];
         public:
             const char *elf_pathname;
             size_t  elf_size;

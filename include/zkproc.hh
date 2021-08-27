@@ -24,15 +24,14 @@ namespace Process {
         protected:
             int     proc_id;
             Addr    proc_baseaddr;
-            void    SetMapPath(pid_t pid);
-            void    SetMemPath(pid_t pid);
-            void    SetCmdline(pid_t pid);
+            void    SetMapPath(void);
+            void    SetMemPath(void);
+            void    SetCmdline(void);
         public:
             char    *proc_mappath;
             char    *proc_mempath;
             char    *proc_cmdline;
 
-            Proc();
             Proc(pid_t pid);
             ~Proc();
             void SetProcessId(pid_t pid);
