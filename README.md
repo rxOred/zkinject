@@ -1,9 +1,18 @@
 ### zkinject
 
-zkinject or libzkinject is a malware development framework for linux elf binaries. main goal of this project is to make instrumentation with elf binaries eassy.
+zkinject or libzkinject is a linux elf malware framework/library written in C++ for zkz debugger. main goal of this project is to make instrumentation with elf binaries eazy.
 
-This framework is capable of parsing 64 bit elf binaries and interacting with linux x86-64 bit processes using linux /proc file system and ptrace system call.
+libzkinject uses linux /proc file system and ptrace system call to interact with running processes. it also parses elf binaries and provides set of APIs to manipulate internal data structures.
 
-It also provides set of classes and methods for code injection, GOT poisoining, hooking and many more elf malware techniques.
+Currently it provides (incomplete) APIs for Silvio text padding injection and userland hooks
 
-Under development & will not be out soon.
+This project is still in the early stage of development :)
+
+Future plans
+- Data segment injections
+- Reverse text padding injection
+- Userland hooks with ptrace
+- Process image reconstruction
+- note section infections
+
+when will this thing be completed? totally depend on 'when will i finish my homework/assignments'.
