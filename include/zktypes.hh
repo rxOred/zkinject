@@ -4,14 +4,15 @@
 #include <cstdint>
 #include <elf.h>
 
-typedef uint64_t u64;
-typedef uint32_t u32;
-typedef uint16_t u16;
-typedef uint8_t u8;
+typedef uint64_t    u64;
+typedef uint32_t    u32;
+typedef uint16_t    u16;
+typedef uint8_t     u8;
 
 /* architecture specific types */
 #if defined(__x86_64__) || defined (__aarch64__)
 
+    #define __BITS_64__
     typedef Elf64_Ehdr  Ehdr;
     typedef Elf64_Phdr  Phdr;
     typedef Elf64_Shdr  Shdr;
@@ -32,6 +33,7 @@ typedef uint8_t u8;
 
 #elif(__i386__)
 
+    #define __BITS_32__
     typedef Elf32_Ehdr  Ehdr;
     typedef Elf32_Phdr  Phdr;
     typedef Elf32_Shdr  Shdr;
