@@ -20,6 +20,7 @@ Process::Proc::Proc(pid_t pid)
     SetMapPath();
     SetMemPath();
     SetCmdline();
+    GetBaseAddress();
 }
 
 Process::Proc::~Proc()
@@ -68,7 +69,7 @@ void Process::Proc::SetCmdline(void)
     }
 }
 
-Addr Process::Proc::GetBaseAddress(void)
+void Process::Proc::SetBaseAddress(void)
 {
     assert(proc_mappath != nullptr && "map path is not set");
 
@@ -86,6 +87,10 @@ Addr Process::Proc::GetBaseAddress(void)
     }
     sscanf(addr_buf, "%lx", &baseaddr);
     proc_baseaddr = baseaddr;
+}
+
+Addr Process::Proc::GetBaseAddress(void) const
+{
     return proc_baseaddr;
 }
 
