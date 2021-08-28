@@ -1,9 +1,21 @@
 #include "zkhooks.hh"
+#include "zkexcept.hh"
 #include "zkproc.hh"
+#include "zktypes.hh"
+#include <sched.h>
 
-/* API for PLT / GOT redirection */
+Hooks::Hook::Hook()
+    :h_symindex(0), h_orig_addr(nullptr), h_fake_addr(nullptr)
+{}
+
+/*
+ * Elf Got / Plt Hooking explaination
+ * ==================================
+ * 
+ */
+
 Hooks::ElfGotPltHook::ElfGotPltHook(const char *pathname)
-    :Binary::Elf(pathname), h_relocplt_index(0), h_relocplt(nullptr)
+    :Binary::Elf(pathname), h_relocplt_index(0), h_relocplt(nullptr) 
 {
     u16 type = GetElfType();
     if(type != ET_DYN)
@@ -43,7 +55,7 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
 {
     assert((h_relocplt_index != 0 && h_relocdyn_index != 0) && "relocation      \
             section indexes are not set");
-    h_fakeaddr = fake_addr;
+    h_fake_addr = fake_addr;
     try{
         h_symindex = GetDynSymbolIndexbyName(func_name);
     } catch (zkexcept::symbol_not_found_error& e){
@@ -51,6 +63,7 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
         std::exit(1);
     }
 
+#if defined __BITS_64__
     /* for position independant binaries */
     for (int i = 0; i < elf_shdr[h_relocplt_index].sh_size / sizeof(Relocation)
             ; i++){
@@ -64,11 +77,13 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
              */ 
             Addr *addr = ((Addr *)(((Addr)base_addr) + (Addr)h_relocplt[i].
                         r_offset));
-            //h_origaddr = (void *)*addr;
-            *(addr) = (Addr)h_fakeaddr;
+            // NOTE h_origaddr = (void *)*addr;
+            *(addr) = (Addr)h_fake_addr;
             break;
         }
     }
+
+#elif __BITS_32__
     /* for position dependant -m32 binaries */
     for (int i = 0; i < elf_shdr[h_relocdyn_index].sh_size / sizeof(Relocation);
             i++){
@@ -90,17 +105,21 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
              */
             void *p = (void *)(((Addr *)base_addr) + h_relocdyn[i].r_offset);
             /* getting S */
-            if(h_origaddr == 0){
+            if(h_orig_addr == 0){
                 /* origaddr =       | p |       +   | *p |     +  | addend | */
-                h_origaddr = (void *)((Addr *)p + (*(Addr *)p) + sizeof(u32));
+                h_orig_addr = (void *)((Addr *)p + (*(Addr *)p) + sizeof(u32));
 
+                // NOTE mprotect needed to be fixed
                 if(mprotect(p, sizeof(Addr), PROT_READ | PROT_WRITE) < 0)
                     throw zkexcept::permission_denied();
                 *(Addr *)p = (Addr)((Addr)fake_addr - ((Addr)p + sizeof(u32)));
+
+                // NOTE another mprotect to restore permissions
             }
             break;
         }
     }
+#endif
 }
 
 void Hooks::ElfGotPltHook::UnhookFuction()
@@ -120,4 +139,68 @@ Addr Hooks::ElfGotPltHook::GetModuleBaseAddress(const char *module_name) const
         std::exit(1);
     }
     return address;
+}
+
+/*
+ * Process Got / Plt hooking explaination
+ * ======================================
+ *
+ *
+ */
+Hooks::ProcGotPltHook::ProcGotPltHook(pid_t pid, const char *module_name)
+    :Process::Proc(pid), Hook()
+{
+    try{
+        elfhook = new ElfGotPltHook(module_name);
+    } catch (zkexcept::not_dyn_error& e){
+        std::cerr << e.what();
+        std::exit(1);
+    }
+}
+
+Hooks::ProcGotPltHook::~ProcGotPltHook()
+{
+    delete elfhook;
+}
+
+/*
+ * not very different from ElfGotPltHook::HookFunc, instead of using pointers
+ * this uses ptrace
+ */
+void Hooks::ProcGotPltHook::HookFunc(const char *func_name, void *fake_addr,
+        void *base_addr)
+{
+    assert((elfhook->GetRelocDynIndex() != 0 && elfhook->GetRelocPltIndex() != 
+                0) && "relocation sections are not set");
+    h_fake_addr = fake_addr;
+    try{
+        elfhook->SetSymbolIndex(elfhook->GetDynSymbolIndexbyName(func_name));
+    } catch (zkexcept::symbol_not_found_error& e){
+        std::cerr << e.what();
+        std::exit(1);
+    }
+
+#ifdef __BITS_64__
+    Shdr *relocplt_section = elfhook->GetSectionbyIndex(elfhook->
+            GetRelocPltIndex());
+    for(int i = 0; i < relocplt_section->sh_size / sizeof(Relocation); i++){
+        if(h_symindex == ELF_R_SYM(elfhook->GetRelocPlt()[i].r_info)){
+            // NOTE save value at base_addr + r_offset
+            // replace base_addr + r_offset with fake_addr using ptrace
+            break;
+        }
+    }
+
+#elif __BITS_32__
+    Shdr *relocdyn_section = elfhook->GetSectionbyIndex(elfhook->
+            GetRelocPltIndex());
+    for(int i = 0; i < relocdyn_section->sh_size / sizeof(Relocation); i++){
+        if(h_symindex == ELF_R_SYM(elfhook->GetRelocPlt()[i].r_info)){
+            //NOTE same shit
+            //mprotect before write
+            //mprotect after write
+        }
+    }
+
+#endif
 }
