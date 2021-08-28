@@ -20,6 +20,7 @@
 
 /* process information */
 namespace Process {
+    /* /proc file system */
     class Proc {
         protected:
             int     proc_id;
@@ -27,6 +28,7 @@ namespace Process {
             void    SetMapPath(void);
             void    SetMemPath(void);
             void    SetCmdline(void);
+            void    SetBaseAddress(void);
         public:
             char    *proc_mappath;
             char    *proc_mempath;
@@ -36,8 +38,13 @@ namespace Process {
             ~Proc();
             void SetProcessId(pid_t pid);
             pid_t GetProcessId(void) const;
-            Addr GetBaseAddress(void);
+            Addr GetBaseAddress(void) const;
             Addr GetModuleBaseAddress(const char *module_name);
+    };
+
+    /* ptrace help */
+    class Trace : public Proc {
+        private:
     };
 };
 
