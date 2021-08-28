@@ -69,9 +69,28 @@ namespace Binary{
             void LoadDynamicData(void);
             bool VerifyElf(void) const;
             void RemoveMap(void);
-
-            /* commonly used stuff with infectors */
+            /* commonly used malware stuff */
             u16 GetElfType(void) const;
+            inline Ehdr *GetElfHeader() const
+            {
+                return elf_ehdr;
+            }
+
+            inline Shdr *GetSectionHeaderTable() const
+            {
+                return elf_shdr;
+            }
+
+            inline Phdr *GetProgramHeaderTable() const
+            {
+                return elf_phdr;
+            }
+
+            inline Shdr *GetSectionbyIndex(int index) const
+            {
+                return &elf_shdr[index];
+            }
+
             int GetSegmentIndexbyAttr(u32 type, u32 flags) const;
             int GetSectionIndexbyAttr(u32 tyoe, u32 flags) const;
             int GetSymbolIndexbyName(const char *name) const;
@@ -108,7 +127,6 @@ namespace Binary{
 
     /* patch addresses and shit */
     void PatchAddress(u8 *buffer, size_t len, u8 *addr, u8 *magic);
-
 };
 
 #endif /* ZKELF_HH */
