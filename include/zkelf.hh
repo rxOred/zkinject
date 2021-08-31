@@ -109,7 +109,7 @@ namespace Binary{
     /* reverse text padding infection */
 
     /* patch addresses and shit */
-    void PatchAddress(u8 *buffer, size_t len, u8 *addr, u8 *magic);
+    void PatchAddress(u8 *buffer, size_t len, Addr addr, u8 *magic);
 };
 
 #endif /* ZKELF_HH */

@@ -2,18 +2,19 @@
 #include "zkexcept.hh"
 #include "zktypes.hh"
 
-void Binary::PatchAddress(u8 *buffer, size_t len, u8 *addr, u8 *magic)
+void Binary::PatchAddress(u8 *buffer, size_t len, u64 addr, u8 *magic)
 {
     for(int i = 0; i < len; i++){
-
-        /* NOTE fix this to look up MAGIC_LEN */
-        if(buffer[i] == magic[0] && buffer[i + 1] == magic[1]){
-            for(int j = 0; j < ADDR_LEN && i < len; j++, i++){
-                buffer[i] = addr[j];
+        if(buffer[i] == magic[0]){
+            for(int j = i; j < i + MAGIC_LEN; j++){
+                if(buffer[i] != magic[j - i])
+                    goto error;
             }
-            return;
+            /* magic found!!! */
+            *(u64 *)((void *)(buffer + i)) = addr;
         }
     }
+error:
     throw zkexcept::magic_not_found_error();
 }
 
