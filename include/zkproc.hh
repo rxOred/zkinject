@@ -41,7 +41,6 @@ namespace Process {
             Addr GetBaseAddress(void) const;
             Addr GetModuleBaseAddress(const char *module_name);
     };
-
     /* ptrace help */
     class Trace : public Proc {
         private:
