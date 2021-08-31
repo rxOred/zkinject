@@ -5,6 +5,8 @@
 void Binary::PatchAddress(u8 *buffer, size_t len, u8 *addr, u8 *magic)
 {
     for(int i = 0; i < len; i++){
+
+        /* NOTE fix this to look up MAGIC_LEN */
         if(buffer[i] == magic[0] && buffer[i + 1] == magic[1]){
             for(int j = 0; j < ADDR_LEN && i < len; j++, i++){
                 buffer[i] = addr[j];
