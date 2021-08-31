@@ -9,7 +9,7 @@ namespace Injections {
             void    *tpi_payload;
             size_t  tpi_payload_sz;
             u8      tpi_magic[MAGIC_LEN];
-            u8      tpi_org_entry[ADDR_LEN];
+            Addr    tpi_org_entry;
             Addr    tpi_fake_entry;
         public:
             TextPaddingInfection(const char *target);
