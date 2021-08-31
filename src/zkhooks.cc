@@ -3,6 +3,8 @@
 #include "zkproc.hh"
 #include "zktypes.hh"
 #include <sched.h>
+#include <stdexcept>
+#include <sys/ptrace.h>
 
 Hooks::Hook::Hook()
     :h_symindex(0), h_orig_addr(nullptr), h_fake_addr(nullptr)
@@ -185,8 +187,20 @@ void Hooks::ProcGotPltHook::HookFunc(const char *func_name, void *fake_addr,
             GetRelocPltIndex());
     for(int i = 0; i < relocplt_section->sh_size / sizeof(Relocation); i++){
         if(h_symindex == ELF_R_SYM(elfhook->GetRelocPlt()[i].r_info)){
-            // NOTE save value at base_addr + r_offset
-            // replace base_addr + r_offset with fake_addr using ptrace
+            Addr *addr = ((Addr *)(((Addr)base_addr) + (Addr)elfhook->
+                        GetRelocPlt()[i].r_offset));
+            if(ptrace(PTRACE_ATTACH, proc_id, nullptr, nullptr) < 0)
+                throw std::runtime_error("ptrace attach failed\n");
+
+            h_orig_addr = (void *)ptrace(PTRACE_PEEKTEXT, proc_id, addr,nullptr);
+            if((long)h_orig_addr < 0)
+                throw std::runtime_error("ptrace peektext failed\n");
+
+            if(ptrace(PTRACE_POKETEXT, proc_id, addr, (void *)h_fake_addr)< 0)
+                throw std::runtime_error("ptrace poketext failed\n");
+
+            if(ptrace(PTRACE_DETACH, proc_id, nullptr, nullptr) < 0)
+                throw std::runtime_error("ptrace detach failed\n");
             break;
         }
     }
@@ -196,9 +210,21 @@ void Hooks::ProcGotPltHook::HookFunc(const char *func_name, void *fake_addr,
             GetRelocPltIndex());
     for(int i = 0; i < relocdyn_section->sh_size / sizeof(Relocation); i++){
         if(h_symindex == ELF_R_SYM(elfhook->GetRelocPlt()[i].r_info)){
-            //NOTE same shit
-            //mprotect before write
-            //mprotect after write
+            Addr addr = ((Addr *)(((Addr)base_addr) + (Addr)elfhook->
+                        GetRelocDyn()[i].r_offset));
+            if(ptrace(PTRACE_ATTACH, proc_id, nullptr, nullptr) < 0)
+                throw std::runtime_error("ptrace attach failed\n");
+
+            h_orig_addr = (void *)ptrace(PTRACE_PEEKTEXT, proc_id,addr,nullptr);
+            if((long)h_orig_addr < 0)
+                throw std::runtime_error("ptrace attach failed\n");
+
+            if(ptrace(PTRACE_POKETEXT, proc_id, addr, (void *)h_fake_addr) < 0)
+                throw std::runtime_error("ptrace poketext failed\n");
+
+            if(ptrace(PTRACE_DETACH, proc_id, nullptr, nullptr) < 0)
+                throw std::runtime_error("ptrace detach failed\n");
+            break;
         }
     }
 
