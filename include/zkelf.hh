@@ -91,6 +91,11 @@ namespace Binary{
                 return &elf_shdr[index];
             }
 
+            inline void SetEntryPoint(Addr fake_entry) const
+            {
+                elf_ehdr->e_entry = fake_entry;
+            }
+
             int GetSegmentIndexbyAttr(u32 type, u32 flags) const;
             int GetSectionIndexbyAttr(u32 tyoe, u32 flags) const;
             int GetSymbolIndexbyName(const char *name) const;
@@ -99,29 +104,7 @@ namespace Binary{
             void *ElfRead(off_t readoff, size_t size) const;
             void ElfWrite(void *buffer, off_t writeoff, size_t size) const;
     };
-
-    /* text padding infection */
-    class TextPaddingInfection : public Elf{
-        private:
-            void    *tpi_payload;
-            size_t  tpi_payload_sz;
-            u8      tpi_magic[MAGIC_LEN];
-            u8      tpi_org_entry[ADDR_LEN];
-            Addr    tpi_fake_entry;
-        public:
-            TextPaddingInfection(const char *target);
-            ~TextPaddingInfection();
-            /* 
-             * re-alloc space for a new payload with a modified
-             * return address. return address = tpi_org_entry
-             */
-            void SetPayload(u8 *payload, size_t payload_sz);
-            /* find a freespace and set tpi_fake_entry */
-            off_t FindFreeSpace(void);
-            void InjectPayload(off_t writeoff) const;
-    };
-
-    /* data segment infection */
+   /* data segment infection */
 
     /* reverse text padding infection */
 
