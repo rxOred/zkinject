@@ -6,6 +6,7 @@
 #include "zktypes.hh"
 #include "zkexcept.hh"
 #include <sched.h>
+#include <sys/ptrace.h>
 
 namespace Hooks {
 
