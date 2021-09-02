@@ -4,16 +4,21 @@
 
 void Binary::PatchAddress(u8 *buffer, size_t len, u64 addr, u8 *magic)
 {
-    for(int i = 0; i < len; i++){
+    int count = 0;
+    for (int i = 0; i < len; i++){
+        printf("%x\n", buffer[i]);
         if(buffer[i] == magic[0]){
-            for(int j = i; j < i + MAGIC_LEN; j++){
-                if(buffer[i] != magic[j - i])
-                    goto error;
+            for (int j = 0; j < MAGIC_LEN; j++){
+                if(buffer[i + j] == magic[j])
+                    count++;
             }
-            /* magic found!!! */
-            *(u64 *)((void *)(buffer + i)) = addr;
+            if(count == MAGIC_LEN)
+                *(u64 *)((void *)(buffer + i)) = addr;
+            else
+                continue;
         }
     }
+
 error:
     throw zkexcept::magic_not_found_error();
 }
@@ -150,11 +155,16 @@ void Binary::Elf::RemoveMap(void)
     elf_memmap = nullptr;
 }
 
-int Binary::Elf::GetSegmentIndexbyAttr(u32 type, u32 flags) const
+int Binary::Elf::GetSegmentIndexbyAttr(u32 type, u32 flags, u32 prev_flags) 
+    const
 {
     for(int i = 0; i < elf_ehdr->e_phnum; i++){
         if(elf_phdr[i].p_type == type && elf_phdr[i].p_flags == flags){
-            return i;
+            if(prev_flags != 0){
+                if(elf_phdr[i - 1].p_flags == prev_flags)
+                    return i;
+            } else
+                return i;
         }
     }
     throw zkexcept::segment_not_found_error();
