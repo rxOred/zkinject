@@ -12,7 +12,7 @@ namespace Injections {
             Addr    tpi_org_entry;
             Addr    tpi_fake_entry;
         public:
-            TextPaddingInfection(const char *target);
+            TextPaddingInfection(const char *target, u8 *magic);
             ~TextPaddingInfection();
             /* 
              * re-alloc space for a new payload with a modified return address. 
@@ -21,7 +21,7 @@ namespace Injections {
             void SetPayload(u8 *payload, size_t payload_sz);
             /* find a freespace and set tpi_fake_entry */
             off_t FindFreeSpace(void);
-            void InjectPayload(off_t writeoff, size_t size) const;
+            void InjectPayload(void);
     };
 
     class CodeInjection : public Process::Proc{

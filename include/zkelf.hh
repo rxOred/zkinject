@@ -96,7 +96,8 @@ namespace Binary{
                 elf_ehdr->e_entry = fake_entry;
             }
 
-            int GetSegmentIndexbyAttr(u32 type, u32 flags) const;
+            int GetSegmentIndexbyAttr(u32 type, u32 flags, u32 prev_flags) 
+                const;
             int GetSectionIndexbyAttr(u32 tyoe, u32 flags) const;
             int GetSymbolIndexbyName(const char *name) const;
             int GetDynSymbolIndexbyName(const char *name) const;

@@ -57,6 +57,6 @@ typedef uint8_t     u8;
 typedef char *      Strtab;
 
 /* macros and struff */
-#define MAGIC_LEN   2   /* for magic numbers */
+#define MAGIC_LEN   3   /* for magic numbers */
 
 #endif /* ZKTYPES_HH */
