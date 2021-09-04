@@ -141,11 +141,6 @@ bool Binary::Elf::VerifyElf(void) const
     return true;
 }
 
-u16 Binary::Elf::GetElfType(void) const
-{
-    return elf_ehdr->e_type;
-}
-
 void Binary::Elf::RemoveMap(void)
 {
     assert(elf_memmap != nullptr && "memory is not mapped to unmap");

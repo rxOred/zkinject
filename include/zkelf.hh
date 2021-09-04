@@ -46,7 +46,7 @@ namespace Binary{
             /* elf dynamic string table optional */
             Strtab  elf_dynstr;
 
-            enum ELF_SHDR_TABLE{
+            enum ELF_SHDR_TABLE : short{
                 ELF_SYMTAB_INDEX,
                 ELF_STRTAB_INDEX,
                 ELF_SHSTRTAB_INDEX, 
@@ -69,8 +69,21 @@ namespace Binary{
             void LoadDynamicData(void);
             bool VerifyElf(void) const;
             void RemoveMap(void);
+
             /* commonly used malware stuff */
-            u16 GetElfType(void) const;
+            inline u16 GetElfType(void) const
+            {
+                return elf_ehdr->e_type;
+            }
+
+            /* assume elf files to be relocatable objects */
+            virtual bool CheckElfType() const
+            {
+                if(GetElfType() != ET_REL)
+                    return false;
+                return true;
+            }
+
             inline Ehdr *GetElfHeader() const
             {
                 return elf_ehdr;
