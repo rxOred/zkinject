@@ -17,22 +17,20 @@ Hooks::Hook::Hook()
  */
 
 Hooks::ElfGotPltHook::ElfGotPltHook(const char *pathname)
-    :Binary::Elf(pathname), h_relocplt_index(0), h_relocplt(nullptr) 
+    :Binary::Elf(pathname), egph_relocplt_index(0), egph_relocplt(nullptr) 
 {
-    u16 type = GetElfType();
-    if(type != ET_DYN)
-        throw zkexcept::not_dyn_error();
-
-    LoadDynamicData();
-    LoadRelocations();
+    if(CheckElfType()){
+        LoadDynamicData();
+        LoadRelocations();
+    }
 }
 
 void Hooks::ElfGotPltHook::LoadRelocations(void)
 {
     try{
-        h_relocplt_index = GetSectionIndexbyName(RELOC_PLT);
+        egph_relocplt_index = GetSectionIndexbyName(RELOC_PLT);
     } catch(zkexcept::section_not_found_error& e){
-        h_relocplt_index = GetSectionIndexbyAttr(RELOC_TYPE, SHF_ALLOC | 
+        egph_relocplt_index = GetSectionIndexbyAttr(RELOC_TYPE, SHF_ALLOC | 
                 SHF_INFO_LINK);
         /* NOTE find out what is `I` in readelf -S output for rela.plt in */
         std::cerr << e.what();
@@ -40,22 +38,22 @@ void Hooks::ElfGotPltHook::LoadRelocations(void)
         std::abort();
     }
     u8 *memmap = (u8 *)elf_memmap;
-    h_relocplt = (Relocation *)&memmap[elf_shdr[h_relocplt_index].sh_offset];
+    egph_relocplt = (Relocation *)&memmap[elf_shdr[egph_relocplt_index].sh_offset];
     try{
-        h_relocdyn_index = GetSectionIndexbyName(RELOC_DYN);
+        egph_relocdyn_index = GetSectionIndexbyName(RELOC_DYN);
     } catch(zkexcept::section_not_found_error& e){
-        h_relocplt_index = GetSectionIndexbyAttr(RELOC_TYPE, SHF_ALLOC);
+        egph_relocplt_index = GetSectionIndexbyAttr(RELOC_TYPE, SHF_ALLOC);
         std::cerr << e.what();
         RemoveMap();
         std::abort();
     }
-    h_relocdyn = (Relocation *)&memmap[elf_shdr[h_relocdyn_index].sh_offset];
+    egph_relocdyn = (Relocation *)&memmap[elf_shdr[egph_relocdyn_index].sh_offset];
 }
 
 void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
         void *base_addr)
 {
-    assert((h_relocplt_index != 0 && h_relocdyn_index != 0) && "relocation      \
+    assert((egph_relocplt_index != 0 && egph_relocdyn_index != 0) && "relocation\
             section indexes are not set");
     h_fake_addr = fake_addr;
     try{
@@ -67,9 +65,9 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
 
 #if defined __BITS_64__
     /* for position independant binaries */
-    for (int i = 0; i < elf_shdr[h_relocplt_index].sh_size / sizeof(Relocation)
+    for (int i = 0; i < elf_shdr[egph_relocplt_index].sh_size / sizeof(Relocation)
             ; i++){
-        if(h_symindex == ELF_R_SYM(h_relocplt[i].r_info)){
+        if(h_symindex == ELF_R_SYM(egph_relocplt[i].r_info)){
             /*
              * convert void *base_addr to Addr *base_addr, add r_offset to it, 
              * basically result will point to global offset table's entry for 
@@ -77,7 +75,7 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
              * by dereferencing that value, we can get original load address of 
              * func_name symbol/function
              */ 
-            Addr *addr = ((Addr *)(((Addr)base_addr) + (Addr)h_relocplt[i].
+            Addr *addr = ((Addr *)(((Addr)base_addr) + (Addr)egph_relocplt[i].
                         r_offset));
             // NOTE h_origaddr = (void *)*addr;
             *(addr) = (Addr)h_fake_addr;
@@ -87,9 +85,9 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
 
 #elif __BITS_32__
     /* for position dependant -m32 binaries */
-    for (int i = 0; i < elf_shdr[h_relocdyn_index].sh_size / sizeof(Relocation);
+    for (int i = 0; i < elf_shdr[egph_relocdyn_index].sh_size / sizeof(Relocation);
             i++){
-        if(h_symindex == ELF_R_SYM(h_relocdyn[i].r_info)){
+        if(h_symindex == ELF_R_SYM(egph_relocdyn[i].r_info)){
             /*
              * now, since rel.dyn section could contain many entries for same 
              * symbol index, we should break just after the first match and 
@@ -105,7 +103,7 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
              * relocation applies. call occurs with result of above expression
              * + rip.
              */
-            void *p = (void *)(((Addr *)base_addr) + h_relocdyn[i].r_offset);
+            void *p = (void *)(((Addr *)base_addr) + egph_relocdyn[i].r_offset);
             /* getting S */
             if(h_orig_addr == 0){
                 /* origaddr =       | p |       +   | *p |     +  | addend | */
