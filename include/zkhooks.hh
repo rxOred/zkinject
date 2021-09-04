@@ -6,6 +6,7 @@
 #include "zktypes.hh"
 #include "zkexcept.hh"
 #include <sched.h>
+#include <optional>
 #include <sys/ptrace.h>
 
 namespace Hooks {
@@ -23,44 +24,52 @@ namespace Hooks {
     class ElfGotPltHook : public Hook, public Binary::Elf{
         private:
             /* dynsym index of the symbol */
-            int     h_symbol_index;
+            int         egph_symbol_index;
             /* section header table index of rel.plt and rel.dyn */
-            int     h_relocplt_index;
-            int     h_relocdyn_index;
+            int         egph_relocplt_index;
+            int         egph_relocdyn_index;
             /* rel.plt section */
-            Relocation  *h_relocdyn;
-            Relocation  *h_relocplt;
+            Relocation  *egph_relocdyn;
+            Relocation  *egph_relocplt;
             void LoadRelocations(void);
         public:
             ElfGotPltHook(const char *pathname);
 
-            inline void SetSymbolIndex(int index){
-                h_symbol_index = index;
+            inline void SetSymbolIndex(int index)
+            {
+                egph_symbol_index = index;
+            }
+
+            bool CheckElfType() const override
+            {
+                if(GetElfType() == ET_DYN)
+                    return true;
+                return false;
             }
 
             inline int GetSymbolIndex(void) const
             {
-                return h_symbol_index;
+                return egph_symbol_index;
             }
 
             inline int GetRelocPltIndex(void) const
             {
-                return h_relocplt_index;
+                return egph_relocplt_index;
             }
 
             inline int GetRelocDynIndex(void) const
             {
-                return h_relocdyn_index;
+                return egph_relocdyn_index;
             }
 
             inline Relocation *GetRelocDyn(void) const
             {
-                return h_relocdyn;
+                return egph_relocdyn;
             }
 
             inline Relocation *GetRelocPlt(void) const
             {
-                return h_relocplt;
+                return egph_relocplt;
             }
 
             Addr GetModuleBaseAddress(const char *module_name) const;

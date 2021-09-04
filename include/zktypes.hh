@@ -54,6 +54,10 @@ typedef uint8_t     u8;
 
 #endif /* (__x86_64__) */
 
+/* 
+ * NOTE that since we are using char *, someone can make a special elf binary with
+ * 1 less null terminator at the end and fuck us up. so validate it
+ */
 typedef char *      Strtab;
 
 /* macros and struff */
