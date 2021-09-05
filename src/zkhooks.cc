@@ -38,7 +38,8 @@ void Hooks::ElfGotPltHook::LoadRelocations(void)
         std::abort();
     }
     u8 *memmap = (u8 *)elf_memmap;
-    egph_relocplt = (Relocation *)&memmap[elf_shdr[egph_relocplt_index].sh_offset];
+    egph_relocplt = (relocation_t *)&memmap[elf_shdr[egph_relocplt_index].
+        sh_offset];
     try{
         egph_relocdyn_index = GetSectionIndexbyName(RELOC_DYN);
     } catch(zkexcept::section_not_found_error& e){
@@ -47,14 +48,15 @@ void Hooks::ElfGotPltHook::LoadRelocations(void)
         RemoveMap();
         std::abort();
     }
-    egph_relocdyn = (Relocation *)&memmap[elf_shdr[egph_relocdyn_index].sh_offset];
+    egph_relocdyn = (relocation_t *)&memmap[elf_shdr[egph_relocdyn_index].
+        sh_offset];
 }
 
 void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
         void *base_addr)
 {
-    assert((egph_relocplt_index != 0 && egph_relocdyn_index != 0) && "relocation\
-            section indexes are not set");
+    assert((egph_relocplt_index != 0 && egph_relocdyn_index != 0) && 
+            "relocation section indexes are not set");
     h_fake_addr = fake_addr;
     try{
         h_symindex = GetDynSymbolIndexbyName(func_name);
@@ -65,31 +67,32 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
 
 #if defined __BITS_64__
     /* for position independant binaries */
-    for (int i = 0; i < elf_shdr[egph_relocplt_index].sh_size / sizeof(Relocation)
+    for (int i = 0; i < elf_shdr[egph_relocplt_index].sh_size / 
+            sizeof(relocation_t)
             ; i++){
         if(h_symindex == ELF_R_SYM(egph_relocplt[i].r_info)){
             /*
-             * convert void *base_addr to Addr *base_addr, add r_offset to it, 
-             * basically result will point to global offset table's entry for 
-             * func_name function's address (resolved or not).
-             * by dereferencing that value, we can get original load address of 
-             * func_name symbol/function
+             * convert void *base_addr to Addr *base_addr, add r_offset to 
+             * it, basically result will point to global offset table's 
+             * entry for func_name function's address (resolved or not).
+             * by dereferencing that value, we can get original load address
+             * of func_name symbol/function
              */ 
-            Addr *addr = ((Addr *)(((Addr)base_addr) + (Addr)egph_relocplt[i].
-                        r_offset));
+            addr_t *addr = ((addr_t *)(((addr_t)base_addr) + (addr_t)egph_relocplt[i]
+                        .r_offset));
             // NOTE h_origaddr = (void *)*addr;
-            *(addr) = (Addr)h_fake_addr;
+            *(addr) = (addr_t)h_fake_addr;
             break;
         }
     }
 
 #elif __BITS_32__
     /* for position dependant -m32 binaries */
-    for (int i = 0; i < elf_shdr[egph_relocdyn_index].sh_size / sizeof(Relocation);
-            i++){
+    for (int i = 0; i < elf_shdr[egph_relocdyn_index].sh_size / 
+            sizeof(Relocation); i++){
         if(h_symindex == ELF_R_SYM(egph_relocdyn[i].r_info)){
             /*
-             * now, since rel.dyn section could contain many entries for same 
+             * now, since rel.dyn section could contain many entries for same
              * symbol index, we should break just after the first match and 
              * we cant directly get the address like before because r_offset
              * contains the offset the linker should patch.
@@ -98,21 +101,25 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
             /*
              * position dependant code usually implements relocations with
              * R_XXX_PC32 reloaction type, which uses relative addresses.
-             * algorithm for resolving those type of relocations is S + A - P,
+             * algorithm for resolving those type of relocations is S + A - P
              * where S = symbols load address, A = addend, P = offset where 
-             * relocation applies. call occurs with result of above expression
-             * + rip.
+             * relocation applies. call occurs with result of above expressi
+             * - on + rip.
              */
             void *p = (void *)(((Addr *)base_addr) + egph_relocdyn[i].r_offset);
             /* getting S */
             if(h_orig_addr == 0){
-                /* origaddr =       | p |       +   | *p |     +  | addend | */
-                h_orig_addr = (void *)((Addr *)p + (*(Addr *)p) + sizeof(u32));
+                /* 
+                 * origaddr =       | p |       +   | *p |     +  | addend | 
+                 */
+                h_orig_addr = (void *)((Addr *)p + (*(Addr *)p) + 
+                        sizeof(u32));
 
                 // NOTE mprotect needed to be fixed
                 if(mprotect(p, sizeof(Addr), PROT_READ | PROT_WRITE) < 0)
                     throw zkexcept::permission_denied();
-                *(Addr *)p = (Addr)((Addr)fake_addr - ((Addr)p + sizeof(u32)));
+                *(Addr *)p = (Addr)((Addr)fake_addr - ((Addr)p + sizeof(u32))
+                        );
 
                 // NOTE another mprotect to restore permissions
             }
@@ -128,9 +135,10 @@ void Hooks::ElfGotPltHook::UnhookFuction()
     puts("hello");
 }
 
-Addr Hooks::ElfGotPltHook::GetModuleBaseAddress(const char *module_name) const
+addr_t Hooks::ElfGotPltHook::GetModuleBaseAddress(const char *module_name) 
+    const
 {
-    Addr address;
+    addr_t address;
     Process::Proc proc(0);
     try{
         address = proc.GetModuleBaseAddress(module_name); 
@@ -170,8 +178,8 @@ Hooks::ProcGotPltHook::~ProcGotPltHook()
 void Hooks::ProcGotPltHook::HookFunc(const char *func_name, void *fake_addr,
         void *base_addr)
 {
-    assert((elfhook->GetRelocDynIndex() != 0 && elfhook->GetRelocPltIndex() != 
-                0) && "relocation sections are not set");
+    assert((elfhook->GetRelocDynIndex() != 0 && elfhook->GetRelocPltIndex() 
+                != 0) && "relocation sections are not set");
     h_fake_addr = fake_addr;
     try{
         elfhook->SetSymbolIndex(elfhook->GetDynSymbolIndexbyName(func_name));
@@ -181,28 +189,30 @@ void Hooks::ProcGotPltHook::HookFunc(const char *func_name, void *fake_addr,
     }
 
 #ifdef __BITS_64__
-    Shdr *relocplt_section = elfhook->GetSectionbyIndex(elfhook->
+    shdr_t relocplt_section = elfhook->GetSectionbyIndex(elfhook->
             GetRelocPltIndex());
-    for(int i = 0; i < relocplt_section->sh_size / sizeof(Relocation); i++){
+    for(int i = 0; i < relocplt_section.sh_size / sizeof(relocation_t); i++){
         if(h_symindex == ELF_R_SYM(elfhook->GetRelocPlt()[i].r_info)){
 
 #elif __BITS_32__
-    Shdr *relocdyn_section = elfhook->GetSectionbyIndex(elfhook->
+    Shdr relocdyn_section = elfhook->GetSectionbyIndex(elfhook->
             GetRelocPltIndex());
-    for(int i = 0; i < relocdyn_section->sh_size / sizeof(Relocation); i++){
+    for(int i = 0; i < relocdyn_section.sh_size / sizeof(Relocation); i++){
         if(h_symindex == ELF_R_SYM(elfhook->GetRelocPlt()[i].r_info)){
 
 #endif
-                Addr *addr = ((Addr *)(((Addr)base_addr) + (Addr)elfhook->
+                addr_t *addr = ((addr_t *)(((addr_t)base_addr) + (addr_t)elfhook->
                         GetRelocPlt()[i].r_offset));
             if(ptrace(PTRACE_ATTACH, proc_id, nullptr, nullptr) < 0)
                 throw std::runtime_error("ptrace attach failed\n");
 
-            h_orig_addr = (void *)ptrace(PTRACE_PEEKTEXT, proc_id, addr,nullptr);
+            h_orig_addr = (void *)ptrace(PTRACE_PEEKTEXT, proc_id, addr,
+                    nullptr);
             if((long)h_orig_addr < 0)
                 throw std::runtime_error("ptrace peektext failed\n");
 
-            if(ptrace(PTRACE_POKETEXT, proc_id, addr, (void *)h_fake_addr)< 0)
+            if(ptrace(PTRACE_POKETEXT, proc_id, addr, (void *)h_fake_addr) <
+                    0)
                 throw std::runtime_error("ptrace poketext failed\n");
 
             if(ptrace(PTRACE_DETACH, proc_id, nullptr, nullptr) < 0)

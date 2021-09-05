@@ -29,8 +29,9 @@ namespace Hooks {
             int         egph_relocplt_index;
             int         egph_relocdyn_index;
             /* rel.plt section */
-            Relocation  *egph_relocdyn;
-            Relocation  *egph_relocplt;
+            relocation_t  *egph_relocdyn;
+            /* rel.dyn section */
+            relocation_t  *egph_relocplt;
             void LoadRelocations(void);
         public:
             ElfGotPltHook(const char *pathname);
@@ -62,17 +63,17 @@ namespace Hooks {
                 return egph_relocdyn_index;
             }
 
-            inline Relocation *GetRelocDyn(void) const
+            inline relocation_t *GetRelocDyn(void) const
             {
                 return egph_relocdyn;
             }
 
-            inline Relocation *GetRelocPlt(void) const
+            inline relocation_t *GetRelocPlt(void) const
             {
                 return egph_relocplt;
             }
 
-            Addr GetModuleBaseAddress(const char *module_name) const;
+            addr_t GetModuleBaseAddress(const char *module_name) const;
             void HookFunc(const char *func_name, void *fake_addr, void *
                     base_addr);
             void UnhookFuction();
