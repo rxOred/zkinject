@@ -9,13 +9,14 @@ namespace Injections {
             void    *tpi_payload;
             size_t  tpi_payload_sz;
             u8      tpi_magic[MAGIC_LEN];
-            Addr    tpi_org_entry;
-            Addr    tpi_fake_entry;
+            addr_t    tpi_org_entry;
+            addr_t    tpi_fake_entry;
         public:
             TextPaddingInfection(const char *target, u8 *magic);
             ~TextPaddingInfection();
             /* 
-             * re-alloc space for a new payload with a modified return address. 
+             * re-alloc space for a new payload with a modified return 
+             * addres. 
              * return address = tpi_org_entry
              */
             void SetPayload(u8 *payload, size_t payload_sz);

