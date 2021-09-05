@@ -83,8 +83,12 @@ void Binary::Elf::LoadFile(void)
     elf_ehdr = (Ehdr *)elf_memmap;
     assert(VerifyElf() != true && "File is not an Elf binary");
 
-    u8 *m = (u8 *)elf_ehdr;
+    u8 *m = (u8 *)elf_memmap;
+    assert(elf_ehdr->e_phoff < elf_size && 
+            "Anomaly detected in program header offset");
     elf_phdr = (Phdr *)&m[elf_ehdr->e_phoff];
+        assert(elf_ehdr->e_shoff < elf_size && 
+            "Anomaly detected in section header offset");
     elf_shdr = (Shdr *)&m[elf_ehdr->e_shoff];
 
     /* symbol table and string table */

@@ -30,21 +30,21 @@ namespace Binary{
             /* load address of elf */
             u64     elf_baseaddr;
             /* elf header */
-            Ehdr    *elf_ehdr;
+            ehdr_t    *elf_ehdr;
             /* elf program header table */
-            Phdr    *elf_phdr;
+            phdr_t    *elf_phdr;
             /* elf section header table */
-            Shdr    *elf_shdr;
+            shdr_t    *elf_shdr;
             /* elf symbol table */
-            Symtab  *elf_symtab;
+            symtab_t *elf_symtab;
             /* elf symbol string table */
-            Strtab  elf_strtab;
+            strtab_t  elf_strtab;
             /* elf dynamic symbol table optional */
-            Dynamic *elf_dynamic;
+            dynamic_t *elf_dynamic;
             /* elf dynamic symtab optional */
-            Symtab  *elf_dynsym;
+            symtab_t  *elf_dynsym;
             /* elf dynamic string table optional */
-            Strtab  elf_dynstr;
+            strtab_t  elf_dynstr;
 
             enum ELF_SHDR_TABLE : short{
                 ELF_SYMTAB_INDEX,
@@ -59,7 +59,7 @@ namespace Binary{
             int elf_indexes[ELF_INDEX_TABLE_SIZE];
         public:
             const char *elf_pathname;
-            size_t  elf_size;
+            size_t      elf_size;
 
             Elf();
             Elf(const char *pathname);
@@ -70,41 +70,41 @@ namespace Binary{
             bool VerifyElf(void) const;
             void RemoveMap(void);
 
+            virtual bool CheckElfType() const = 0;
+
             /* commonly used malware stuff */
             inline u16 GetElfType(void) const
             {
                 return elf_ehdr->e_type;
             }
-
-            /* assume elf files to be relocatable objects */
-            virtual bool CheckElfType() const
-            {
-                if(GetElfType() != ET_REL)
-                    return false;
-                return true;
-            }
-
-            inline Ehdr *GetElfHeader() const
+ 
+            inline ehdr_t *GetElfHeader() const
             {
                 return elf_ehdr;
             }
 
-            inline Shdr *GetSectionHeaderTable() const
+            inline shdr_t *GetSectionHeaderTable() const
             {
                 return elf_shdr;
             }
 
-            inline Phdr *GetProgramHeaderTable() const
+            inline phdr_t *GetProgramHeaderTable() const
             {
                 return elf_phdr;
             }
 
-            inline Shdr *GetSectionbyIndex(int index) const
+            /* we allow caller to modify those section headers */
+            inline shdr_t& GetSectionbyIndex(const int& index) const
             {
-                return &elf_shdr[index];
+                return elf_shdr[index];
             }
 
-            inline void SetEntryPoint(Addr fake_entry) const
+            inline phdr_t& GetSegmentByIndex(const int& index) const
+            {
+                return elf_phdr[index];
+            }
+
+            inline void SetEntryPoint(addr_t fake_entry) const
             {
                 elf_ehdr->e_entry = fake_entry;
             }
@@ -123,7 +123,7 @@ namespace Binary{
     /* reverse text padding infection */
 
     /* patch addresses and shit */
-    void PatchAddress(u8 *buffer, size_t len, Addr addr, u8 *magic);
+    void PatchAddress(u8 *buffer, size_t len, addr_t addr, u8 *magic);
 };
 
 #endif /* ZKELF_HH */
