@@ -5,6 +5,7 @@
 
 namespace zkexcept {
 
+
     struct some_weird_error : public std::runtime_error{
         some_weird_error(const char *what) : runtime_error(what) {}
         some_weird_error() : runtime_error("some weird error occured\n")
