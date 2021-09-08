@@ -73,6 +73,11 @@ namespace zkexcept {
         proc_file_error(const char *what) : runtime_error(what) {}
         proc_file_error() : runtime_error("proc file error\n") {}
     };
+
+    struct page_not_found_error : public std::runtime_error{
+        page_not_found_error(const char *what) : runtime_error(what) {}
+        page_not_found_error() : runtime_error("page not found\n") {}
+    };
 }
 
 #endif /* ZKEXCEPT_HH */
