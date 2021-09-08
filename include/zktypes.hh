@@ -1,6 +1,7 @@
 #ifndef ZKTYPES_HH
 #define ZKTYPES_HH
 
+#include <string>
 #include <cstdint>
 #include <elf.h>
 #include <sys/ptrace.h>
@@ -67,12 +68,42 @@ typedef char * strtab_t;
 * a type that represent start and end address of a 
 * memory mapped page 
 */ 
-typedef struct {
-    addr_t  page_saddr;
-    addr_t  page_eaddr;
-} page_t;
+class page_t {
+        addr_t      page_saddr;
+        addr_t      page_eaddr;
+        std::string page_permissions;
+        std::string page_name;
+
+    public:
+        page_t(addr_t saddr, addr_t eaddr, std::string permissions, std::string 
+                name)
+            :page_saddr(saddr), page_eaddr(eaddr), page_permissions(permissions),
+            page_name(name)
+        {}
+
+        inline addr_t GetPageStartAddress(void) const
+        {
+            return page_saddr;
+        }
+
+        inline addr_t GetPageEndAddress(void) const
+        {
+            return page_eaddr;
+        }
+
+        inline std::string GetPagePermissions(void) const
+        {
+            return page_permissions;
+        }
+
+        inline std::string GetPageName(void) const
+        {
+            return page_name;
+        }
+};
 
 typedef struct user_regs_struct registers_t;
+
 /* macros and struff */
 #define MAGIC_LEN   3   /* for magic numbers */
 
