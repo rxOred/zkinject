@@ -3,14 +3,14 @@
 
 #include "zktypes.hh"
 #include "zkexcept.hh"
+#include <cstddef>
+#include <memory>
 #include <sys/types.h>
-#include <assert.h>
-#include <cstdio>
+#include <vector>
+#include <fcntl.h>
 #include <fstream>
-#include <new>
-#include <sched.h>
 #include <string>
-#include <string.h>
+#include <sstream>
 
 #define PATH_LEN  64
 
@@ -18,32 +18,49 @@
 #define MEMPATH     "/proc/%d/mem"
 #define CMDLINE     "/proc/%d/cmdline"
 
-/* process information */
-namespace Process {
-    /* /proc file system */
-    class Proc {
-        protected:
-            int     proc_id;
-            Addr    proc_baseaddr;
-            void    SetMapPath(void);
-            void    SetMemPath(void);
-            void    SetCmdline(void);
-            void    SetBaseAddress(void);
-        public:
-            char    *proc_mappath;
-            char    *proc_mempath;
-            char    *proc_cmdline;
+/*
+ * following class stores information about a process.
+ * such information include, memory map, command line args
+ * and more
+ */
+#define MASK_ONLY_BASE_ADDR     (1 << 0)
+#define CHECK_MASK(x, y)        (x & y)
 
-            Proc(pid_t pid);
-            ~Proc();
-            void SetProcessId(pid_t pid);
-            pid_t GetProcessId(void) const;
-            Addr GetBaseAddress(void) const;
-            Addr GetModuleBaseAddress(const char *module_name);
+namespace Process {
+    class MemoryMap  {
+            u8 flag;
+            std::vector<std::shared_ptr<page_t>> mm_pageinfo;
+        public:
+            MemoryMap(pid_t pid);
+            addr_t GetModuleBaseAddress(const char *module_name) const;
+            addr_t GetModuleEndAddress(const char *module_name) const;
+            std::shared_ptr<page_t> GetModulePage(const char *module_name) const;
+
+            inline std::shared_ptr<page_t> GetBasePage(void) const
+            {
+                return  mm_pageinfo[0];
+            }
+
+            inline addr_t GetBaseAddress(void) const
+            {
+                return mm_pageinfo[0]->GetPageStartAddress();
+            }
+
+            inline addr_t GetBaseEndAddress(void) const
+            {
+                return mm_pageinfo[0]->GetPageEndAddress();
+            }
     };
-    /* ptrace help */
-    class Trace : public Proc {
+
+    class Ptrace {
         private:
+            addr_t p_baseaddr;
+
+        public:
+            void *ReadProcess(addr_t address, size_t buffer_sz) const;
+            void WriteProcess(void *buffer, addr_t address, size_t buffer_sz);
+            registers_t ReadRegisters(void) const;
+            void WriteRegisters(registers_t& registers) const;
     };
 };
 
