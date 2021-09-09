@@ -4,6 +4,7 @@
 #include <string>
 #include <cstdint>
 #include <elf.h>
+#include <sys/user.h>
 #include <sys/ptrace.h>
 #include <sys/types.h>
 
