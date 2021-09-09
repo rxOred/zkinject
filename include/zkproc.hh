@@ -28,10 +28,10 @@
 
 namespace Process {
     class MemoryMap  {
-            u8 flag;
+            u8 mm_flag;
             std::vector<std::shared_ptr<page_t>> mm_pageinfo;
         public:
-            MemoryMap(pid_t pid);
+            MemoryMap(pid_t pid, u8 flag);
             addr_t GetModuleBaseAddress(const char *module_name) const;
             addr_t GetModuleEndAddress(const char *module_name) const;
             std::shared_ptr<page_t> GetModulePage(const char *module_name) const;
@@ -55,7 +55,7 @@ namespace Process {
     class Ptrace {
         private:
             addr_t p_baseaddr;
-
+            
         public:
             void *ReadProcess(addr_t address, size_t buffer_sz) const;
             void WriteProcess(void *buffer, addr_t address, size_t buffer_sz);

@@ -1,7 +1,9 @@
 #include "zkproc.hh"
 #include "zkexcept.hh"
+#include <cstdint>
 
-Process::MemoryMap::MemoryMap(pid_t pid)
+Process::MemoryMap::MemoryMap(pid_t pid, u8 flag)
+    :mm_flag(flag)
 {
     char buffer[24];
     std::sprintf(buffer, MAPPATH, pid);
@@ -29,15 +31,21 @@ Process::MemoryMap::MemoryMap(pid_t pid)
                 permissions, name);
         mm_pageinfo.push_back(page);
 
-        if(CHECK_MASK(MASK_ONLY_BASE_ADDR, flag)) break;
+        if(CHECK_MASK(MASK_ONLY_BASE_ADDR, mm_flag)) break;
     }
 }
 
 std::shared_ptr<page_t> Process::MemoryMap::GetModulePage(const char *module_name) 
     const
 {
-
+    for(auto const& x : mm_pageinfo){
+        if(x->GetPageName().compare(module_name)){
+            return x;
+        }
+    }
+    throw zkexcept::page_not_found_error();
 }
+
 addr_t Process::MemoryMap::GetModuleBaseAddress(const char *module_name) const
 {
     for(auto const& x : mm_pageinfo){

@@ -80,16 +80,16 @@ void Binary::Elf::LoadFile(void)
     if(elf_memmap == MAP_FAILED)
         throw std::runtime_error("mmap failed\n");
 
-    elf_ehdr = (Ehdr *)elf_memmap;
+    elf_ehdr = (ehdr_t *)elf_memmap;
     assert(VerifyElf() != true && "File is not an Elf binary");
 
     u8 *m = (u8 *)elf_memmap;
     assert(elf_ehdr->e_phoff < elf_size && 
             "Anomaly detected in program header offset");
-    elf_phdr = (Phdr *)&m[elf_ehdr->e_phoff];
+    elf_phdr = (phdr_t *)&m[elf_ehdr->e_phoff];
         assert(elf_ehdr->e_shoff < elf_size && 
             "Anomaly detected in section header offset");
-    elf_shdr = (Shdr *)&m[elf_ehdr->e_shoff];
+    elf_shdr = (shdr_t *)&m[elf_ehdr->e_shoff];
 
     /* symbol table and string table */
     int symtab_index = 0;
@@ -101,9 +101,9 @@ void Binary::Elf::LoadFile(void)
         std::exit(1);
     }
     u8 *memmap = (u8 *)elf_memmap;
-    elf_symtab = (Symtab *)&memmap[elf_shdr[symtab_index].sh_offset];
+    elf_symtab = (symtab_t *)&memmap[elf_shdr[symtab_index].sh_offset];
     elf_indexes[ELF_STRTAB_INDEX] = elf_shdr[symtab_index].sh_link;
-    elf_strtab = (Strtab)&memmap[elf_shdr[elf_indexes[ELF_STRTAB_INDEX]].
+    elf_strtab = (strtab_t)&memmap[elf_shdr[elf_indexes[ELF_STRTAB_INDEX]].
         sh_offset];
 }
 
@@ -119,9 +119,9 @@ void Binary::Elf::LoadDynamicData(void)
     }
 
     u8 *memmap = (u8 *)elf_memmap;
-    elf_dynamic = (Dynamic *)&memmap[elf_shdr[dynamic_index].sh_offset];
+    elf_dynamic = (dynamic_t *)&memmap[elf_shdr[dynamic_index].sh_offset];
     elf_indexes[ELF_DYNSTR_INDEX] = elf_shdr[dynamic_index].sh_link;
-    elf_dynstr = (Strtab) &memmap[elf_shdr[elf_indexes[ELF_DYNSTR_INDEX]].
+    elf_dynstr = (strtab_t) &memmap[elf_shdr[elf_indexes[ELF_DYNSTR_INDEX]].
         sh_offset];
     int dynsym_index = 0;
     try{
@@ -132,7 +132,7 @@ void Binary::Elf::LoadDynamicData(void)
         std::exit(1);
     }
 
-    elf_dynsym = (Symtab *)&memmap[elf_shdr[dynsym_index].sh_offset];
+    elf_dynsym = (symtab_t *)&memmap[elf_shdr[dynsym_index].sh_offset];
 }
 
 bool Binary::Elf::VerifyElf(void) const
@@ -186,8 +186,8 @@ int Binary::Elf::GetSectionIndexbyName(const char *name) const
     if(elf_ehdr->e_shstrndx == 0)
         throw zkexcept::stripped_binary_error("section header string    \
                 table not found");
-    Strtab memmap = (Strtab)elf_memmap;
-    Strtab shstrtab = &memmap[elf_shdr[elf_ehdr->e_shstrndx].sh_offset];
+    strtab_t memmap = (strtab_t)elf_memmap;
+    strtab_t shstrtab = &memmap[elf_shdr[elf_ehdr->e_shstrndx].sh_offset];
     for(int i = 0; i< elf_ehdr->e_shnum; i++){
         if(strcmp(&shstrtab[elf_shdr[i].sh_name], name) == 0){
             return i;
@@ -200,7 +200,7 @@ int Binary::Elf::GetSymbolIndexbyName(const char *name)
     const
 {
     int index = elf_indexes[ELF_SYMTAB_INDEX];
-    for(int i = 0; i < elf_shdr[index].sh_size / sizeof(Symtab); i++){
+    for(int i = 0; i < elf_shdr[index].sh_size / sizeof(symtab_t); i++){
         if(strcmp(&elf_strtab[elf_symtab[i].st_name], name) == 0){
             return i;
         }
@@ -214,7 +214,7 @@ int Binary::Elf::GetDynSymbolIndexbyName(const char *name)
     assert(elf_indexes[ELF_DYNSYM_INDEX] != 0 && 
             "dynamic sections are not parsed\n");
     int index = elf_indexes[ELF_DYNSTR_INDEX];
-    for(int i = 0; i < elf_shdr[index].sh_size / sizeof(Symtab); i++){
+    for(int i = 0; i < elf_shdr[index].sh_size / sizeof(symtab_t); i++){
         if(strcmp(&elf_dynstr[elf_dynsym[i].st_name], name) == 0){
             return i;
         }
