@@ -28,14 +28,15 @@
 
 namespace Process {
 
-    enum PROCESS_INFO : short {
+    enum PROCESS_INFO : u16 {
         PTRACE_ATTACH_NOW       = 1 << 0,
         PTRACE_START_NOW        = 1 << 1,
-        MEMMAP_ONLY_BASE_ADDR   = 1 << 2
+        PTRACE_DISABLE_ASLR     = 1 << 2,
+        MEMMAP_ONLY_BASE_ADDR   = 1 << 3
     };
 
     class MemoryMap  {
-            u8 mm_flag;
+            u8 mm_flags = 0;
             std::vector<std::shared_ptr<page_t>> mm_pageinfo;
         public:
             MemoryMap(pid_t pid, u8 flag);
@@ -61,14 +62,27 @@ namespace Process {
 
     class Ptrace {
         private:
-            u8 p_flags;
-            /* NOTE make this unique */
-            std::shared_ptr<MemoryMap> p_memmap;
+            u8 p_flags = 0;
+
+            enum PROCESS_STATE : u8 {
+                PROCESS_NOT_STARTED     = 1 << 0,
+                PROCESS_STATE_EXITED    = 1 << 1,
+                PROCESS_STATE_SIGNALED  = 1 << 2,
+                PROCESS_STATE_STOPPED   = 1 << 3,
+                PROCESS_STATE_CONTINUED = 1 << 4,
+                PROCESS_STATE_FAILED    = 1 << 5
+            };
+
+            PROCESS_STATE p_state = PROCESS_NOT_STARTED;
+
+            std::shared_ptr<MemoryMap> p_memmap;            /* NOTE make this unique */
             pid_t p_pid;
             registers_t& p_registers;
         public:
-            Ptrace(const char *pathname, pid_t pid, registers_t& regs, u8 flags);
+            Ptrace(const char **pathname, pid_t pid, registers_t& regs, u8 flags);
             void AttachToPorcess(void) const;
+            void StartProcess(char **pathname);
+            PROCESS_STATE WaitForProcess(void) const;
             template<class T> T ReadProcess(addr_t address, size_t buffer_sz) const;
             void WriteProcess(void *buffer, addr_t address, size_t buffer_sz);
             registers_t ReadRegisters(void) const;

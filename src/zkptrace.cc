@@ -1,11 +1,18 @@
+#include "zkexcept.hh"
 #include "zkproc.hh"
+#include <cstdlib>
 #include <iostream>
 #include <cstddef>
 #include <memory>
 #include <new>
+#include <assert.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <sys/personality.h>
 #include <sys/ptrace.h>
 
-Process::Ptrace::Ptrace(const char *pathname , pid_t pid, registers_t& regs, u8 
+Process::Ptrace::Ptrace(const char **pathname , pid_t pid, registers_t& regs, u8 
         flags)
     :p_pid(pid), p_registers(regs), p_flags(flags)
 {
@@ -19,7 +26,7 @@ Process::Ptrace::Ptrace(const char *pathname , pid_t pid, registers_t& regs, u8
         p_memmap = std::make_shared<MemoryMap>(p_pid, 0);
     }else if(CHECK_FLAGS(PTRACE_START_NOW, p_flags) && pathname != nullptr){
         try{
-            StartProcess(pathname);
+            StartProcess((char **)pathname);
         } catch (zkexcept::ptrace_error& e){
             std::cerr << e.what() << std::endl;
             std::exit(1);
@@ -33,22 +40,43 @@ void Process::Ptrace::AttachToPorcess(void) const
     if(ptrace(PTRACE_ATTACH, p_pid, nullptr, nullptr) < 0)
         throw zkexcept::ptrace_error("ptrace attach failed\n");
 
-    u8 ret = WaitForProcess();
+    PROCESS_STATE ret = WaitForProcess();
     if(CHECK_FLAGS(ret, PROCESS_STATE_EXITED))
         throw zkexcept::ptrace_error();
 
     return;
 }
 
-pid_t Process::Ptrace::StartProcess(const char *pathname)
+void Process::Ptrace::StartProcess(char **pathname)
 {
-    pid_t pid = fork();
-    if(pid == -1)
+    p_pid = fork();
+    if(p_pid == -1)
         throw zkexcept::process_error("forking failed\n");
 
-    else if(pid == 0){
-        if(CHECK_FLAGS(flag, ))
+    else if(p_pid == 0){
+        if(CHECK_FLAGS(p_flags, PTRACE_DISABLE_ASLR))
+            personality(ADDR_NO_RANDOMIZE);
+        if(ptrace(PTRACE_TRACEME, 0, nullptr, nullptr) < 0)
+            throw zkexcept::ptrace_error("aslr disabling failed\n");
+        if(execvp(pathname[0], pathname) == -1)
+            std::exit(EXIT_FAILURE);
     }
+    else {
+        PROCESS_STATE ret = WaitForProcess();
+    }
+}
+
+Process::Ptrace::PROCESS_STATE Process::Ptrace::WaitForProcess(void) const
+{
+    assert(p_pid != 0 && "Process ID is not set");
+    int wstatus = 0;
+    waitpid(p_pid, &wstatus, 0);
+    if(WIFEXITED(wstatus)) return PROCESS_STATE_EXITED;
+    else if(WIFSTOPPED(wstatus)) return PROCESS_STATE_STOPPED;
+    else if(WIFSIGNALED(wstatus)) return PROCESS_STATE_SIGNALED;
+    else if(WIFCONTINUED(wstatus)) return PROCESS_STATE_CONTINUED;
+
+    return PROCESS_STATE_FAILED;
 }
 
 template<class T> T Process::Ptrace::ReadProcess(addr_t address, size_t buffer_sz) 
