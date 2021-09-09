@@ -18,7 +18,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#define PAGE_SIZE   sysconf(_SC_PAGESIZE);
+//#define PAGE_SIZE   sysconf(_SC_PAGESIZE);
 
 namespace Binary{
     /* class which defines important parts of an elf binary */
