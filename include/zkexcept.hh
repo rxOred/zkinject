@@ -4,8 +4,6 @@
 #include <stdexcept>
 
 namespace zkexcept {
-
-
     struct some_weird_error : public std::runtime_error{
         some_weird_error(const char *what) : runtime_error(what) {}
         some_weird_error() : runtime_error("some weird error occured\n")
@@ -77,6 +75,11 @@ namespace zkexcept {
     struct page_not_found_error : public std::runtime_error{
         page_not_found_error(const char *what) : runtime_error(what) {}
         page_not_found_error() : runtime_error("page not found\n") {}
+    };
+
+    struct ptrace_error : public std::runtime_error{
+        ptrace_error(const char *what) : runtime_error(what) {}
+        ptrace_error() : runtime_error("ptrace error\n") {}
     };
 }
 
