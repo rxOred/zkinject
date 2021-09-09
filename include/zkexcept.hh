@@ -81,6 +81,11 @@ namespace zkexcept {
         ptrace_error(const char *what) : runtime_error(what) {}
         ptrace_error() : runtime_error("ptrace error\n") {}
     };
+
+    struct process_error : public std::runtime_error{
+        process_error(const char *what) : runtime_error(what) {}
+        process_error() : runtime_error("process error\n") {}
+    };
 }
 
 #endif /* ZKEXCEPT_HH */
