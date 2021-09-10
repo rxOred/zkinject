@@ -5,6 +5,7 @@
 #include "zkproc.hh"
 #include "zktypes.hh"
 #include "zkexcept.hh"
+#include <memory>
 #include <sched.h>
 #include <optional>
 #include <sys/ptrace.h>
@@ -73,18 +74,17 @@ namespace Hooks {
                 return egph_relocplt;
             }
 
-            addr_t GetModuleBaseAddress(const char *module_name) const;
             void HookFunc(const char *func_name, void *fake_addr, void *
                     base_addr);
             void UnhookFuction();
     };
 
-    class ProcGotPltHook : public Hook, public Process::Proc{
+    class ProcGotPltHook : public Hook{
         private:
-            ElfGotPltHook *elfhook;
+            std::shared_ptr<Process::Ptrace> pgph_ptrace;   /* NOTE make these unique */
+            std::shared_ptr<ElfGotPltHook> pgph_elfhook;
         public:
             ProcGotPltHook(pid_t pid, const char *module_name);
-            ~ProcGotPltHook();
             void HookFunc(const char *func_name, void *fake_addr, void *
                     base_addr);
     };

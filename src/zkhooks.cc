@@ -2,6 +2,7 @@
 #include "zkexcept.hh"
 #include "zkproc.hh"
 #include "zktypes.hh"
+#include <memory>
 #include <sched.h>
 #include <stdexcept>
 #include <sys/ptrace.h>
@@ -156,19 +157,15 @@ addr_t Hooks::ElfGotPltHook::GetModuleBaseAddress(const char *module_name)
  *
  */
 Hooks::ProcGotPltHook::ProcGotPltHook(pid_t pid, const char *module_name)
-    :Process::Proc(pid), Hook()
+    :Hook()
 {
     try{
-        elfhook = new ElfGotPltHook(module_name);
+        pgph_ptrace = std::make_shared<Process::Ptrace>(pid, Process::PTRACE_START_NOW);
+        pgph_elfhook = std::make_shared<ElfGotPltHook>(module_name);
     } catch (zkexcept::not_dyn_error& e){
         std::cerr << e.what();
         std::exit(1);
     }
-}
-
-Hooks::ProcGotPltHook::~ProcGotPltHook()
-{
-    delete elfhook;
 }
 
 /*
