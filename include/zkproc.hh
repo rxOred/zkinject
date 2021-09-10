@@ -35,11 +35,20 @@
 
 namespace Process {
 
-    enum PROCESS_INFO : u16 {
+    enum PROCESS_INFO : u8 {
         PTRACE_ATTACH_NOW       = 1 << 0,
         PTRACE_START_NOW        = 1 << 1,
         PTRACE_DISABLE_ASLR     = 1 << 2,
         MEMMAP_ONLY_BASE_ADDR   = 1 << 3
+    };
+
+    enum PROCESS_STATE : u8 {
+        PROCESS_NOT_STARTED     = 1,
+        PROCESS_STATE_EXITED,
+        PROCESS_STATE_SIGNALED,
+        PROCESS_STATE_STOPPED,
+        PROCESS_STATE_CONTINUED,
+        PROCESS_STATE_FAILED
     };
 
     class MemoryMap  {
@@ -70,25 +79,20 @@ namespace Process {
     class Ptrace {
         private:
             u8 p_flags = 0;
-
-            enum PROCESS_STATE : u8 {
-                PROCESS_NOT_STARTED     = 1 << 0,
-                PROCESS_STATE_EXITED    = 1 << 1,
-                PROCESS_STATE_SIGNALED  = 1 << 2,
-                PROCESS_STATE_STOPPED   = 1 << 3,
-                PROCESS_STATE_CONTINUED = 1 << 4,
-                PROCESS_STATE_FAILED    = 1 << 5
-            };
-
             PROCESS_STATE p_state = PROCESS_NOT_STARTED;
-
             std::shared_ptr<MemoryMap> p_memmap;            /* NOTE make this unique */
             pid_t p_pid;
-            registers_t& p_registers;
+            registers_t p_registers;
         public:
-            Ptrace(const char **pathname, pid_t pid, registers_t& regs, u8 flags);
+            /* 
+             * pathname = filepath to elf binary which should be forkd and execed with 
+             * ptrace 
+             * pid = pid for a currently active process
+             * regs = register struct
+             */
+            Ptrace(const char **pathname, pid_t pid, u8 flags);
             void AttachToPorcess(void) const;
-            void StartProcess(char **pathname);
+            PROCESS_STATE StartProcess(char **pathname);
             PROCESS_STATE WaitForProcess(void) const;
             template<class T> T ReadProcess(addr_t address, size_t buffer_sz) const;
             void WriteProcess(void *buffer, addr_t address, size_t buffer_sz);

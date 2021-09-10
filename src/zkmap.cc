@@ -3,7 +3,7 @@
 #include <cstdint>
 
 Process::MemoryMap::MemoryMap(pid_t pid, u8 flag)
-    :mm_flag(flag)
+    :mm_flags(flag)
 {
     char buffer[24];
     std::sprintf(buffer, MAPPATH, pid);
@@ -31,7 +31,7 @@ Process::MemoryMap::MemoryMap(pid_t pid, u8 flag)
                 permissions, name);
         mm_pageinfo.push_back(page);
 
-        if(CHECK_FLAGS(MEMMAP_ONLY_BASE_ADDR, mm_flag)) break;
+        if(CHECK_FLAGS(MEMMAP_ONLY_BASE_ADDR, mm_flags)) break;
     }
 }
 
