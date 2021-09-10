@@ -3,6 +3,7 @@
 
 #include "zktypes.hh"
 #include "zkexcept.hh"
+#include <iostream>
 #include <cstddef>
 #include <memory>
 #include <sys/types.h>
@@ -11,6 +12,12 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <assert.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/wait.h>
+#include <sys/personality.h>
+#include <sys/ptrace.h>
 
 #define PATH_LEN  64
 

@@ -1,16 +1,4 @@
-#include "zkexcept.hh"
 #include "zkproc.hh"
-#include <cstdlib>
-#include <iostream>
-#include <cstddef>
-#include <memory>
-#include <new>
-#include <assert.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <sys/personality.h>
-#include <sys/ptrace.h>
 
 Process::Ptrace::Ptrace(const char **pathname , pid_t pid, registers_t& regs, u8 
         flags)
@@ -41,7 +29,7 @@ void Process::Ptrace::AttachToPorcess(void) const
         throw zkexcept::ptrace_error("ptrace attach failed\n");
 
     PROCESS_STATE ret = WaitForProcess();
-    if(CHECK_FLAGS(ret, PROCESS_STATE_EXITED))
+    if(ret == PROCESS_STATE_EXITED)
         throw zkexcept::ptrace_error();
 
     return;
@@ -63,6 +51,8 @@ void Process::Ptrace::StartProcess(char **pathname)
     }
     else {
         PROCESS_STATE ret = WaitForProcess();
+        if(ret == PROCESS_STATE_EXITED)
+
     }
 }
 
