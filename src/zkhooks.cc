@@ -140,11 +140,11 @@ addr_t Hooks::ElfGotPltHook::GetModuleBaseAddress(const char *module_name)
     const
 {
     addr_t address;
-    Process::Proc proc(0);
+    Process::MemoryMap _map(0, 0);
     try{
-        address = proc.GetModuleBaseAddress(module_name); 
-    }catch(zkexcept::proc_file_error& e){
-        std::cerr << e.what();
+        address = _map.GetModuleBaseAddress(module_name);
+    }catch (zkexcept::page_not_found_error& e){
+        std::cerr << e.what() << std::endl;
         std::exit(1);
     }
     return address;
@@ -157,10 +157,11 @@ addr_t Hooks::ElfGotPltHook::GetModuleBaseAddress(const char *module_name)
  *
  */
 Hooks::ProcGotPltHook::ProcGotPltHook(pid_t pid, const char *module_name)
-    :Hook()
+    :Hook(), pgph_pid(pid)
 {
     try{
-        pgph_ptrace = std::make_shared<Process::Ptrace>(pid, Process::PTRACE_START_NOW);
+        pgph_ptrace = std::make_shared<Process::Ptrace>(pid, 
+                Process::PTRACE_ATTACH_NOW);
         pgph_elfhook = std::make_shared<ElfGotPltHook>(module_name);
     } catch (zkexcept::not_dyn_error& e){
         std::cerr << e.what();
@@ -175,21 +176,22 @@ Hooks::ProcGotPltHook::ProcGotPltHook(pid_t pid, const char *module_name)
 void Hooks::ProcGotPltHook::HookFunc(const char *func_name, void *fake_addr,
         void *base_addr)
 {
-    assert((elfhook->GetRelocDynIndex() != 0 && elfhook->GetRelocPltIndex() 
-                != 0) && "relocation sections are not set");
+    assert((pgph_elfhook->GetRelocDynIndex() != 0 && pgph_elfhook->
+                GetRelocPltIndex() != 0) && "relocation sections are not set");
     h_fake_addr = fake_addr;
     try{
-        elfhook->SetSymbolIndex(elfhook->GetDynSymbolIndexbyName(func_name));
+        pgph_elfhook->SetSymbolIndex(pgph_elfhook->GetDynSymbolIndexbyName
+                (func_name));
     } catch (zkexcept::symbol_not_found_error& e){
         std::cerr << e.what();
         std::exit(1);
     }
 
 #ifdef __BITS_64__
-    shdr_t relocplt_section = elfhook->GetSectionbyIndex(elfhook->
+    shdr_t relocplt_section = pgph_elfhook->GetSectionbyIndex(pgph_elfhook->
             GetRelocPltIndex());
     for(int i = 0; i < relocplt_section.sh_size / sizeof(relocation_t); i++){
-        if(h_symindex == ELF_R_SYM(elfhook->GetRelocPlt()[i].r_info)){
+        if(h_symindex == ELF_R_SYM(pgph_elfhook->GetRelocPlt()[i].r_info)){
 
 #elif __BITS_32__
     Shdr relocdyn_section = elfhook->GetSectionbyIndex(elfhook->
@@ -198,23 +200,17 @@ void Hooks::ProcGotPltHook::HookFunc(const char *func_name, void *fake_addr,
         if(h_symindex == ELF_R_SYM(elfhook->GetRelocPlt()[i].r_info)){
 
 #endif
-                addr_t *addr = ((addr_t *)(((addr_t)base_addr) + (addr_t)elfhook->
-                        GetRelocPlt()[i].r_offset));
-            if(ptrace(PTRACE_ATTACH, proc_id, nullptr, nullptr) < 0)
-                throw std::runtime_error("ptrace attach failed\n");
-
-            h_orig_addr = (void *)ptrace(PTRACE_PEEKTEXT, proc_id, addr,
-                    nullptr);
-            if((long)h_orig_addr < 0)
-                throw std::runtime_error("ptrace peektext failed\n");
-
-            if(ptrace(PTRACE_POKETEXT, proc_id, addr, (void *)h_fake_addr) <
-                    0)
-                throw std::runtime_error("ptrace poketext failed\n");
-
-            if(ptrace(PTRACE_DETACH, proc_id, nullptr, nullptr) < 0)
-                throw std::runtime_error("ptrace detach failed\n");
-            break;
-        }
+            addr_t addr = (((addr_t)base_addr) + (addr_t)
+                            pgph_elfhook->GetRelocPlt()[i].r_offset);
+            try{
+                h_orig_addr = pgph_ptrace->ReadProcess<void *>(addr, sizeof(
+                        addr_t));
+                pgph_ptrace->WriteProcess((void *)h_fake_addr, addr, sizeof(
+                            addr_t));
+            } catch (zkexcept::ptrace_error& e){
+                std::cerr << e.what() << std::endl;
+                std::exit(1);
+            }
+       }
     }
 }

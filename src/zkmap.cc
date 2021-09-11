@@ -1,12 +1,16 @@
 #include "zkproc.hh"
 #include "zkexcept.hh"
 #include <cstdint>
+#include <cstdio>
 
 Process::MemoryMap::MemoryMap(pid_t pid, u8 flag)
     :mm_flags(flag)
 {
     char buffer[24];
-    std::sprintf(buffer, MAPPATH, pid);
+    if(pid != 0)
+        std::sprintf(buffer, MAPPATH, pid);
+    else
+        std::sprintf(buffer, "/proc/self/maps");
 
     std::ifstream fh(buffer);
     std::string line, saddr, eaddr, permissions, name;
