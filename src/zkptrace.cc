@@ -76,8 +76,8 @@ Process::PROCESS_STATE Process::Ptrace::WaitForProcess(void) const
     return PROCESS_STATE_FAILED;
 }
 
-template<class T> T Process::Ptrace::ReadProcess(addr_t address, size_t buffer_sz) 
-    const
+template<class T>
+T Process::Ptrace::ReadProcess(addr_t address, size_t buffer_sz) const
 {
     T buffer = (T) malloc(buffer_sz);
     if(buffer == nullptr)
