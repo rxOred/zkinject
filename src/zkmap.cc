@@ -31,6 +31,7 @@ Process::MemoryMap::MemoryMap(pid_t pid, u8 flag)
         std::sscanf(saddr.c_str(), "%lx", &_saddr);
         std::sscanf(eaddr.c_str(), "%lx", &_eaddr);
 
+        /* BUG */
         std::shared_ptr<page_t> page = std::make_shared<page_t>(_saddr, eaddr, 
                 permissions, name);
         mm_pageinfo.push_back(page);
