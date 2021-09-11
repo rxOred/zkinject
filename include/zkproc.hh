@@ -51,6 +51,40 @@ namespace Process {
         PROCESS_STATE_FAILED
     };
 
+    class page_t {
+            addr_t      page_saddr;
+            addr_t      page_eaddr;
+            std::string page_permissions;
+            std::string page_name;
+
+        public:
+            page_t(addr_t saddr, addr_t eaddr, std::string permissions, std::string 
+                    name)
+                :page_saddr(saddr), page_eaddr(eaddr), page_permissions(permissions),
+                page_name(name)
+            {}
+
+            inline addr_t GetPageStartAddress(void) const
+            {
+                return page_saddr;
+            }
+
+            inline addr_t GetPageEndAddress(void) const
+            {
+                return page_eaddr;
+            }
+
+            inline std::string GetPagePermissions(void) const
+            {
+                return page_permissions;
+            }
+
+            inline std::string GetPageName(void) const
+            {
+                return page_name;
+            }
+    };
+
     class MemoryMap  {
             u8 mm_flags = 0;
             std::vector<std::shared_ptr<page_t>> mm_pageinfo;
