@@ -74,20 +74,18 @@ namespace Hooks {
                 return egph_relocplt;
             }
             addr_t GetModuleBaseAddress(const char *module_name) const;
-            void HookFunc(const char *func_name, void *fake_addr, void *
-                    base_addr);
+            void HookFunc(const char *func_name, void *fake_addr, void *base_addr);
             void UnhookFuction();
     };
 
     class ProcGotPltHook : public Hook{
         private:
             pid_t pgph_pid;
-            std::shared_ptr<Process::Ptrace> pgph_ptrace;   /* NOTE make these unique */
-            std::shared_ptr<ElfGotPltHook> pgph_elfhook;
+            std::unique_ptr<Process::Ptrace> pgph_ptrace;
+            std::unique_ptr<ElfGotPltHook> pgph_elfhook;
         public:
             ProcGotPltHook(pid_t pid, const char *module_name);
-            void HookFunc(const char *func_name, void *fake_addr, void *
-                    base_addr);
+            void HookFunc(const char *func_name, void *fake_addr, void *base_addr);
     };
 }
 
