@@ -1,5 +1,6 @@
 #include "zkproc.hh"
 #include "zktypes.hh"
+#include <sys/ptrace.h>
 
 Process::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
     :p_pid(pid), p_flags(flags)
@@ -25,6 +26,13 @@ Process::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
     }
 }
 
+Process::Ptrace::~Ptrace()
+{
+    if(CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || CHECK_FLAGS(PTRACE_START_NOW,
+                p_flags))
+        DetachFromProcess();
+}
+
 void Process::Ptrace::AttachToPorcess(void) const
 {
     if(ptrace(PTRACE_ATTACH, p_pid, nullptr, nullptr) < 0)
@@ -34,6 +42,12 @@ void Process::Ptrace::AttachToPorcess(void) const
     if(ret == PROCESS_STATE_EXITED)
         throw zkexcept::ptrace_error();
     return;
+}
+
+void Process::Ptrace::DetachFromProcess(void) const
+{
+    if(ptrace(PTRACE_DETACH, p_pid, nullptr, nullptr) < 0)
+        throw zkexcept::ptrace_error("ptrace detach failed\n");
 }
 
 Process::PROCESS_STATE Process::Ptrace::StartProcess(char **pathname)
@@ -79,6 +93,10 @@ Process::PROCESS_STATE Process::Ptrace::WaitForProcess(void) const
 template<class T>
 T Process::Ptrace::ReadProcess(addr_t address, size_t buffer_sz) const
 {
+    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || !CHECK_FLAGS(PTRACE_START_NOW, 
+                p_flags))
+        AttachToPorcess();
+
     T buffer = (T) malloc(buffer_sz);
     if(buffer == nullptr)
         throw std::bad_alloc();
@@ -97,6 +115,11 @@ T Process::Ptrace::ReadProcess(addr_t address, size_t buffer_sz) const
 
 void Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t buffer_sz)
 {
+
+    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || !CHECK_FLAGS(PTRACE_START_NOW, 
+                p_flags))
+        AttachToPorcess();
+
     u64 *src = (u64 *)buffer;
     addr_t addr = address;
     for (int i = 0; i < (buffer_sz /  sizeof(addr_t)); addr+=sizeof(addr_t), 
@@ -110,6 +133,10 @@ void Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t buffer_s
 
 registers_t Process::Ptrace::ReadRegisters(void) const
 {
+    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || !CHECK_FLAGS(PTRACE_START_NOW, 
+                p_flags))
+        AttachToPorcess();
+
     if(ptrace(PTRACE_GETREGS, p_pid, nullptr, p_registers)  < 0)
         throw zkexcept::ptrace_error();
     return p_registers;
@@ -117,6 +144,11 @@ registers_t Process::Ptrace::ReadRegisters(void) const
 
 void Process::Ptrace::WriteRegisters(registers_t& registers) const
 {
+    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || !CHECK_FLAGS(PTRACE_START_NOW, 
+                p_flags))
+        AttachToPorcess();
+
+
     if(ptrace(PTRACE_SETREGS, p_pid, nullptr, p_registers) < 0)
         throw zkexcept::ptrace_error();
 }

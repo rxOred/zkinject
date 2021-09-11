@@ -1,11 +1,4 @@
 #include "zkhooks.hh"
-#include "zkexcept.hh"
-#include "zkproc.hh"
-#include "zktypes.hh"
-#include <memory>
-#include <sched.h>
-#include <stdexcept>
-#include <sys/ptrace.h>
 
 Hooks::Hook::Hook()
     :h_symindex(0), h_orig_addr(nullptr), h_fake_addr(nullptr)
@@ -160,8 +153,8 @@ Hooks::ProcGotPltHook::ProcGotPltHook(pid_t pid, const char *module_name)
     :Hook(), pgph_pid(pid)
 {
     try{
-        pgph_ptrace = std::make_shared<Process::Ptrace>(pid, 
-                Process::PTRACE_ATTACH_NOW);
+        pgph_ptrace = std::make_shared<Process::Ptrace>(nullptr, pid, Process::
+                PTRACE_ATTACH_NOW);
         pgph_elfhook = std::make_shared<ElfGotPltHook>(module_name);
     } catch (zkexcept::not_dyn_error& e){
         std::cerr << e.what();
