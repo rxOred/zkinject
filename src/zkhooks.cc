@@ -153,9 +153,9 @@ Hooks::ProcGotPltHook::ProcGotPltHook(pid_t pid, const char *module_name)
     :Hook(), pgph_pid(pid)
 {
     try{
-        pgph_ptrace = std::make_shared<Process::Ptrace>(nullptr, pid, Process::
+        pgph_ptrace = std::make_unique<Process::Ptrace>(nullptr, pid, Process::
                 PTRACE_ATTACH_NOW);
-        pgph_elfhook = std::make_shared<ElfGotPltHook>(module_name);
+        pgph_elfhook = std::make_unique<ElfGotPltHook>(module_name);
     } catch (zkexcept::not_dyn_error& e){
         std::cerr << e.what();
         std::exit(1);
