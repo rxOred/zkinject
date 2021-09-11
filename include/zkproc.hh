@@ -91,7 +91,9 @@ namespace Process {
              * regs = register struct
              */
             Ptrace(const char **pathname, pid_t pid, u8 flags);
+            ~Ptrace();
             void AttachToPorcess(void) const;
+            void DetachFromProcess(void) const;
             PROCESS_STATE StartProcess(char **pathname);
             PROCESS_STATE WaitForProcess(void) const;
             template<class T> T ReadProcess(addr_t address, size_t buffer_sz) const;
