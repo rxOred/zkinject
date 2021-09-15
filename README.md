@@ -1,7 +1,7 @@
 ### zkinject
 
 zkinject or libzkinject is a C++ library, provides a rich interface to work with elf binaries, proc file system and ptrace system call.
-It also provides APIs to write elf infectors and hooks. It abstracts out complexity of elf infection techniques, therefor zkinject is a great resource for anyone interest in malware/ malware analysis and reverse engineering.
+It also provides APIs to write elf infectors and hooks. It abstracts out complexity of elf infection techniques, therefore zkinject is a great resource for anyone interest in malware/ malware analysis and reverse engineering.
 
 Currently it provides (some are incomplete) APIs for Silvio text padding infection and userland hooks
 
