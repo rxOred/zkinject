@@ -8,5 +8,5 @@ class Go : public Binary::Elf{
         
     public:
         Go(const char *pathname);
-        Shdr *Getgopclntab(void) const;
+        shdr_t *Getgopclntab(void) const;
 };

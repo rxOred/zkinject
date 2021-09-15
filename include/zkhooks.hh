@@ -16,6 +16,9 @@ namespace Hooks {
         /* all basic things related to hooking */
         protected:
             int     h_symindex;
+            /* address of got */
+            addr_t  *h_addr;
+            /* original address at h_addr */
             void    *h_orig_addr;
             void    *h_fake_addr;
         public:
@@ -84,7 +87,12 @@ namespace Hooks {
             std::unique_ptr<Process::Ptrace> pgph_ptrace;
             std::unique_ptr<ElfGotPltHook> pgph_elfhook;
         public:
-            ProcGotPltHook(pid_t pid, const char *module_name);
+            /* 
+             * pid is for ptrace, pathname is to parse the indicated binary 
+             * using elf interface and retrieve relocation, dynamic and plt
+             * section information
+             */
+            ProcGotPltHook(pid_t pid, const char *pathname);
             void HookFunc(const char *func_name, void *fake_addr, void *base_addr);
     };
 }
