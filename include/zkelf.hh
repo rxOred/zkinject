@@ -73,25 +73,13 @@ namespace Binary{
             virtual bool CheckElfType() const = 0;
 
             /* commonly used malware stuff */
-            inline u16 GetElfType(void) const
-            {
-                return elf_ehdr->e_type;
-            }
+            inline u16 GetElfType(void) const { return elf_ehdr->e_type; }
  
-            inline ehdr_t *GetElfHeader() const
-            {
-                return elf_ehdr;
-            }
+            inline ehdr_t *GetElfHeader() const { return elf_ehdr; }
 
-            inline shdr_t *GetSectionHeaderTable() const
-            {
-                return elf_shdr;
-            }
+            inline shdr_t *GetSectionHeaderTable() const { return elf_shdr; }
 
-            inline phdr_t *GetProgramHeaderTable() const
-            {
-                return elf_phdr;
-            }
+            inline phdr_t *GetProgramHeaderTable() const { return elf_phdr; }
 
             /* we allow caller to modify those section headers */
             inline shdr_t& GetSectionbyIndex(const int& index) const

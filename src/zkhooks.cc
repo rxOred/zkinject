@@ -1,4 +1,5 @@
 #include "zkhooks.hh"
+#include "zktypes.hh"
 
 Hooks::Hook::Hook()
     :h_symindex(0), h_orig_addr(nullptr), h_fake_addr(nullptr)
@@ -13,10 +14,12 @@ Hooks::Hook::Hook()
 Hooks::ElfGotPltHook::ElfGotPltHook(const char *pathname)
     :Binary::Elf(pathname), egph_relocplt_index(0), egph_relocplt(nullptr) 
 {
+    /* There is no GOT / PLTs in statically linked binaries */
     if(CheckElfType()){
         LoadDynamicData();
         LoadRelocations();
-    }
+    } else
+        throw zkexcept::not_dyn_error();
 }
 
 void Hooks::ElfGotPltHook::LoadRelocations(void)
@@ -61,9 +64,8 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
 
 #if defined __BITS_64__
     /* for position independant binaries */
-    for (int i = 0; i < elf_shdr[egph_relocplt_index].sh_size / 
-            sizeof(relocation_t)
-            ; i++){
+    for (int i = 0; i < elf_shdr[egph_relocplt_index].sh_size / sizeof(relocation_t); 
+            i++){
         if(h_symindex == ELF_R_SYM(egph_relocplt[i].r_info)){
             /*
              * convert void *base_addr to Addr *base_addr, add r_offset to 
@@ -72,15 +74,15 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
              * by dereferencing that value, we can get original load address
              * of func_name symbol/function
              */ 
-            addr_t *addr = ((addr_t *)(((addr_t)base_addr) + (addr_t)egph_relocplt[i]
+            h_addr = ((addr_t *)(((addr_t)base_addr) + (addr_t)egph_relocplt[i]
                         .r_offset));
             // NOTE h_origaddr = (void *)*addr;
-            *(addr) = (addr_t)h_fake_addr;
+            *(h_addr) = (addr_t)h_fake_addr;
             break;
         }
     }
 
-#elif __BITS_32__
+#elif __BITS_32__ // NOTE change this to depend on file type
     /* for position dependant -m32 binaries */
     for (int i = 0; i < elf_shdr[egph_relocdyn_index].sh_size / 
             sizeof(Relocation); i++){
@@ -125,8 +127,24 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
 
 void Hooks::ElfGotPltHook::UnhookFuction()
 {
-    //make this thing usefull
-    puts("hello");
+    assert(egph_symbol_index != 0 && egph_relocplt_index != 0 && egph_relocdyn_index
+            != 0 && "function may not be hooked");
+#if defined __BITS64__
+    for (int i = 0; i < elf_shdr[egph_relocplt_index].sh_size / sizeof(relocation_t);
+            i++){
+        if(h_symindex == ELF_R_SYM(egph_relocplt[i].r_info)){
+            *(h_addr) = h_orig_addr
+        }
+    }
+#elif __BITS32__
+    for (int i = 0; i < elf_shdr[egph_relocdyn_index].sh_size / sizeof(relocation_t);
+            i++){
+        if(h_symindex == ELF_R_SYM(egph_relocdyn[i].r_info)){
+            // NOTE big chunk of code here
+
+        }
+    }
+#endif
 }
 
 addr_t Hooks::ElfGotPltHook::GetModuleBaseAddress(const char *module_name) 
@@ -186,7 +204,7 @@ void Hooks::ProcGotPltHook::HookFunc(const char *func_name, void *fake_addr,
     for(int i = 0; i < relocplt_section.sh_size / sizeof(relocation_t); i++){
         if(h_symindex == ELF_R_SYM(pgph_elfhook->GetRelocPlt()[i].r_info)){
 
-#elif __BITS_32__
+#elif __BITS_32__ // NOTE for position dependant binaries
     Shdr relocdyn_section = elfhook->GetSectionbyIndex(elfhook->
             GetRelocPltIndex());
     for(int i = 0; i < relocdyn_section.sh_size / sizeof(Relocation); i++){
@@ -207,3 +225,4 @@ void Hooks::ProcGotPltHook::HookFunc(const char *func_name, void *fake_addr,
        }
     }
 }
+
