@@ -11,21 +11,21 @@
 #include <sys/ptrace.h>
 
 namespace Hooks {
-
+    template<class T>
     class Hook{
         /* all basic things related to hooking */
         protected:
-            int     h_symindex;
+            int h_symindex;
             /* address of got */
-            addr_t  *h_addr;
+            T   *h_addr;
             /* original address at h_addr */
-            void    *h_orig_addr;
-            void    *h_fake_addr;
+            T   h_orig_addr;
+            T   h_fake_addr;
         public:
             Hook();
     };
 
-    class ElfGotPltHook : public Hook, public Binary::Elf{
+    class ElfGotPltHook : public Hook<addr_t>, public Binary::Elf{
         private:
             /* dynsym index of the symbol */
             int         egph_symbol_index;
@@ -81,7 +81,7 @@ namespace Hooks {
             void UnhookFuction();
     };
 
-    class ProcGotPltHook : public Hook{
+    class ProcGotPltHook : public Hook<addr_t>{
         private:
             pid_t pgph_pid;
             std::unique_ptr<Process::Ptrace> pgph_ptrace;
@@ -94,6 +94,7 @@ namespace Hooks {
              */
             ProcGotPltHook(pid_t pid, const char *pathname);
             void HookFunc(const char *func_name, void *fake_addr, void *base_addr);
+            void UnhookFunction() const;
     };
 }
 

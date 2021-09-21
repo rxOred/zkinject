@@ -126,11 +126,22 @@ namespace Process {
              */
             Ptrace(const char **pathname, pid_t pid, u8 flags);
             ~Ptrace();
+
+            /* attach and detach from a process */
             void AttachToPorcess(void) const;
             void DetachFromProcess(void) const;
+
+            /* Start the proces */
             PROCESS_STATE StartProcess(char **pathname);
+
+            /* wait until process stops */
             PROCESS_STATE WaitForProcess(void) const;
-            template<class T> T ReadProcess(addr_t address, size_t buffer_sz) const;
+
+            /* 
+             * read from process to an allocated buffer starting at address, 
+             * sizeof buffer_sz len.
+             */
+            void *ReadProcess(void *buffer, addr_t address, size_t buffer_sz) const;
             void WriteProcess(void *buffer, addr_t address, size_t buffer_sz);
             registers_t ReadRegisters(void) const;
             void WriteRegisters(registers_t& registers) const;
