@@ -90,26 +90,23 @@ Process::PROCESS_STATE Process::Ptrace::WaitForProcess(void) const
     return PROCESS_STATE_FAILED;
 }
 
-template<class T>
-T Process::Ptrace::ReadProcess(addr_t address, size_t buffer_sz) const
+void *Process::Ptrace::ReadProcess(void *buffer, addr_t address, size_t buffer_sz) const
 {
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || !CHECK_FLAGS(PTRACE_START_NOW, 
                 p_flags))
         AttachToPorcess();
 
-    T buffer = (T) malloc(buffer_sz);
-    if(buffer == nullptr)
-        throw std::bad_alloc();
-
-    memset(buffer, 0, buffer_sz);
     addr_t addr = address;
-    T src = buffer;
+    u8 *dst = (u8 *)buffer;
+    addr_t data;
     for (int i = 0; i < (buffer_sz /  sizeof(addr_t)); addr+=sizeof(addr_t),
-            src+=sizeof(addr_t)){
-        src = ptrace(PTRACE_PEEKTEXT, p_pid, addr, nullptr);
-        if(src < 0)
+            dst+=sizeof(addr_t)){
+        data = ptrace(PTRACE_PEEKTEXT, p_pid, addr, nullptr);
+        if(data < 0)
             throw zkexcept::ptrace_error();
+        *(addr_t *)dst = data;
     }
+    DetachFromProcess();
     return buffer;
 }
 
@@ -120,14 +117,15 @@ void Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t buffer_s
                 p_flags))
         AttachToPorcess();
 
-    u64 *src = (u64 *)buffer;
+    u8 *src = (u8 *)buffer;
     addr_t addr = address;
-    for (int i = 0; i < (buffer_sz /  sizeof(addr_t)); addr+=sizeof(addr_t), 
-            src+=sizeof(addr_t)){
+    for (int i = 0; i < (buffer_sz / sizeof(addr_t)); addr+=sizeof(addr_t), src+=
+            sizeof(addr_t)){
         if(ptrace(PTRACE_POKETEXT, p_pid, addr, src)  < 0){
             throw zkexcept::ptrace_error();
         }
     }
+    DetachFromProcess();
     return;
 }
 

@@ -1,5 +1,7 @@
 #include "zkhooks.hh"
 #include "zktypes.hh"
+#include <new>
+#include <zkexcept.hh>
 
 Hooks::Hook::Hook()
     :h_symindex(0), h_orig_addr(nullptr), h_fake_addr(nullptr)
@@ -189,7 +191,7 @@ void Hooks::ProcGotPltHook::HookFunc(const char *func_name, void *fake_addr,
 {
     assert((pgph_elfhook->GetRelocDynIndex() != 0 && pgph_elfhook->
                 GetRelocPltIndex() != 0) && "relocation sections are not set");
-    h_fake_addr = fake_addr;
+    h_fake_addr = (addr_t)fake_addr;
     try{
         pgph_elfhook->SetSymbolIndex(pgph_elfhook->GetDynSymbolIndexbyName
                 (func_name));
@@ -211,13 +213,13 @@ void Hooks::ProcGotPltHook::HookFunc(const char *func_name, void *fake_addr,
         if(h_symindex == ELF_R_SYM(elfhook->GetRelocPlt()[i].r_info)){
 
 #endif
-            addr_t addr = (((addr_t)base_addr) + (addr_t)
-                            pgph_elfhook->GetRelocPlt()[i].r_offset);
+            h_addr = ((addr_t *)((addr_t)base_addr) + (addr_t)pgph_elfhook->
+                    GetRelocPlt()[i].r_offset);
             try{
-                h_orig_addr = pgph_ptrace->ReadProcess<void *>(addr, sizeof(
-                        addr_t));
-                pgph_ptrace->WriteProcess((void *)h_fake_addr, addr, sizeof(
-                            addr_t));
+                h_orig_addr = pgph_ptrace->ReadProcess<addr_t>((addr_t)h_addr, 
+                        sizeof(addr_t));
+                pgph_ptrace->WriteProcess((void *)h_fake_addr, (addr_t)h_addr, 
+                        sizeof(addr_t));
             } catch (zkexcept::ptrace_error& e){
                 std::cerr << e.what() << std::endl;
                 std::exit(1);
@@ -226,3 +228,21 @@ void Hooks::ProcGotPltHook::HookFunc(const char *func_name, void *fake_addr,
     }
 }
 
+void Hooks::ProcGotPltHook::UnhookFuction() const
+{
+    assert((pgph_elfhook->GetRelocDynIndex() != 0 && pgph_elfhook->GetRelocPltIndex
+                () != 0) && "relocation sections are not set");
+    try{
+        void *buffer = malloc(sizeof(addr_t));
+        if(buffer == nullptr)
+            throw std::bad_alloc();
+        if (h_fake_addr == (addr_t)pgph_ptrace->ReadProcess(buffer, (addr_t)h_addr, 
+                    sizeof(addr_t))){
+            pgph_ptrace->WriteProcess((void *)h_orig_addr, (addr_t)h_addr, sizeof
+                    (addr_t));
+        }
+    } catch (zkexcept::ptrace_error& e) {
+        std::cerr << e.what() << std::endl;
+        std::exit(1);
+    }
+}
