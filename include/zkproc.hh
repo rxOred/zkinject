@@ -141,7 +141,7 @@ namespace Process {
              * read from process to an allocated buffer starting at address, 
              * sizeof buffer_sz len.
              */
-            void *ReadProcess(void *buffer, addr_t address, size_t buffer_sz) const;
+            void ReadProcess(void *buffer, addr_t address, size_t buffer_sz) const;
             void WriteProcess(void *buffer, addr_t address, size_t buffer_sz);
             registers_t ReadRegisters(void) const;
             void WriteRegisters(registers_t& registers) const;
