@@ -90,7 +90,7 @@ Process::PROCESS_STATE Process::Ptrace::WaitForProcess(void) const
     return PROCESS_STATE_FAILED;
 }
 
-void *Process::Ptrace::ReadProcess(void *buffer, addr_t address, size_t buffer_sz) const
+void Process::Ptrace::ReadProcess(void *buffer, addr_t address, size_t buffer_sz) const
 {
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || !CHECK_FLAGS(PTRACE_START_NOW, 
                 p_flags))
@@ -106,8 +106,9 @@ void *Process::Ptrace::ReadProcess(void *buffer, addr_t address, size_t buffer_s
             throw zkexcept::ptrace_error();
         *(addr_t *)dst = data;
     }
-    DetachFromProcess();
-    return buffer;
+    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || !CHECK_FLAGS(PTRACE_START_NOW, p_flags
+                ))
+        DetachFromProcess();
 }
 
 void Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t buffer_sz)
