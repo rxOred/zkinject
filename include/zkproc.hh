@@ -114,7 +114,7 @@ namespace Process {
         private:
             u8 p_flags = 0;
             PROCESS_STATE p_state = PROCESS_NOT_STARTED;
-            std::shared_ptr<MemoryMap> p_memmap;            /* NOTE make this unique */
+            std::unique_ptr<MemoryMap> p_memmap;
             pid_t p_pid;
             registers_t p_registers;
         public:
