@@ -114,7 +114,7 @@ namespace Process {
         private:
             u8 p_flags = 0;
             PROCESS_STATE p_state = PROCESS_NOT_STARTED;
-            std::unique_ptr<MemoryMap> p_memmap;
+            std::shared_ptr<MemoryMap> p_memmap;
             pid_t p_pid;
             registers_t p_registers;
         public:
@@ -126,6 +126,11 @@ namespace Process {
              */
             Ptrace(const char **pathname, pid_t pid, u8 flags);
             ~Ptrace();
+
+            inline std::shared_ptr<MemoryMap> GetMemoryMap(void) const 
+            {
+                return p_memmap;
+            }
 
             /* attach and detach from a process */
             void AttachToPorcess(void) const;

@@ -92,9 +92,19 @@ namespace Hooks {
              * using elf interface and retrieve relocation, dynamic and plt
              * section information
              */
-            ProcGotPltHook(pid_t pid, const char *pathname);
+            ProcGotPltHook(const char *pathname, pid_t pid);
             void HookFunc(const char *func_name, void *fake_addr, void *base_addr);
             void UnhookFunction() const;
+
+            /* Get Process's base address */
+            inline addr_t GetProcessBaseAddress(void) const
+            {
+                return pgph_ptrace->GetMemoryMap()->GetBaseAddress();
+            }
+
+            inline addr_t GetFunctionAddress(void) const {
+
+            }
     };
 }
 
