@@ -172,11 +172,11 @@ addr_t Hooks::ElfGotPltHook::GetModuleBaseAddress(const char *module_name)
  */
 
 /* pid is for ptrace, pathname is to parse the binary */
-Hooks::ProcGotPltHook::ProcGotPltHook(pid_t pid, const char *pathname)
+Hooks::ProcGotPltHook::ProcGotPltHook(const char *pathname, pid_t pid)
     :Hook(), pgph_pid(pid)
 {
     try{
-        pgph_ptrace = std::make_unique<Process::Ptrace>(nullptr, pid, Process::
+        pgph_ptrace = std::make_unique<Process::Ptrace>(&pathname, pid, Process::
                 PTRACE_ATTACH_NOW);
         pgph_elfhook = std::make_unique<ElfGotPltHook>(pathname);
     } catch (zkexcept::not_dyn_error& e){

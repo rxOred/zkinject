@@ -12,7 +12,7 @@ Process::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
             std::cerr << e.what() << std::endl;
             std::exit(1);
         }
-        p_memmap = std::make_unique<MemoryMap>(p_pid, 0);
+        p_memmap = std::make_shared<MemoryMap>(p_pid, 0);
     }else if(CHECK_FLAGS(PTRACE_START_NOW, p_flags) && pathname != nullptr){
         try{
             PROCESS_STATE ret = StartProcess((char **)pathname);
@@ -22,7 +22,8 @@ Process::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
             std::cerr << e.what() << std::endl;
             std::exit(1);
         }
-        p_memmap = std::make_unique<MemoryMap>(p_pid, 0);
+        /* StartProcess set p_pid so we can get the memory map of the process */
+        p_memmap = std::make_shared<MemoryMap>(p_pid, 0);
     }
 }
 
