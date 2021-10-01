@@ -28,14 +28,14 @@ namespace Hooks {
     class ElfGotPltHook : public Hook<addr_t>, public Binary::Elf{
         private:
             /* dynsym index of the symbol */
-            int         egph_symbol_index;
+            int             egph_symbol_index;
             /* section header table index of rel.plt and rel.dyn */
-            int         egph_relocplt_index;
-            int         egph_relocdyn_index;
+            int             egph_relocplt_index;
+            int             egph_relocdyn_index;
             /* rel.plt section */
-            relocation_t  *egph_relocdyn;
+            relocation_t    *egph_relocdyn;
             /* rel.dyn section */
-            relocation_t  *egph_relocplt;
+            relocation_t    *egph_relocplt;
             void LoadRelocations(void);
         public:
             ElfGotPltHook(const char *pathname);

@@ -27,29 +27,28 @@ Hooks::ElfGotPltHook::ElfGotPltHook(const char *pathname)
 
 void Hooks::ElfGotPltHook::LoadRelocations(void)
 {
+    u8 *memmap = (u8 *)elf_memmap;
+#ifdef __BITS_64__
     try{
         egph_relocplt_index = GetSectionIndexbyName(RELOC_PLT);
     } catch(zkexcept::section_not_found_error& e){
-        egph_relocplt_index = GetSectionIndexbyAttr(RELOC_TYPE, SHF_ALLOC | 
-                SHF_INFO_LINK);
-        /* NOTE find out what is `I` in readelf -S output for rela.plt in */
         std::cerr << e.what();
         RemoveMap();
         std::abort();
     }
-    u8 *memmap = (u8 *)elf_memmap;
     egph_relocplt = (relocation_t *)&memmap[elf_shdr[egph_relocplt_index].
         sh_offset];
+#elif __BITS_32__
     try{
         egph_relocdyn_index = GetSectionIndexbyName(RELOC_DYN);
     } catch(zkexcept::section_not_found_error& e){
-        egph_relocplt_index = GetSectionIndexbyAttr(RELOC_TYPE, SHF_ALLOC);
         std::cerr << e.what();
         RemoveMap();
         std::abort();
     }
     egph_relocdyn = (relocation_t *)&memmap[elf_shdr[egph_relocdyn_index].
         sh_offset];
+#endif
 }
 
 void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
@@ -150,6 +149,8 @@ void Hooks::ElfGotPltHook::UnhookFuction()
 #endif
 }
 
+
+// NOTE this gets addresses of itself only 
 addr_t Hooks::ElfGotPltHook::GetModuleBaseAddress(const char *module_name) 
     const
 {
@@ -176,9 +177,16 @@ Hooks::ProcGotPltHook::ProcGotPltHook(const char *pathname, pid_t pid)
     :Hook(), pgph_pid(pid)
 {
     try{
-        pgph_ptrace = std::make_unique<Process::Ptrace>(&pathname, pid, Process::
-                PTRACE_ATTACH_NOW);
-        pgph_elfhook = std::make_unique<ElfGotPltHook>(pathname);
+        if (pathname != nullptr) {
+            pgph_elfhook = std::make_unique<ElfGotPltHook>(pathname);
+            pgph_ptrace = std::make_unique<Process::Ptrace>(&pathname, pid,
+                    Process::PTRACE_ATTACH_NOW);
+        }
+        else if (pid != 0 && pathname == nullptr){
+            pgph_ptrace = std::make_unique<Process::Ptrace>(&pathname, pid, 
+                Process::PTRACE_ATTACH_NOW);
+            pgph_ptrace.
+        }
     } catch (zkexcept::not_dyn_error& e){
         std::cerr << e.what();
         std::exit(1);
@@ -196,7 +204,7 @@ void Hooks::ProcGotPltHook::HookFunc(const char *func_name, void *fake_addr,
                 GetRelocPltIndex() != 0) && "relocation sections are not set");
     h_fake_addr = (addr_t)fake_addr;
     try{
-        pgph_elfhook->SetSymbolIndex(pgph_elfhook->GetDynSymbolIndexbyName
+        h_symindex = pgph_elfhook->SetSymbolIndex(pgph_elfhook->GetDynSymbolIndexbyName
                 (func_name));
     } catch (zkexcept::symbol_not_found_error& e){
         std::cerr << e.what();
@@ -208,16 +216,18 @@ void Hooks::ProcGotPltHook::HookFunc(const char *func_name, void *fake_addr,
             GetRelocPltIndex());
     for(int i = 0; i < relocplt_section.sh_size / sizeof(relocation_t); i++){
         if(h_symindex == ELF_R_SYM(pgph_elfhook->GetRelocPlt()[i].r_info)){
+            h_addr = ((addr_t *)((addr_t)base_addr) + (addr_t)pgph_elfhook->
+                    GetRelocPlt()[i].r_offset);
 
 #elif __BITS_32__ // NOTE for position dependant binaries
     Shdr relocdyn_section = elfhook->GetSectionbyIndex(elfhook->
-            GetRelocPltIndex());
+            GetRelocDynIndex());
     for(int i = 0; i < relocdyn_section.sh_size / sizeof(Relocation); i++){
-        if(h_symindex == ELF_R_SYM(elfhook->GetRelocPlt()[i].r_info)){
-
+        if(h_symindex == ELF_R_SYM(elfhook->GetRelocDyn()[i].r_info)){
+            h_addr = ((addr_t *)((addr_t )base_addr) + (addr_t)pgph_elfhook->
+                    GetRelocDyn()[i].r_offset);
 #endif
-            h_addr = ((addr_t *)((addr_t)base_addr) + (addr_t)pgph_elfhook->
-                    GetRelocPlt()[i].r_offset);
+
             try{
                 pgph_ptrace->ReadProcess((void *)&h_orig_addr, (addr_t)h_addr, 
                         sizeof(addr_t));
