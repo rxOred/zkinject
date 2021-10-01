@@ -150,7 +150,11 @@ namespace Process {
             void WriteProcess(void *buffer, addr_t address, size_t buffer_sz);
             registers_t ReadRegisters(void) const;
             void WriteRegisters(registers_t& registers) const;
-            void GetProcessPathname(void) const;
+
+            inline std::string GetProcessPathname(void) const 
+            {
+                return p_memmap->GetBasePage()->GetPageName();
+            }
     };
 };
 
