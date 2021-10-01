@@ -71,6 +71,7 @@ void Binary::Elf::OpenElf(void)
     elf_size = st.st_size;
 }
 
+/* load the elf binary into memory, parse most essential headers */
 void Binary::Elf::LoadFile(void)
 {
     assert(elf_fd != 0 && "file descriptor is empty");
