@@ -29,7 +29,7 @@ Process::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
 
 Process::Ptrace::~Ptrace()
 {
-    if(CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || CHECK_FLAGS(PTRACE_START_NOW,
+    if(CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || CHECK_FLAGS(PTRACE_START_NOW, 
                 p_flags))
         DetachFromProcess();
 }
@@ -40,8 +40,7 @@ void Process::Ptrace::AttachToPorcess(void) const
         throw zkexcept::ptrace_error("ptrace attach failed\n");
 
     PROCESS_STATE ret = WaitForProcess();
-    if(ret == PROCESS_STATE_EXITED)
-        throw zkexcept::ptrace_error();
+    if(ret == PROCESS_STATE_EXITED) throw zkexcept::ptrace_error();
     return;
 }
 
@@ -64,16 +63,11 @@ Process::PROCESS_STATE Process::Ptrace::StartProcess(char **pathname)
     }
     else if(p_pid > 0) {
         PROCESS_STATE ret = WaitForProcess();
-        if(ret == PROCESS_STATE_EXITED)
-            return PROCESS_STATE_EXITED;
-        else if(ret == PROCESS_STATE_STOPPED)
-            return PROCESS_STATE_STOPPED;
-        else if(ret == PROCESS_STATE_SIGNALED)
-            return PROCESS_STATE_SIGNALED;
-        else if(ret == PROCESS_STATE_CONTINUED) 
-            return PROCESS_STATE_CONTINUED;
-        else
-            return PROCESS_STATE_FAILED;
+        if(ret == PROCESS_STATE_EXITED) return PROCESS_STATE_EXITED;
+        else if(ret == PROCESS_STATE_STOPPED) return PROCESS_STATE_STOPPED;
+        else if(ret == PROCESS_STATE_SIGNALED) return PROCESS_STATE_SIGNALED;
+        else if(ret == PROCESS_STATE_CONTINUED) return PROCESS_STATE_CONTINUED;
+        else return PROCESS_STATE_FAILED;
     }
     throw zkexcept::process_error("forking failed\n");
 }
@@ -91,7 +85,8 @@ Process::PROCESS_STATE Process::Ptrace::WaitForProcess(void) const
     return PROCESS_STATE_FAILED;
 }
 
-void Process::Ptrace::ReadProcess(void *buffer, addr_t address, size_t buffer_sz) const
+void Process::Ptrace::ReadProcess(void *buffer, addr_t address, size_t buffer_sz) 
+    const
 {
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || !CHECK_FLAGS(PTRACE_START_NOW, 
                 p_flags))
@@ -107,8 +102,8 @@ void Process::Ptrace::ReadProcess(void *buffer, addr_t address, size_t buffer_sz
             throw zkexcept::ptrace_error();
         *(addr_t *)dst = data;
     }
-    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || !CHECK_FLAGS(PTRACE_START_NOW, p_flags
-                ))
+    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || !CHECK_FLAGS(PTRACE_START_NOW, 
+                p_flags))
         DetachFromProcess();
 }
 

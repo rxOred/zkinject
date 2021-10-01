@@ -39,7 +39,7 @@ Process::MemoryMap::MemoryMap(pid_t pid, u8 flag)
     }
 }
 
-std::shared_ptr<Process::page_t> Process::MemoryMap::GetModulePage(const char
+std::shared_ptr<Process::page_t> Process::MemoryMap::GetModulePage(const char 
         *module_name) const
 {
     for(auto const& x : mm_pageinfo){
