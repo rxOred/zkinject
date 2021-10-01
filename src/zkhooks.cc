@@ -185,7 +185,8 @@ Hooks::ProcGotPltHook::ProcGotPltHook(const char *pathname, pid_t pid)
         else if (pid != 0 && pathname == nullptr){
             pgph_ptrace = std::make_unique<Process::Ptrace>(&pathname, pid, 
                 Process::PTRACE_ATTACH_NOW);
-            pgph_ptrace.
+            pgph_elfhook = std::make_unique<ElfGotPltHook>(pgph_ptrace->
+                    GetProcessPathname().c_str());
         }
     } catch (zkexcept::not_dyn_error& e){
         std::cerr << e.what();
