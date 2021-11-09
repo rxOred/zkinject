@@ -1,5 +1,0 @@
-Work on `egph_symbol_index` -zkhooks.hh
-Work on examples/ptrace_hooks.cc
-Work on Ptrace Read/Write
-Work on getting function addresses.
-Read about Shared library function hooks again!
