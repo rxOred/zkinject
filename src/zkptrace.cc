@@ -143,12 +143,7 @@ void Process::Ptrace::WriteRegisters(registers_t& registers) const
                 p_flags))
         AttachToPorcess();
 
-
     if(ptrace(PTRACE_SETREGS, p_pid, nullptr, p_registers) < 0)
         throw zkexcept::ptrace_error();
 }
 
-inline char *GetProcessPathname(void) const 
-{
-    return p_memmap->GetBasePage()->GetPageName().c_str();
-}

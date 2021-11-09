@@ -28,7 +28,7 @@ namespace Hooks {
     class ElfGotPltHook : public Hook<addr_t>, public Binary::Elf{
         private:
             /* dynsym index of the symbol */
-            int             egph_symbol_index;
+            int             egph_symbol_index;  // BUG useless
             /* section header table index of rel.plt and rel.dyn */
             int             egph_relocplt_index;
             int             egph_relocdyn_index;

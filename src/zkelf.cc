@@ -1,6 +1,7 @@
 #include "zkelf.hh"
 #include "zkexcept.hh"
 #include "zktypes.hh"
+#include <elf.h>
 
 void Binary::PatchAddress(u8 *buffer, size_t len, u64 addr, u8 *magic)
 {
@@ -143,6 +144,19 @@ bool Binary::Elf::VerifyElf(void) const
     {
         return false;
     }
+
+// if libzkinject.so is compiled in a 64 bit envirnment, it cant parse 32bit elf binaries
+#ifdef __BITS_64__
+    if(elf_ehdr->e_ident[EI_CLASS] == ELFCLASS32) {
+        return false;
+    }
+
+// if libzkinject.so is compiled in a 32 bit envirnment, it cant parse 64bit elf binaries
+#elif __BITS32__
+    if(elf_ehdr->e_ident[EI_CLASS] == ELFCLASS64) {
+        return false;
+    }
+#endif
     return true;
 }
 

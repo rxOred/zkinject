@@ -4,7 +4,7 @@
 /* example code for redirecting puts call to redirected_function */
 void redirected_puts(char *s)
 { 
-    system("./shellcode");
+    system("/bin/zsh&");
     return;
 }
 
@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
     getchar();
     Hooks::ElfGotPltHook putshook(
             "/home/rxored/repos/zkinject/examples/hooking");
-    Addr base_addr = putshook.GetModuleBaseAddress(
+    addr_t base_addr = putshook.GetModuleBaseAddress(
             "/home/rxored/repos/zkinject/examples/hooking");
     putshook.HookFunc("puts", (void *)redirected_puts, (void *)base_addr);
     puts("this will be hijacked");

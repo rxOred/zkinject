@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC -g -shared -Wl,-soname,liblibzkinject.so.1 -o liblibzkinject.so.0.1 CMakeFiles/libzkinject.dir/src/zkelf.cc.o CMakeFiles/libzkinject.dir/src/zkhooks.cc.o CMakeFiles/libzkinject.dir/src/zkinjections.cc.o CMakeFiles/libzkinject.dir/src/zkproc.cc.o 

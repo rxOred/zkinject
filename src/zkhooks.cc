@@ -54,7 +54,7 @@ void Hooks::ElfGotPltHook::LoadRelocations(void)
 void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
         void *base_addr)
 {
-    assert((egph_relocplt_index != 0 && egph_relocdyn_index != 0) && 
+    assert((egph_relocplt_index != 0 || egph_relocdyn_index != 0) && 
             "relocation section indexes are not set");
     h_fake_addr = (addr_t)fake_addr;
     try{
@@ -129,8 +129,8 @@ void Hooks::ElfGotPltHook::HookFunc(const char *func_name, void *fake_addr,
 
 void Hooks::ElfGotPltHook::UnhookFuction()
 {
-    assert(egph_symbol_index != 0 && egph_relocplt_index != 0 && egph_relocdyn_index
-            != 0 && "function may not be hooked");
+    assert(h_symindex != 0 && (egph_relocplt_index != 0 || egph_relocdyn_index
+            != 0) && "function may not be hooked");
 #if defined __BITS64__
     for (int i = 0; i < elf_shdr[egph_relocplt_index].sh_size / sizeof(relocation_t);
             i++){
@@ -149,8 +149,7 @@ void Hooks::ElfGotPltHook::UnhookFuction()
 #endif
 }
 
-
-// NOTE this gets addresses of itself only 
+/* get base address of a page / module */
 addr_t Hooks::ElfGotPltHook::GetModuleBaseAddress(const char *module_name) 
     const
 {
@@ -185,6 +184,7 @@ Hooks::ProcGotPltHook::ProcGotPltHook(const char *pathname, pid_t pid)
         else if (pid != 0 && pathname == nullptr){
             pgph_ptrace = std::make_unique<Process::Ptrace>(&pathname, pid, 
                 Process::PTRACE_ATTACH_NOW);
+            /* here we use memory map's help to get the path to binary */
             pgph_elfhook = std::make_unique<ElfGotPltHook>(pgph_ptrace->
                     GetProcessPathname().c_str());
         }
@@ -201,12 +201,11 @@ Hooks::ProcGotPltHook::ProcGotPltHook(const char *pathname, pid_t pid)
 void Hooks::ProcGotPltHook::HookFunc(const char *func_name, void *fake_addr,
         void *base_addr)
 {
-    assert((pgph_elfhook->GetRelocDynIndex() != 0 && pgph_elfhook->
+    assert((pgph_elfhook->GetRelocDynIndex() != 0 || pgph_elfhook->
                 GetRelocPltIndex() != 0) && "relocation sections are not set");
     h_fake_addr = (addr_t)fake_addr;
     try{
-        h_symindex = pgph_elfhook->SetSymbolIndex(pgph_elfhook->GetDynSymbolIndexbyName
-                (func_name));
+        h_symindex = pgph_elfhook->GetDynSymbolIndexbyName(func_name);
     } catch (zkexcept::symbol_not_found_error& e){
         std::cerr << e.what();
         std::exit(1);
@@ -244,8 +243,8 @@ void Hooks::ProcGotPltHook::HookFunc(const char *func_name, void *fake_addr,
 
 void Hooks::ProcGotPltHook::UnhookFunction() const
 {
-    assert((pgph_elfhook->GetRelocDynIndex() != 0 && pgph_elfhook->GetRelocPltIndex
-                () != 0) && "relocation sections are not set");
+    assert(h_symindex != 0 && (pgph_elfhook->GetRelocDynIndex() != 0 || pgph_elfhook
+                ->GetRelocPltIndex() != 0) && "relocation sections are not set");
     try{
         addr_t buffer;
         pgph_ptrace->ReadProcess((void *)&buffer, (addr_t)h_addr, sizeof(addr_t));

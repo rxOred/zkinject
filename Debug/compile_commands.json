@@ -1,0 +1,22 @@
+[
+{
+  "directory": "/home/rxored/repos/zkinject/Debug",
+  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -g -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zkelf.cc.o -c /home/rxored/repos/zkinject/src/zkelf.cc",
+  "file": "/home/rxored/repos/zkinject/src/zkelf.cc"
+},
+{
+  "directory": "/home/rxored/repos/zkinject/Debug",
+  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -g -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zkhooks.cc.o -c /home/rxored/repos/zkinject/src/zkhooks.cc",
+  "file": "/home/rxored/repos/zkinject/src/zkhooks.cc"
+},
+{
+  "directory": "/home/rxored/repos/zkinject/Debug",
+  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -g -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zkmap.cc.o -c /home/rxored/repos/zkinject/src/zkmap.cc",
+  "file": "/home/rxored/repos/zkinject/src/zkmap.cc"
+},
+{
+  "directory": "/home/rxored/repos/zkinject/Debug",
+  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -g -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zkptrace.cc.o -c /home/rxored/repos/zkinject/src/zkptrace.cc",
+  "file": "/home/rxored/repos/zkinject/src/zkptrace.cc"
+}
+]
