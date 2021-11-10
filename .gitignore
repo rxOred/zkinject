@@ -5,3 +5,6 @@ build/
 example.cc
 *.pc.in
 vgcore.*
+Debug/
+*.in
+
