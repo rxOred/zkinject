@@ -45,7 +45,7 @@ namespace Hooks {
                 egph_symbol_index = index;
             }
 
-            bool CheckElfType() const 
+            bool CheckElfType() const override
             {
                 if(GetElfType() == ET_DYN)
                     return true;
@@ -107,12 +107,6 @@ namespace Hooks {
             inline addr_t GetFunctionAddress(void) const {
 
             }
-    };
-
-    class VtableHook : public Hook<addr_t>{
-        private:
-
-        public:
     };
 }
 
