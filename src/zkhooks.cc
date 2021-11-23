@@ -183,7 +183,6 @@ Hooks::ProcGotPltHook::ProcGotPltHook(const char *pathname, pid_t pid)
         else if (pid != 0 && pathname == nullptr){
             pgph_ptrace = std::make_unique<Process::Ptrace>(&pathname, pid, 
                 Process::PTRACE_ATTACH_NOW);
-            /* here we use memory map's help to get the path to binary */
             pgph_elfhook = std::make_unique<ElfGotPltHook>(pgph_ptrace->
                     GetProcessPathname().c_str());
         }

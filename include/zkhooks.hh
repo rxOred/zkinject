@@ -45,7 +45,7 @@ namespace Hooks {
                 egph_symbol_index = index;
             }
 
-            bool CheckElfType() const override
+            bool CheckElfType() const 
             {
                 if(GetElfType() == ET_DYN)
                     return true;
