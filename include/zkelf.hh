@@ -58,15 +58,12 @@ namespace Binary{
 
             int elf_indexes[ELF_INDEX_TABLE_SIZE];
         public:
-
-            // TODO:A bug with virtual methods
-
             const char *elf_pathname;
             size_t      elf_size;
 
             Elf();
             Elf(const char *pathname);
-            virtual ~Elf();
+            ~Elf();
             void OpenElf(void);
             void LoadFile(void);
             void LoadDynamicData(void);
