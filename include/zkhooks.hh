@@ -108,6 +108,12 @@ namespace Hooks {
 
             }
     };
+
+    class VtableHook : public Hook<addr_t>{
+        private:
+
+        public:
+    };
 }
 
 #endif /* ZKHOOKS_HH */

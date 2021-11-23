@@ -58,19 +58,25 @@ namespace Binary{
 
             int elf_indexes[ELF_INDEX_TABLE_SIZE];
         public:
+
+            // TODO:A bug with virtual methods
+
             const char *elf_pathname;
             size_t      elf_size;
 
             Elf();
             Elf(const char *pathname);
-            ~Elf();
+            virtual ~Elf();
             void OpenElf(void);
             void LoadFile(void);
             void LoadDynamicData(void);
             bool VerifyElf(void) const;
             void RemoveMap(void);
 
-            virtual bool CheckElfType(); 
+            virtual bool CheckElfType() const 
+            { 
+                return true;
+            }
 
             /* commonly used malware stuff */
             inline u16 GetElfType(void) const { return elf_ehdr->e_type; }
