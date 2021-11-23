@@ -70,7 +70,7 @@ namespace Binary{
             bool VerifyElf(void) const;
             void RemoveMap(void);
 
-            virtual bool CheckElfType() const = 0;
+            virtual bool CheckElfType(); 
 
             /* commonly used malware stuff */
             inline u16 GetElfType(void) const { return elf_ehdr->e_type; }

@@ -145,13 +145,15 @@ bool Binary::Elf::VerifyElf(void) const
         return false;
     }
 
-// if libzkinject.so is compiled in a 64 bit envirnment, it cant parse 32bit elf binaries
+// if libzkinject.so is compiled in a 64 bit envirnment, it cant parse 
+// 32bit elf binaries
 #ifdef __BITS_64__
     if(elf_ehdr->e_ident[EI_CLASS] == ELFCLASS32) {
         return false;
     }
 
-// if libzkinject.so is compiled in a 32 bit envirnment, it cant parse 64bit elf binaries
+// if libzkinject.so is compiled in a 32 bit envirnment, it cant parse 
+// 64bit elf binaries
 #elif __BITS32__
     if(elf_ehdr->e_ident[EI_CLASS] == ELFCLASS64) {
         return false;
