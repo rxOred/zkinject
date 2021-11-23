@@ -1,5 +1,5 @@
 #ifndef ZKHOOKS_HH
-#define ZKHOOKS_HHH
+#define ZKHOOKS_HH
 
 #include "zkelf.hh"
 #include "zkproc.hh"
@@ -77,7 +77,8 @@ namespace Hooks {
                 return egph_relocplt;
             }
             addr_t GetModuleBaseAddress(const char *module_name) const;
-            void HookFunc(const char *func_name, void *fake_addr, void *base_addr);
+            void HookFunc(const char *func_name, void *fake_addr, void 
+                    *base_addr);
             void UnhookFuction();
     };
 
@@ -93,7 +94,8 @@ namespace Hooks {
              * section information
              */
             ProcGotPltHook(const char *pathname, pid_t pid);
-            void HookFunc(const char *func_name, void *fake_addr, void *base_addr);
+            void HookFunc(const char *func_name, void *fake_addr, void 
+                    *base_addr);
             void UnhookFunction() const;
 
             /* Get Process's base address */

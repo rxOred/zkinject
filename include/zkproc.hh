@@ -58,10 +58,10 @@ namespace Process {
             std::string page_name;
 
         public:
-            page_t(addr_t saddr, addr_t eaddr, std::string permissions, std::string 
-                    name)
-                :page_saddr(saddr), page_eaddr(eaddr), page_permissions(permissions),
-                page_name(name)
+            page_t(addr_t saddr, addr_t eaddr, std::string permissions, 
+                    std::string name)
+                :page_saddr(saddr), page_eaddr(eaddr), page_permissions
+                 (permissions),page_name(name)
             {}
 
             inline addr_t GetPageStartAddress(void) const
@@ -92,7 +92,8 @@ namespace Process {
             MemoryMap(pid_t pid, u8 flag);
             addr_t GetModuleBaseAddress(const char *module_name) const;
             addr_t GetModuleEndAddress(const char *module_name) const;
-            std::shared_ptr<page_t> GetModulePage(const char *module_name) const;
+            std::shared_ptr<page_t> GetModulePage(const char *module_name) 
+                const;
 
             inline std::shared_ptr<page_t> GetBasePage(void) const
             {
@@ -119,8 +120,8 @@ namespace Process {
             registers_t p_registers;
         public:
             /* 
-             * pathname = filepath to elf binary which should be forkd and execed with 
-             * ptrace 
+             * pathname = filepath to elf binary which should be forkd 
+             * and execed with ptrace 
              * pid = pid for a currently active process
              * regs = register struct
              */
@@ -146,8 +147,10 @@ namespace Process {
              * read from process to an allocated buffer starting at address, 
              * sizeof buffer_sz len.
              */
-            void ReadProcess(void *buffer, addr_t address, size_t buffer_sz) const;
-            void WriteProcess(void *buffer, addr_t address, size_t buffer_sz);
+            void ReadProcess(void *buffer, addr_t address, size_t 
+                    buffer_sz) const;
+            void WriteProcess(void *buffer, addr_t address, size_t 
+                    buffer_sz);
             registers_t ReadRegisters(void) const;
             void WriteRegisters(registers_t& registers) const;
 
@@ -155,6 +158,8 @@ namespace Process {
             {
                 return p_memmap->GetBasePage()->GetPageName();
             }
+
+            // TODO:methods to read thread state using registers
     };
 };
 

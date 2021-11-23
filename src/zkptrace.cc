@@ -85,12 +85,11 @@ Process::PROCESS_STATE Process::Ptrace::WaitForProcess(void) const
     return PROCESS_STATE_FAILED;
 }
 
-void Process::Ptrace::ReadProcess(void *buffer, addr_t address, size_t buffer_sz) 
-    const
-{
-    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || !CHECK_FLAGS(PTRACE_START_NOW, 
-                p_flags))
-        AttachToPorcess();
+void Process::Ptrace::ReadProcess(void *buffer, addr_t address, size_t 
+        buffer_sz) const
+{ 
+    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
+            !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
     addr_t addr = address;
     u8 *dst = (u8 *)buffer;
@@ -102,48 +101,55 @@ void Process::Ptrace::ReadProcess(void *buffer, addr_t address, size_t buffer_sz
             throw zkexcept::ptrace_error();
         *(addr_t *)dst = data;
     }
-    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || !CHECK_FLAGS(PTRACE_START_NOW, 
-                p_flags))
-        DetachFromProcess();
+    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
+            !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();
+    return;
 }
 
-void Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t buffer_sz)
+void Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t 
+        buffer_sz)
 {
 
-    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || !CHECK_FLAGS(PTRACE_START_NOW, 
-                p_flags))
-        AttachToPorcess();
+    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
+            !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
     u8 *src = (u8 *)buffer;
     addr_t addr = address;
-    for (int i = 0; i < (buffer_sz / sizeof(addr_t)); addr+=sizeof(addr_t), src+=
-            sizeof(addr_t)){
+    for (int i = 0; i < (buffer_sz / sizeof(addr_t)); addr+=sizeof(addr_t), 
+            src+=sizeof(addr_t)){
         if(ptrace(PTRACE_POKETEXT, p_pid, addr, src)  < 0){
             throw zkexcept::ptrace_error();
         }
     }
-    DetachFromProcess();
+
+    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) ||
+            !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();
     return;
 }
 
 registers_t Process::Ptrace::ReadRegisters(void) const
 {
-    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || !CHECK_FLAGS(PTRACE_START_NOW, 
-                p_flags))
-        AttachToPorcess();
+    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
+            !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
     if(ptrace(PTRACE_GETREGS, p_pid, nullptr, p_registers)  < 0)
         throw zkexcept::ptrace_error();
+    
+    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
+            !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();
+
     return p_registers;
 }
 
 void Process::Ptrace::WriteRegisters(registers_t& registers) const
 {
-    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || !CHECK_FLAGS(PTRACE_START_NOW, 
-                p_flags))
-        AttachToPorcess();
+    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
+            !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
     if(ptrace(PTRACE_SETREGS, p_pid, nullptr, p_registers) < 0)
         throw zkexcept::ptrace_error();
+
+    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
+            !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess(); 
 }
 
