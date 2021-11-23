@@ -171,7 +171,6 @@ addr_t Hooks::ElfGotPltHook::GetModuleBaseAddress(const char *module_name)
  *
  */
 
-/* pid is for ptrace, pathname is to parse the binary */
 Hooks::ProcGotPltHook::ProcGotPltHook(const char *pathname, pid_t pid)
     :Hook(), pgph_pid(pid)
 {

@@ -5,6 +5,7 @@
 Process::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
     :p_pid(pid), p_flags(flags)
 {
+    /* if a pid and PTRACE_ATTACH_NOW is specified, attach to the pid */
     if(CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) && p_pid != 0){
         try{
             AttachToPorcess();
@@ -13,7 +14,9 @@ Process::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
             std::exit(1);
         }
         p_memmap = std::make_shared<MemoryMap>(p_pid, 0);
-    }else if(CHECK_FLAGS(PTRACE_START_NOW, p_flags) && pathname != nullptr){
+    /* if pathname is specified and pid is not, a process will be spawed */
+    }else if(CHECK_FLAGS(PTRACE_START_NOW, p_flags) && pathname != nullptr
+            && p_pid == 0){
         try{
             PROCESS_STATE ret = StartProcess((char **)pathname);
             if(ret == PROCESS_STATE_EXITED || ret == PROCESS_STATE_FAILED)
@@ -22,15 +25,18 @@ Process::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
             std::cerr << e.what() << std::endl;
             std::exit(1);
         }
-        /* StartProcess set p_pid so we can get the memory map of the process */
+        /* 
+         * StartProcess set p_pid so we can get the memory map of the 
+         * process 
+         */
         p_memmap = std::make_shared<MemoryMap>(p_pid, 0);
     }
 }
 
 Process::Ptrace::~Ptrace()
 {
-    if(CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || CHECK_FLAGS(PTRACE_START_NOW, 
-                p_flags))
+    if(CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
+            CHECK_FLAGS(PTRACE_START_NOW, p_flags))
         DetachFromProcess();
 }
 
@@ -66,7 +72,8 @@ Process::PROCESS_STATE Process::Ptrace::StartProcess(char **pathname)
         if(ret == PROCESS_STATE_EXITED) return PROCESS_STATE_EXITED;
         else if(ret == PROCESS_STATE_STOPPED) return PROCESS_STATE_STOPPED;
         else if(ret == PROCESS_STATE_SIGNALED) return PROCESS_STATE_SIGNALED;
-        else if(ret == PROCESS_STATE_CONTINUED) return PROCESS_STATE_CONTINUED;
+        else if(ret == PROCESS_STATE_CONTINUED) 
+            return PROCESS_STATE_CONTINUED;
         else return PROCESS_STATE_FAILED;
     }
     throw zkexcept::process_error("forking failed\n");

@@ -2,8 +2,9 @@ cmake_minimum_required(VERSION 3.20)
 enable_language(CXX)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-project(zkinject VERSION 0.1 DESCRIPTION "Elf malware development library")
+project(zkinject VERSION 0.1 DESCRIPTION "some ugly library")
 include(GNUInstallDirs)
 
 set(LIBZKINJECT_PUBLIC_INCLUDE_DIRECTORIES include/)
