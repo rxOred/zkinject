@@ -115,7 +115,8 @@ namespace Binary{
 
     /* patch addresses and shit */
     void PatchAddress(u8 *buffer, size_t len, addr_t addr, u8 *magic);
-    void WriteBufferToDisk(const char *pathname, void *buffer);
+    void WriteBufferToDisk(const char *pathname, off_t offset, void 
+        *buffer, int buffer_size);
 };
 
 #endif /* ZKELF_HH */

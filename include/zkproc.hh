@@ -113,6 +113,12 @@ namespace Process {
             {
                 return mm_pageinfo[0]->GetPageEndAddress();
             }
+
+            /*
+             * TODO
+             * Implement VirtualAlloc
+             * Implement VirtualProtect
+             */
     };
 
     class Ptrace {
@@ -163,8 +169,11 @@ namespace Process {
                 return p_memmap->GetBasePage()->GetPageName();
             }
 
-
-            // TODO:methods to read thread state using registers
+            /* 
+             * TODO
+             * methods to read thread state using registers
+             * CreateThread
+             */
     };
 };
 

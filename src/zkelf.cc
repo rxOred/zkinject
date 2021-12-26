@@ -269,7 +269,7 @@ void Binary::Elf::ElfWrite(void *buffer, off_t writeoff, size_t size)
     WriteBufferToDisk(elf_pathname, writeoff, buffer, size);
 }
 
-bool WriteBufferToDisk(const char *pathname, off_t offset, 
+void WriteBufferToDisk(const char *pathname, off_t offset, 
         void *buffer, int buffer_size)
 {
     int fd = open(pathname, O_CREAT | O_WRONLY, 0666);
