@@ -30,5 +30,10 @@ int main(int argc, char *argv[])
     printf("vadr %lx\n", phdrtab[1].p_vaddr);
     printf("flags %x\n", phdrtab[1].p_flags);
 
+    auto type = elf.GetElfType();
+    printf("elf type %x\n", type);
 
+    auto entry = 0x1234;
+    elf.SetEntryPoint(entry); 
+    printf("new entry point %lx\n", elf.GetElfHeader()->e_entry);
 }

@@ -12,6 +12,7 @@
 #include <iostream>
 #include <exception>
 #include <fcntl.h>
+#include <unistd.h>
 #include <assert.h>
 #include <stdexcept>
 #include <sys/mman.h>
@@ -23,9 +24,7 @@
 namespace Binary{
     /* class which defines important parts of an elf binary */
     class Elf {
-        protected:
-            int     elf_fd;
-            /* memory mapped elf binary */
+        protected: 
             void    *elf_memmap;
             /* load address of elf */
             u64     elf_baseaddr;
@@ -57,6 +56,7 @@ namespace Binary{
             };
 
             int elf_indexes[ELF_INDEX_TABLE_SIZE];
+            void LoadFile(int fd);
         public:
             const char *elf_pathname;
             size_t      elf_size;
@@ -65,7 +65,7 @@ namespace Binary{
             Elf(const char *pathname);
             ~Elf();
             void OpenElf(void);
-            void LoadFile(void);
+            
             void LoadDynamicData(void);
             bool VerifyElf(void) const;
             void RemoveMap(void);
@@ -95,9 +95,9 @@ namespace Binary{
                 return elf_phdr[index];
             }
 
-            inline void SetEntryPoint(addr_t fake_entry) const
+            inline void SetEntryPoint(addr_t new_entry) const
             {
-                elf_ehdr->e_entry = fake_entry;
+                elf_ehdr->e_entry = new_entry;
             }
 
             int GetSegmentIndexbyAttr(u32 type, u32 flags, u32 prev_flags) 
@@ -115,6 +115,7 @@ namespace Binary{
 
     /* patch addresses and shit */
     void PatchAddress(u8 *buffer, size_t len, addr_t addr, u8 *magic);
+    void WriteBufferToDisk(const char *pathname, void *buffer);
 };
 
 #endif /* ZKELF_HH */

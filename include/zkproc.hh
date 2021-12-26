@@ -95,6 +95,10 @@ namespace Process {
             std::shared_ptr<page_t> GetModulePage(const char *module_name) 
                 const;
 
+            int ChangeProtection(int protection);
+
+            void *AllocateMemory(int size, int protection);
+
             inline std::shared_ptr<page_t> GetBasePage(void) const
             {
                 return  mm_pageinfo[0];
@@ -158,6 +162,7 @@ namespace Process {
             {
                 return p_memmap->GetBasePage()->GetPageName();
             }
+
 
             // TODO:methods to read thread state using registers
     };

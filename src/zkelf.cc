@@ -2,6 +2,9 @@
 #include "zkexcept.hh"
 #include "zktypes.hh"
 #include <elf.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 void Binary::PatchAddress(u8 *buffer, size_t len, u64 addr, u8 *magic)
 {
@@ -39,7 +42,6 @@ Binary::Elf::Elf(const char *pathname)
 {
     try{
         OpenElf();
-        LoadFile();
         return;
     } catch (std::exception& e) {
         std::cerr << e.what();
@@ -61,27 +63,30 @@ void Binary::Elf::OpenElf(void)
 {
     assert(elf_pathname != nullptr && "pathname is not specified");
 
-    elf_fd = open(elf_pathname, O_RDONLY);
-    if(elf_fd < 0)
+    int fd = open(elf_pathname, O_RDONLY);
+    if(fd < 0)
         throw zkexcept::file_not_found_error();
 
     struct stat st;
-    if(fstat(elf_fd, &st) < 0)
+    if(fstat(fd, &st) < 0)
         throw std::runtime_error("fstat failed");
 
     elf_size = st.st_size;
+    LoadFile(fd); 
 }
 
 /* load the elf binary into memory, parse most essential headers */
-void Binary::Elf::LoadFile(void)
+void Binary::Elf::LoadFile(int fd)
 {
-    assert(elf_fd != 0 && "file descriptor is empty");
+    assert(fd != 0 && "file descriptor is empty");
 
     elf_memmap = mmap(elf_memmap, elf_size, PROT_READ | PROT_WRITE, 
-            MAP_PRIVATE, elf_fd, 0);
+            MAP_PRIVATE, fd, 0);
     if(elf_memmap == MAP_FAILED)
         throw std::runtime_error("mmap failed\n");
 
+    close(fd);
+    
     elf_ehdr = (ehdr_t *)elf_memmap;
     assert(VerifyElf() != true && "File is not an Elf binary");
 
@@ -261,4 +266,15 @@ void Binary::Elf::ElfWrite(void *buffer, off_t writeoff, size_t size)
     for(int i = 0; i < writeoff + size; i++){
         _buffer[i] = memmap[i];
     }
+    WriteBufferToDisk(elf_pathname, writeoff, buffer, size);
+}
+
+bool WriteBufferToDisk(const char *pathname, off_t offset, 
+        void *buffer, int buffer_size)
+{
+    int fd = open(pathname, O_CREAT | O_WRONLY, 0666);
+    if (fd < 0)
+        throw zkexcept::file_not_found_error();
+
+    int ret = pwrite(fd, buffer, buffer_size, offset);
 }
