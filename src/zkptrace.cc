@@ -1,5 +1,7 @@
+#include "zkexcept.hh"
 #include "zkproc.hh"
 #include "zktypes.hh"
+#include <stdexcept>
 #include <sys/ptrace.h>
 
 Process::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
@@ -94,7 +96,8 @@ Process::PROCESS_STATE Process::Ptrace::WaitForProcess(void) const
 
 void Process::Ptrace::ReadProcess(void *buffer, addr_t address, size_t 
         buffer_sz) const
-{ 
+{
+    /* if not already attached or started, attach */
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
@@ -114,9 +117,8 @@ void Process::Ptrace::ReadProcess(void *buffer, addr_t address, size_t
 }
 
 void Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t 
-        buffer_sz)
+        buffer_sz) const
 {
-
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
@@ -141,7 +143,7 @@ registers_t Process::Ptrace::ReadRegisters(void) const
 
     if(ptrace(PTRACE_GETREGS, p_pid, nullptr, p_registers)  < 0)
         throw zkexcept::ptrace_error();
-    
+
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();
 
@@ -160,3 +162,43 @@ void Process::Ptrace::WriteRegisters(registers_t& registers) const
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess(); 
 }
 
+void *Process::Ptrace::ReplacePage(addr_t addr, void *buffer, int 
+        buffer_size) const
+{
+    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
+            !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
+
+    void *data = malloc(PAGE_ALIGN_UP(buffer_size));
+    if (data == NULL) {
+        throw std::runtime_error("failed allocate memory\n");
+        return nullptr;
+    }
+    memset(data, 0, PAGE_ALIGN_UP(buffer_size));
+    try { ReadProcess(data, addr, PAGE_ALIGN_UP(buffer_size)); }
+    catch (zkexcept::ptrace_error& e) {
+        std::cerr << e.what();
+        std::exit(1);
+    }
+
+    try { WriteProcess(buffer, addr, buffer_size); }
+    catch (zkexcept::ptrace_error& e) {
+        std::cerr << e.what();
+        std::exit(1);
+    }
+
+    u8 nop_array[PAGE_ALIGN_UP(buffer_size) - buffer_size];
+    memset(nop_array, 0x90, sizeof(nop_array));
+    try {
+        WriteProcess(nop_array, addr+buffer_size, sizeof(nop_array));
+    } catch (zkexcept::ptrace_error& e) {
+        std::cerr << e.what();
+        std::exit(1);
+    }
+
+    return data;
+}
+
+void *Process::Ptrace::MemAlloc(int protection, int size)
+{
+
+}

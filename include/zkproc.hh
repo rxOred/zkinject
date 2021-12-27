@@ -25,6 +25,8 @@
 #define MEMPATH     "/proc/%d/mem"
 #define CMDLINE     "/proc/%d/cmdline"
 
+#define PAGE_ALIGN_UP(x) ((x) & ~(4095))
+
 /*
  * following class stores information about a process.
  * such information include, memory map, command line args
@@ -95,10 +97,6 @@ namespace Process {
             std::shared_ptr<page_t> GetModulePage(const char *module_name) 
                 const;
 
-            int ChangeProtection(int protection);
-
-            void *AllocateMemory(int size, int protection);
-
             inline std::shared_ptr<page_t> GetBasePage(void) const
             {
                 return  mm_pageinfo[0];
@@ -160,15 +158,17 @@ namespace Process {
             void ReadProcess(void *buffer, addr_t address, size_t 
                     buffer_sz) const;
             void WriteProcess(void *buffer, addr_t address, size_t 
-                    buffer_sz);
+                    buffer_sz) const;
             registers_t ReadRegisters(void) const;
             void WriteRegisters(registers_t& registers) const;
 
+            void *ReplacePage(addr_t addr, void *buffer, int buffer_size) 
+                const;
+            void *MemAlloc(int protection, int size);
             inline std::string GetProcessPathname(void) const 
             {
                 return p_memmap->GetBasePage()->GetPageName();
             }
-
             /* 
              * TODO
              * methods to read thread state using registers
