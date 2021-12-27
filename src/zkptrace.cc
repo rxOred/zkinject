@@ -104,8 +104,8 @@ void Process::Ptrace::ReadProcess(void *buffer, addr_t address, size_t
     addr_t addr = address;
     u8 *dst = (u8 *)buffer;
     addr_t data;
-    for (int i = 0; i < (buffer_sz /  sizeof(addr_t)); addr+=sizeof(addr_t),
-            dst+=sizeof(addr_t)){
+    for (int i = 0; i < (buffer_sz /  sizeof(addr_t)); addr+=sizeof(addr_t)
+            , dst+=sizeof(addr_t)){
         data = ptrace(PTRACE_PEEKTEXT, p_pid, addr, nullptr);
         if(data < 0)
             throw zkexcept::ptrace_error();
@@ -159,7 +159,7 @@ void Process::Ptrace::WriteRegisters(registers_t& registers) const
         throw zkexcept::ptrace_error();
 
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
-            !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess(); 
+            !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();
 }
 
 void *Process::Ptrace::ReplacePage(addr_t addr, void *buffer, int 

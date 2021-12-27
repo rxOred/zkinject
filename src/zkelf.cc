@@ -22,7 +22,6 @@ void Binary::PatchAddress(u8 *buffer, size_t len, u64 addr, u8 *magic)
                 continue;
         }
     }
-
 error:
     throw zkexcept::magic_not_found_error();
 }
@@ -128,8 +127,8 @@ void Binary::Elf::LoadDynamicData(void)
     u8 *memmap = (u8 *)elf_memmap;
     elf_dynamic = (dynamic_t *)&memmap[elf_shdr[dynamic_index].sh_offset];
     elf_indexes[ELF_DYNSTR_INDEX] = elf_shdr[dynamic_index].sh_link;
-    elf_dynstr = (strtab_t) &memmap[elf_shdr[elf_indexes[ELF_DYNSTR_INDEX]].
-        sh_offset];
+    elf_dynstr = (strtab_t) &memmap[elf_shdr[elf_indexes[ELF_DYNSTR_INDEX]]
+        .sh_offset];
     int dynsym_index = 0;
     try{
         dynsym_index = GetSectionIndexbyName(".dynsym");
@@ -176,7 +175,7 @@ void Binary::Elf::RemoveMap(void)
     elf_memmap = nullptr;
 }
 
-int Binary::Elf::GetSegmentIndexbyAttr(u32 type, u32 flags, u32 prev_flags) 
+int Binary::Elf::GetSegmentIndexbyAttr(u32 type, u32 flags, u32 prev_flags)
     const
 {
     for(int i = 0; i < elf_ehdr->e_phnum; i++){

@@ -3,7 +3,3 @@
 #include <new>
 #include <zkexcept.hh>
 
-Hooks::Hook::Hook(addr_t addr)
-    :h_addr(addr)
-{}
-
