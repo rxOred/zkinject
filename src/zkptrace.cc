@@ -3,12 +3,17 @@
 #include "zktypes.hh"
 #include <stdexcept>
 #include <sys/ptrace.h>
+#include <cstring>
 
 Process::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
     :p_pid(pid), p_flags(flags)
 {
+    if (CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) && CHECK_FLAGS(PTRACE_START_NOW, p_flags)){
+        throw std::invalid_argument("flags ATTACH_NOW and START_NOW cannot be used at the \
+                same time");
+    }
     /* if a pid and PTRACE_ATTACH_NOW is specified, attach to the pid */
-    if(CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) && p_pid != 0){
+    else if(CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) && p_pid != 0){
         try{
             AttachToPorcess();
         } catch(zkexcept::ptrace_error& e){
@@ -32,6 +37,8 @@ Process::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
          * process 
          */
         p_memmap = std::make_shared<MemoryMap>(p_pid, 0);
+    }else {
+        throw std::invalid_argument();
     }
 }
 
@@ -198,7 +205,18 @@ void *Process::Ptrace::ReplacePage(addr_t addr, void *buffer, int
     return data;
 }
 
+
+/*
+ * Inject a small shellcode into an executable memory segment 
+ * which calls mmap 
+ * if protection is not null or something, inject another shellcode that 
+ * calls mprotect
+ */
 void *Process::Ptrace::MemAlloc(int protection, int size)
 {
+    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
+            !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
+    registers_t regs = ReadRegisters();
+    
 }
