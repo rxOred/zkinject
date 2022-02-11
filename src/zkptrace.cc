@@ -131,6 +131,15 @@ void Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
 
     u8 *src = (u8 *)buffer;
     addr_t addr = address;
+
+    if (addr == 0x0){
+        while (true){
+            addr = GenerateAddress(buffer_sz);
+            if (p_memmap->IsMapped(addr) ==  false) {
+                break;
+            }
+        }
+    }
     for (int i = 0; i < (buffer_sz / sizeof(addr_t)); addr+=sizeof(addr_t), 
             src+=sizeof(addr_t)){
         if(ptrace(PTRACE_POKETEXT, p_pid, addr, src)  < 0){
@@ -143,18 +152,16 @@ void Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
     return;
 }
 
-registers_t Process::Ptrace::ReadRegisters(void) const
+void Process::Ptrace::ReadRegisters(registers_t* registers) const
 {
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
-    if(ptrace(PTRACE_GETREGS, p_pid, nullptr, p_registers)  < 0)
+    if(ptrace(PTRACE_GETREGS, p_pid, nullptr, registers)  < 0)
         throw zkexcept::ptrace_error();
 
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();
-
-    return p_registers;
 }
 
 void Process::Ptrace::WriteRegisters(registers_t& registers) const
@@ -162,7 +169,7 @@ void Process::Ptrace::WriteRegisters(registers_t& registers) const
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
-    if(ptrace(PTRACE_SETREGS, p_pid, nullptr, p_registers) < 0)
+    if(ptrace(PTRACE_SETREGS, p_pid, nullptr, registers) < 0)
         throw zkexcept::ptrace_error();
 
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
@@ -205,18 +212,29 @@ void *Process::Ptrace::ReplacePage(addr_t addr, void *buffer, int
     return data;
 }
 
-
 /*
  * Inject a small shellcode into an executable memory segment 
  * which calls mmap 
  * if protection is not null or something, inject another shellcode that 
  * calls mprotect
  */
-void *Process::Ptrace::MemAlloc(int protection, int size)
+void *Process::Ptrace::MemAlloc(void *mmap_shellcode, int protection, 
+        int size)
 {
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
-    registers_t regs = ReadRegisters();
+    Snapshot snapshot;
+    snapshot.SaveSnapshot();
+    if (mmap_shellcode != nullptr){
+        /* Write given shellcode to a random address */
+        WriteProcess(mmap_shellcode, 0, size);
+        /* Save a snapshot */
+    }
+#ifdef __BITS_64__
     
+#elif __BITS_32__
+    
+#endif
 }
+
