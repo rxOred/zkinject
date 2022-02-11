@@ -18,21 +18,23 @@ bool Process::Snapshot::SaveSnapshot(Process::Ptrace &ptrace, u8 flags)
         }
         ptrace.ReadRegisters(regs);
 
-        stack = calloc(sizeof(u8), 1024);
+        stack = calloc(sizeof(u8), DEFAULT_SNAPSHOT_STACK_SZ);
         if (stack ==  nullptr) {
             throw std::runtime_error("failed to allocate memory\n");
         }
-        try { ptrace.ReadProcess(stack, regs->rsp, 1024); }
+        try { ptrace.ReadProcess(stack, regs->rsp, 
+                DEFAULT_SNAPSHOT_STACK_SZ); }
         catch (zkexcept::ptrace_error& e) {
             std::cerr << e.what();
             std::exit(1);
         }
 
-        instr = calloc(sizeof(u8), 64);
+        instr = calloc(sizeof(u8), DEFAULT_SNAPSHOT_INSTR);
         if (instr ==  nullptr) {
             throw std::runtime_error("failed to allocate memory\n");
         }
-        try { ptrace.ReadProcess(instr, regs->rip, 64); }
+        try { ptrace.ReadProcess(instr, regs->rip, 
+                DEFAULT_SNAPSHOT_INSTR); }
         catch (zkexcept::ptrace_error& e) {
             std::cerr << e.what();
             std::exit(1);
@@ -57,11 +59,12 @@ bool Process::Snapshot::SaveSnapshot(Process::Ptrace &ptrace, u8 flags)
             std::exit(1);
         }
 
-        instr = calloc(sizeof(u8), 64);
+        instr = calloc(sizeof(u8), DEFAULT_SNAPSHOT_INSTR);
         if (instr ==  nullptr) {
             throw std::runtime_error("failed to allocate memory\n");
         }
-        try { ptrace.ReadProcess(instr, regs->rip, 64); }
+        try { ptrace.ReadProcess(instr, regs->rip, 
+                DEFAULT_SNAPSHOT_INSTR); }
         catch (zkexcept::ptrace_error& e) {
             std::cerr << e.what();
             std::exit(1);
@@ -80,5 +83,18 @@ bool Process::Snapshot::RestoreSnapshot(Process::Ptrace &ptrace)
 {
     ProcessSnapshot *curr = snap_state;
     snap_state = curr->GetNext();
+
+    registers_t *regs = curr->GetRegisters();
     ptrace.WriteRegisters(curr->GetRegisters());
+    if (CHECK_FLAGS(PROCESS_SNAP_ALL, curr->GetFlags()))
+        ptrace.WriteProcess(curr->GetStack(), regs->rsp, 
+                DEFAULT_SNAPSHOT_STACK_SZ);
+    else {
+        int stack_frame_sz = regs->rbp - regs->rsp;
+        ptrace.WriteProcess(curr->GetStack(), regs->rsp, stack_frame_sz);
+    }
+    ptrace.WriteProcess(curr->GetInstructions(), regs->rip, 
+            DEFAULT_SNAPSHOT_INSTR);
+
+    return true;
 }

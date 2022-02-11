@@ -29,6 +29,9 @@
 
 #define PAGE_ALIGN_UP(x) ((x) & ~(4095))
 
+#define DEFAULT_SNAPSHOT_STACK_SZ   1024
+#define DEFAULT_SNAPSHOT_INSTR      64
+
 /*
  * following class stores information about a process.
  * such information include, memory map, command line args
@@ -190,7 +193,7 @@ namespace Process {
             void WriteProcess(void *buffer, addr_t address, size_t 
                     buffer_sz) const;
             void ReadRegisters(registers_t* registers) const;
-            void WriteRegisters(registers_t& registers) const;
+            void WriteRegisters(registers_t* registers) const;
 
             void *ReplacePage(addr_t addr, void *buffer, int buffer_size) 
                 const;
@@ -222,8 +225,6 @@ namespace Process {
                 ps_instructions(instr), ps_stack(stack), 
                 ps_next(nullptr)
             {}
-
-            //Process
 
             inline u8 GetFlags(void) const
             {

@@ -164,7 +164,7 @@ void Process::Ptrace::ReadRegisters(registers_t* registers) const
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();
 }
 
-void Process::Ptrace::WriteRegisters(registers_t& registers) const
+void Process::Ptrace::WriteRegisters(registers_t* registers) const
 {
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
