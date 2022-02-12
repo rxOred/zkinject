@@ -5,6 +5,8 @@
 #include <sys/ptrace.h>
 #include <cstring>
 
+/* BUG - this may not work */
+
 bool Process::Snapshot::SaveSnapshot(Process::Ptrace &ptrace, u8 flags)
 {
     registers_t *regs = nullptr;

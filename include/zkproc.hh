@@ -197,7 +197,7 @@ namespace Process {
 
             void *ReplacePage(addr_t addr, void *buffer, int buffer_size) 
                 const;
-            void *MemAlloc(int protection, int size);
+            void *MemAlloc(void *mmap_shellcode, int protection, int size);
             inline std::string GetProcessPathname(void) const 
             {
                 return p_memmap->GetBasePage()->GetPageName();
@@ -225,6 +225,13 @@ namespace Process {
                 ps_instructions(instr), ps_stack(stack), 
                 ps_next(nullptr)
             {}
+
+            ~ProcessSnapshot()
+            {
+                if (ps_registers) { free(ps_registers); }
+                if (ps_instructions) { free(ps_instructions); }
+                if (ps_stack) { free(ps_stack); }
+            }
 
             inline u8 GetFlags(void) const
             {
@@ -262,6 +269,19 @@ namespace Process {
         private:
             ProcessSnapshot *snap_state;   // head
         public:
+            Snapshot(void)
+                :snap_state(nullptr)
+            {}
+
+            ~Snapshot(void)
+            {
+                ProcessSnapshot *curr;
+                for (curr = snap_state; curr != nullptr; curr = 
+                        snap_state->GetNext()) {
+                    delete 
+                }
+            }
+
             bool SaveSnapshot(Process::Ptrace &ptrace, u8 flags);
             bool RestoreSnapshot(Process::Ptrace &ptrace);
     };
