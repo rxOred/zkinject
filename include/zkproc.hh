@@ -122,23 +122,8 @@ namespace Process {
                 return mm_pageinfo[0]->GetPageEndAddress();
             }
 
-            inline bool IsMapped(addr_t addr) const
-            {
-                /* check if given address is kernel allocated */
-                if (addr >= 0x7fffffffffffff){
-                    return true;
-                }
-                for(int i = 0; i < mm_pageinfo.size(); i++){
-                    if((addr & 0x000000000000ffff) == 
-                        mm_pageinfo[i]->GetPageStartAddress() ||
-                        (addr & 0x000000000000ffff) == 
-                        mm_pageinfo[i]->GetPageEndAddress()){
-                        return true;
-                    } 
-                }
-                return false;
-            }
-            /*
+            bool IsMapped(addr_t addr) const;
+           /*
              * TODO
              * Implement VirtualAlloc
              * Implement VirtualProtect
@@ -173,24 +158,23 @@ namespace Process {
             /* Start the proces */
             PROCESS_STATE StartProcess(char **pathname);
 
+            PROCESS_STATE BreakpointStopProcess(addr_t addr);
+            PROCESS_STATE SignalStopProcess(/*signal*/); 
+
+            PROCESS_STATE ContinueProcess();
+
             /* wait until process stops */
             PROCESS_STATE WaitForProcess(void) const;
 
             /* generate a random address */
-            inline addr_t GenerateAddress(int seed) const 
-            {
-                std::mt19937_64 gen(seed);
-                std::uniform_int_distribution<u64> distr(0, 0x7ffffffffffffff);
-
-                return distr(gen);
-            }
+            addr_t GenerateAddress(int seed) const;
             /* 
              * read from process to an allocated buffer starting at address, 
              * sizeof buffer_sz len.
              */
             void ReadProcess(void *buffer, addr_t address, size_t 
                     buffer_sz) const;
-            void WriteProcess(void *buffer, addr_t address, size_t 
+            addr_t WriteProcess(void *buffer, addr_t address, size_t 
                     buffer_sz) const;
             void ReadRegisters(registers_t* registers) const;
             void WriteRegisters(registers_t* registers) const;
@@ -264,7 +248,6 @@ namespace Process {
             }
     };
 
-    // snapshot of the thread context
     class Snapshot {
         private:
             ProcessSnapshot *snap_state;   // head
@@ -275,15 +258,20 @@ namespace Process {
 
             ~Snapshot(void)
             {
-                ProcessSnapshot *curr;
-                for (curr = snap_state; curr != nullptr; curr = 
-                        snap_state->GetNext()) {
-                    delete 
+                ProcessSnapshot *curr = snap_state;
+                while (curr != nullptr) {
+                    auto next = curr->GetNext();
+                    delete curr;
+                    curr = next;
                 }
             }
 
             bool SaveSnapshot(Process::Ptrace &ptrace, u8 flags);
             bool RestoreSnapshot(Process::Ptrace &ptrace);
+            /*inline registers_t *GetSnapshotRegisters(void) const
+            {
+                return snap_state->GetRegisters();
+            }*/
     };
 };
 

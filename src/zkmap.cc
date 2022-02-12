@@ -23,8 +23,8 @@ Process::MemoryMap::MemoryMap(pid_t pid, u8 flag)
         std::getline(ss, eaddr, ' ');
         /* r--p */
         std::getline(ss, permissions, ' ');
-        /* /path/to/file */
-        while(std::getline(ss, line, '/')){
+        /* /path/to/file || [stack/heap/vdso] */
+        while(std::getline(ss, line, '/') || std::getline(ss, line, '[')){
             std::getline(ss, name, '\n');
         }
 
@@ -71,3 +71,21 @@ addr_t Process::MemoryMap::GetModuleEndAddress(const char *module_name)
     }
     throw zkexcept::page_not_found_error();
 }
+
+bool Process::MemoryMap::IsMapped(addr_t addr) const
+{
+    /* check if given address is kernel allocated */
+    if (addr >= 0x7fffffffffffff){
+        return true;
+    }
+    for(int i = 0; i < mm_pageinfo.size(); i++){
+        if((addr & 0x000000000000ffff) == 
+            mm_pageinfo[i]->GetPageStartAddress() ||
+            (addr & 0x000000000000ffff) == 
+            mm_pageinfo[i]->GetPageEndAddress()){
+            return true;
+        } 
+    }
+    return false;
+}
+

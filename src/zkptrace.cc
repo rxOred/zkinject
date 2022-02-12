@@ -90,6 +90,15 @@ Process::PROCESS_STATE Process::Ptrace::StartProcess(char **pathname)
     throw zkexcept::process_error("forking failed\n");
 }
 
+Process::PROCESS_STATE Process::Ptrace::BreakpointStopProcess(addr_t addr)
+{
+    if (addr == 0x0) {
+        // place breakpoint at rip
+    }
+
+
+}
+
 Process::PROCESS_STATE Process::Ptrace::WaitForProcess(void) const
 {
     assert(p_pid != 0 && "Process ID is not set");
@@ -101,6 +110,15 @@ Process::PROCESS_STATE Process::Ptrace::WaitForProcess(void) const
     else if(WIFCONTINUED(wstatus)) return PROCESS_STATE_CONTINUED;
 
     return PROCESS_STATE_FAILED;
+}
+
+/* generate a random address */
+addr_t Process::Ptrace::GenerateAddress(int seed) const 
+{
+    std::mt19937_64 gen(seed);
+    std::uniform_int_distribution<u64> distr(0, 0x7ffffffffffffff);
+
+    return distr(gen);
 }
 
 void Process::Ptrace::ReadProcess(void *buffer, addr_t address, size_t 
@@ -125,7 +143,7 @@ void Process::Ptrace::ReadProcess(void *buffer, addr_t address, size_t
     return;
 }
 
-void Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t 
+addr_t Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t 
         buffer_sz) const
 {
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
@@ -148,10 +166,9 @@ void Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
             throw zkexcept::ptrace_error();
         }
     }
-
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) ||
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();
-    return;
+    return addr;
 }
 
 void Process::Ptrace::ReadRegisters(registers_t* registers) const
@@ -227,11 +244,13 @@ void *Process::Ptrace::MemAlloc(void *mmap_shellcode, int protection,
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
     Snapshot snapshot = Snapshot();
-    snapshot.SaveSnapshot();
+    snapshot.SaveSnapshot(*this, PROCESS_SNAP_FUNC);
     if (mmap_shellcode != nullptr){
         /* Write given shellcode to a random address */
-        WriteProcess(mmap_shellcode, 0, size);
-        /* Save a snapshot */
+        addr_t shellcode_addr = WriteProcess(mmap_shellcode, 0, size);
+        registers_t regs;
+        ReadRegisters(&regs);
+        regs.rip = shellcode_addr;
     }
 #ifdef __BITS_64__
     
