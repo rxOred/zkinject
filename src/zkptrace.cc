@@ -49,20 +49,21 @@ Process::Ptrace::~Ptrace()
         DetachFromProcess();
 }
 
-void Process::Ptrace::AttachToPorcess(void) const
+void Process::Ptrace::AttachToPorcess(void)
 {
     if(ptrace(PTRACE_ATTACH, p_pid, nullptr, nullptr) < 0)
         throw zkexcept::ptrace_error("ptrace attach failed\n");
 
-    PROCESS_STATE ret = WaitForProcess();
-    if(ret == PROCESS_STATE_EXITED) throw zkexcept::ptrace_error();
-    return;
+    p_state = WaitForProcess();
+    if(p_state == PROCESS_STATE_FAILED) 
+        throw zkexcept::ptrace_error("ptrace attach failed\n");
 }
 
-void Process::Ptrace::DetachFromProcess(void) const
+void Process::Ptrace::SeizeProcess(void)
 {
-    if(ptrace(PTRACE_DETACH, p_pid, nullptr, nullptr) < 0)
-        throw zkexcept::ptrace_error("ptrace detach failed\n");
+    if (ptrace(PTRACE_SEIZE, p_pid, nullptr, nullptr) < 0)
+        throw zkexcept::ptrace_error("ptrace seize failed\n");
+    p_state = PROCESS_STATE_CONTINUED;
 }
 
 Process::PROCESS_STATE Process::Ptrace::StartProcess(char **pathname)
@@ -77,26 +78,29 @@ Process::PROCESS_STATE Process::Ptrace::StartProcess(char **pathname)
             std::exit(EXIT_FAILURE);
     }
     else if(p_pid > 0) {
-        PROCESS_STATE ret = WaitForProcess();
-        if(ret == PROCESS_STATE_EXITED) return PROCESS_STATE_EXITED;
-        else if(ret == PROCESS_STATE_STOPPED) 
-            return PROCESS_STATE_STOPPED;
-        else if(ret == PROCESS_STATE_SIGNALED) 
-            return PROCESS_STATE_SIGNALED;
-        else if(ret == PROCESS_STATE_CONTINUED) 
-            return PROCESS_STATE_CONTINUED;
-        else return PROCESS_STATE_FAILED;
+        p_state= WaitForProcess();
+        return p_state;
     }
     throw zkexcept::process_error("forking failed\n");
 }
 
-Process::PROCESS_STATE Process::Ptrace::BreakpointStopProcess(addr_t addr)
+void Process::Ptrace::DetachFromProcess(void)
 {
-    if (addr == 0x0) {
-        // place breakpoint at rip
-    }
+    if(ptrace(PTRACE_DETACH, p_pid, nullptr, nullptr) < 0)
+        throw zkexcept::ptrace_error("ptrace detach failed\n");
+    p_state = PROCESS_STATE_DETACHED;
+}
 
+Process::PROCESS_STATE Process::Ptrace::SignalProcess(void)
+{
+    /* TODO */
+    return PROCESS_STATE_CONTINUED;
+}
 
+Process::PROCESS_STATE Process::Ptrace::SignalStopProcess()
+{
+    /* TODO */
+    return PROCESS_STATE_STOPPED;
 }
 
 Process::PROCESS_STATE Process::Ptrace::WaitForProcess(void) const
@@ -160,11 +164,26 @@ addr_t Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
             }
         }
     }
-    for (int i = 0; i < (buffer_sz / sizeof(addr_t)); addr+=sizeof(addr_t), 
-            src+=sizeof(addr_t)){
-        if(ptrace(PTRACE_POKETEXT, p_pid, addr, src)  < 0){
-            throw zkexcept::ptrace_error();
+    /* 
+     * if buffer size is greater than the maximum size of data 
+     * ptrace can write from a single call - (sizeof(addr_t)) 
+     * and
+     * can be evenly divide by that size 
+     */
+    if (buffer_sz > sizeof(addr_t) && (buffer_sz % sizeof(addr_t)) ==  0) {
+        for (int i = 0; i < (buffer_sz / sizeof(addr_t)); 
+                addr+=sizeof(addr_t), 
+                src+=sizeof(addr_t)){
+            if(ptrace(PTRACE_POKETEXT, p_pid, addr, src)  < 0){
+                throw zkexcept::ptrace_error();
+            }
         }
+    }
+    else if (buffer_sz < sizeof(addr_t)) {
+        
+    }
+    else if (buffer_sz % sizeof(addr_t) != 0) {
+
     }
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) ||
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();
@@ -251,6 +270,7 @@ void *Process::Ptrace::MemAlloc(void *mmap_shellcode, int protection,
         registers_t regs;
         ReadRegisters(&regs);
         regs.rip = shellcode_addr;
+        
     }
 #ifdef __BITS_64__
     
@@ -258,4 +278,3 @@ void *Process::Ptrace::MemAlloc(void *mmap_shellcode, int protection,
     
 #endif
 }
-

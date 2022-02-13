@@ -51,11 +51,19 @@ namespace Process {
 
     enum PROCESS_STATE : u8 {
         PROCESS_NOT_STARTED     = 1,
+        PROCESS_STATE_DETACHED,
         PROCESS_STATE_EXITED,
+        PROCESS_STATE_KILLED,
         PROCESS_STATE_SIGNALED,
         PROCESS_STATE_STOPPED,
         PROCESS_STATE_CONTINUED,
         PROCESS_STATE_FAILED
+    };
+
+    enum TRACE_OPTIONS: u16 {
+        /* TODO 
+         * options for ptrace 
+         */
     };
 
     enum PROCESS_SNAPSHOT : u8 {
@@ -151,19 +159,23 @@ namespace Process {
                 return p_memmap;
             }
 
-            /* attach and detach from a process */
-            void AttachToPorcess(void) const;
-            void DetachFromProcess(void) const;
+            /* attach to the process, stopping it */
+            void AttachToPorcess(void);
 
-            /* Start the proces */
+            /* attach to the process but without stopping it */ 
+            void SeizeProcess(void);
+
+            /* Start the proces, stopping it */
             PROCESS_STATE StartProcess(char **pathname);
 
-            PROCESS_STATE BreakpointStopProcess(addr_t addr);
-            PROCESS_STATE SignalStopProcess(/*signal*/); 
+            /* detach from attached / started process */
+            void DetachFromProcess(void);
 
-            PROCESS_STATE ContinueProcess();
+            PROCESS_STATE SignalProcess();
 
-            /* wait until process stops */
+            PROCESS_STATE SignalStopProcess(); 
+
+            /* wait until process stops/continues/exits */
             PROCESS_STATE WaitForProcess(void) const;
 
             /* generate a random address */
@@ -178,7 +190,6 @@ namespace Process {
                     buffer_sz) const;
             void ReadRegisters(registers_t* registers) const;
             void WriteRegisters(registers_t* registers) const;
-
             void *ReplacePage(addr_t addr, void *buffer, int buffer_size) 
                 const;
             void *MemAlloc(void *mmap_shellcode, int protection, int size);
