@@ -1,6 +1,7 @@
 #include "zkexcept.hh"
 #include "zkproc.hh"
 #include "zktypes.hh"
+#include <cstdint>
 #include <stdexcept>
 #include <sys/ptrace.h>
 #include <cstring>
@@ -126,7 +127,7 @@ addr_t Process::Ptrace::GenerateAddress(int seed) const
 }
 
 void Process::Ptrace::ReadProcess(void *buffer, addr_t address, size_t 
-        buffer_sz) const
+        buffer_sz) 
 {
     /* if not already attached or started, attach */
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
@@ -148,7 +149,7 @@ void Process::Ptrace::ReadProcess(void *buffer, addr_t address, size_t
 }
 
 addr_t Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t 
-        buffer_sz) const
+        buffer_sz) 
 {
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
@@ -170,7 +171,7 @@ addr_t Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
      * and
      * can be evenly divide by that size 
      */
-    if (buffer_sz > sizeof(addr_t) && (buffer_sz % sizeof(addr_t)) ==  0) {
+    if (buffer_sz > sizeof(addr_t) && (buffer_sz % sizeof(addr_t)) ==  0){
         for (int i = 0; i < (buffer_sz / sizeof(addr_t)); 
                 addr+=sizeof(addr_t), 
                 src+=sizeof(addr_t)){
@@ -179,8 +180,23 @@ addr_t Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
             }
         }
     }
+    /* 
+     * if buffer size is less than max size of ptace can write 
+     */
     else if (buffer_sz < sizeof(addr_t)) {
-        
+        /* 
+         * read what is at that address, and replace original data 
+         */
+        try{
+            u64 o_buffer = 0x0;
+            ReadProcess(&o_buffer, addr, sizeof(addr_t));
+            o_buffer = (((o_buffer) & (0xffffffffffffffff - buffer_sz)) 
+                    | o_buffer);     
+            
+        }
+        catch(){
+
+        }
     }
     else if (buffer_sz % sizeof(addr_t) != 0) {
 
@@ -190,7 +206,7 @@ addr_t Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
     return addr;
 }
 
-void Process::Ptrace::ReadRegisters(registers_t* registers) const
+void Process::Ptrace::ReadRegisters(registers_t* registers)
 {
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
@@ -202,7 +218,7 @@ void Process::Ptrace::ReadRegisters(registers_t* registers) const
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();
 }
 
-void Process::Ptrace::WriteRegisters(registers_t* registers) const
+void Process::Ptrace::WriteRegisters(registers_t* registers)
 {
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
@@ -215,7 +231,7 @@ void Process::Ptrace::WriteRegisters(registers_t* registers) const
 }
 
 void *Process::Ptrace::ReplacePage(addr_t addr, void *buffer, int 
-        buffer_size) const
+        buffer_size)
 {
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();

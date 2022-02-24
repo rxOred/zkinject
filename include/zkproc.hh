@@ -185,13 +185,17 @@ namespace Process {
              * sizeof buffer_sz len.
              */
             void ReadProcess(void *buffer, addr_t address, size_t 
-                    buffer_sz) const;
+                    buffer_sz);
+
             addr_t WriteProcess(void *buffer, addr_t address, size_t 
-                    buffer_sz) const;
-            void ReadRegisters(registers_t* registers) const;
-            void WriteRegisters(registers_t* registers) const;
-            void *ReplacePage(addr_t addr, void *buffer, int buffer_size) 
-                const;
+                    buffer_sz);
+            
+            void ReadRegisters(registers_t* registers);
+            
+            void WriteRegisters(registers_t* registers);
+            
+            void *ReplacePage(addr_t addr, void *buffer, int buffer_size);
+            
             void *MemAlloc(void *mmap_shellcode, int protection, int size);
             inline std::string GetProcessPathname(void) const 
             {

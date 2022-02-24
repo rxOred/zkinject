@@ -98,7 +98,6 @@ bool Process::Snapshot::RestoreSnapshot(Process::Ptrace &ptrace)
     ptrace.WriteProcess(curr->GetInstructions(), regs->rip, 
             DEFAULT_SNAPSHOT_INSTR);
 
-    delete curr;
 
     return true;
 }
