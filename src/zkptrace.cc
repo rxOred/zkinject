@@ -2,6 +2,7 @@
 #include "zkproc.hh"
 #include "zktypes.hh"
 #include <cstdint>
+#include <cstdlib>
 #include <stdexcept>
 #include <sys/ptrace.h>
 #include <cstring>
@@ -104,15 +105,20 @@ Process::PROCESS_STATE Process::Ptrace::SignalStopProcess()
     return PROCESS_STATE_STOPPED;
 }
 
-Process::PROCESS_STATE Process::Ptrace::WaitForProcess(void) const
+Process::PROCESS_STATE Process::Ptrace::WaitForProcess(int options) const
 {
     assert(p_pid != 0 && "Process ID is not set");
     int wstatus = 0;
-    waitpid(p_pid, &wstatus, 0);
+    waitpid(p_pid, &wstatus, options);
     if(WIFEXITED(wstatus)) return PROCESS_STATE_EXITED;
-    else if(WIFSTOPPED(wstatus)) return PROCESS_STATE_STOPPED;
+    else if(WIFSTOPPED(wstatus)) {
+        /* set p_stop_state */
+        return PROCESS_STATE_STOPPED;
+    }
     else if(WIFSIGNALED(wstatus)) return PROCESS_STATE_SIGNALED;
     else if(WIFCONTINUED(wstatus)) return PROCESS_STATE_CONTINUED;
+    // more
+
 
     return PROCESS_STATE_FAILED;
 }
@@ -154,7 +160,6 @@ addr_t Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
-    u8 *src = (u8 *)buffer;
     addr_t addr = address;
 
     if (addr == 0x0){
@@ -172,6 +177,7 @@ addr_t Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
      * can be evenly divide by that size 
      */
     if (buffer_sz > sizeof(addr_t) && (buffer_sz % sizeof(addr_t)) ==  0){
+        u8 *src = (u8 *)buffer;
         for (int i = 0; i < (buffer_sz / sizeof(addr_t)); 
                 addr+=sizeof(addr_t), 
                 src+=sizeof(addr_t)){
@@ -190,16 +196,41 @@ addr_t Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
         try{
             u64 o_buffer = 0x0;
             ReadProcess(&o_buffer, addr, sizeof(addr_t));
-            o_buffer = (((o_buffer) & (0xffffffffffffffff - buffer_sz)) 
-                    | o_buffer);     
-            
-        }
-        catch(){
-
+            o_buffer = (((o_buffer) & (0xffffffffffffffff << (buffer_sz 
+                                * 8))) | o_buffer);     
+            if(ptrace(PTRACE_POKETEXT, p_pid, addr, &o_buffer)  < 0){
+                throw zkexcept::ptrace_error();
+            }
+        } catch(zkexcept::ptrace_error& e){
+            std::cerr << e.what();
+            std::exit(1);
         }
     }
     else if (buffer_sz % sizeof(addr_t) != 0) {
+        int count = buffer_sz / sizeof(addr_t);
+        int remainder = buffer_sz % sizeof(addr_t);
 
+        /* write sizeof(addr_t) size chunks */
+        u8 *src = (u8 *)buffer;
+        for (int i = 0; i < count; addr+=sizeof(addr_t), 
+                src+=sizeof(addr_t)){
+            if(ptrace(PTRACE_POKETEXT, p_pid, addr, src)  < 0){
+                throw zkexcept::ptrace_error();
+            }
+        }
+        /* write remaining bytes */ 
+        try{
+            u64 o_buffer = 0x0;
+            ReadProcess(&o_buffer, addr, sizeof(addr_t));
+            o_buffer = (((o_buffer) & (0xffffffffffffffff << (remainder 
+                                * 8))) | o_buffer);     
+            if(ptrace(PTRACE_POKETEXT, p_pid, addr, &o_buffer)  < 0){
+                throw zkexcept::ptrace_error();
+            }
+        } catch(zkexcept::ptrace_error& e){
+            std::cerr << e.what();
+            std::exit(1);
+        }
     }
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) ||
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();

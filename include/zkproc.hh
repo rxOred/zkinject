@@ -49,15 +49,28 @@ namespace Process {
         MEMMAP_ONLY_BASE_ADDR   = 1 << 3
     };
 
+    /* 
+     * These are not to be mistaken for ptrace process state
+     */
     enum PROCESS_STATE : u8 {
         PROCESS_NOT_STARTED     = 1,
         PROCESS_STATE_DETACHED,
         PROCESS_STATE_EXITED,
         PROCESS_STATE_KILLED,
-        PROCESS_STATE_SIGNALED,
+        PROCESS_STATE_SIGNALED,         // not to be confused with signal delivery stop
         PROCESS_STATE_STOPPED,
         PROCESS_STATE_CONTINUED,
         PROCESS_STATE_FAILED
+    };
+
+    enum PROCESS_STOP_STATE : u8 {
+        PROCESS_STOP_NOT_STOPPED,
+        PROCESS_STOP_SIGNAL_DELIVERY_STOP,   //  <---|
+        PROCESS_STOP_GROUP_STOP,             //      |___ ptrace_stop
+        PROCESS_STOP_SYSCALL_STOP,           //      |
+        PROCESS_STOP_PTRACE_EVENT,           //  <---|
+        
+
     };
 
     enum TRACE_OPTIONS: u16 {
@@ -142,6 +155,7 @@ namespace Process {
         private:
             u8 p_flags = 0;
             PROCESS_STATE p_state = PROCESS_NOT_STARTED;
+            PROCESS_STOP_STATE p_stop_state = PROCESS_STOP_NOT_STOPPED;
             std::shared_ptr<MemoryMap> p_memmap;
             pid_t p_pid;
         public:
@@ -176,7 +190,7 @@ namespace Process {
             PROCESS_STATE SignalStopProcess(); 
 
             /* wait until process stops/continues/exits */
-            PROCESS_STATE WaitForProcess(void) const;
+            PROCESS_STATE WaitForProcess(int options) const;
 
             /* generate a random address */
             addr_t GenerateAddress(int seed) const;
