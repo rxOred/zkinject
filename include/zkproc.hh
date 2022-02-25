@@ -27,18 +27,21 @@
 #define MEMPATH     "/proc/%d/mem"
 #define CMDLINE     "/proc/%d/cmdline"
 
-#define PAGE_ALIGN_UP(x) ((x) & ~(4095))
-
 #define DEFAULT_SNAPSHOT_STACK_SZ   1024
 #define DEFAULT_SNAPSHOT_INSTR      64
+
+#define CHECK_FLAGS(x, y) ((x) & (y))
+#define PAGE_ALIGN_UP(x) ((x) & ~(4095))
+#define CHECK_PTRACE_STOP                                           \
+    if(!isPtraceStopped()) {                                        \
+        throw zkexcept::ptrace_error("process is not stopped");     \
+    }                                   
 
 /*
  * following class stores information about a process.
  * such information include, memory map, command line args
  * and more
  */
-
-#define CHECK_FLAGS(x, y) ((x) & (y))
 
 namespace Process {
 
@@ -57,18 +60,18 @@ namespace Process {
         PROCESS_STATE_DETACHED,
         PROCESS_STATE_EXITED,
         PROCESS_STATE_KILLED,
-        PROCESS_STATE_SIGNALED,         // not to be confused with signal delivery stop
+        PROCESS_STATE_SIGNALED,
         PROCESS_STATE_STOPPED,
         PROCESS_STATE_CONTINUED,
         PROCESS_STATE_FAILED
     };
 
-    enum PROCESS_STOP_STATE : u8 {
-        PROCESS_STOP_NOT_STOPPED,
-        PROCESS_STOP_SIGNAL_DELIVERY_STOP,   //  <---|
-        PROCESS_STOP_GROUP_STOP,             //      |___ ptrace_stop
-        PROCESS_STOP_SYSCALL_STOP,           //      |
-        PROCESS_STOP_PTRACE_EVENT,           //  <---|
+    enum PTRACE_STOP_STATE : u8 {
+        PTRACE_STOP_NOT_STOPPED = 0,
+        PTRACE_STOP_SIGNAL_DELIVERY_STOP,   //  <---|
+        PTRACE_STOP_GROUP_STOP,             //      |___ ptrace_stop
+        PTRACE_STOP_SYSCALL_STOP,           //      |
+        PTRACE_STOP_PTRACE_EVENT,           //  <---|
         
 
     };
@@ -155,7 +158,7 @@ namespace Process {
         private:
             u8 p_flags = 0;
             PROCESS_STATE p_state = PROCESS_NOT_STARTED;
-            PROCESS_STOP_STATE p_stop_state = PROCESS_STOP_NOT_STOPPED;
+            PTRACE_STOP_STATE p_ptrace_stop = PTRACE_STOP_NOT_STOPPED;
             std::shared_ptr<MemoryMap> p_memmap;
             pid_t p_pid;
         public:
@@ -185,10 +188,8 @@ namespace Process {
             /* detach from attached / started process */
             void DetachFromProcess(void);
 
-            PROCESS_STATE SignalProcess();
-
-            PROCESS_STATE SignalStopProcess(); 
-
+            void KillProcess(void);
+            
             /* wait until process stops/continues/exits */
             PROCESS_STATE WaitForProcess(int options) const;
 
@@ -220,6 +221,9 @@ namespace Process {
              * methods to read thread state using registers
              * CreateThread
              */
+
+        private:
+            bool isPtraceStopped(void) const;
     };
 
     /* singly-linked list (queue) to store recent process state */

@@ -6,6 +6,16 @@
 #include <stdexcept>
 #include <sys/ptrace.h>
 #include <cstring>
+#include <sys/wait.h>
+
+bool Process::Ptrace::isPtraceStopped(void) const
+{
+    if (p_ptrace_stop != PTRACE_STOP_NOT_STOPPED && 
+            p_ptrace_stop < PTRACE_STOP_PTRACE_EVENT) {
+        return true;
+    }
+    return false;
+}
 
 Process::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
     :p_pid(pid), p_flags(flags)
@@ -56,7 +66,7 @@ void Process::Ptrace::AttachToPorcess(void)
     if(ptrace(PTRACE_ATTACH, p_pid, nullptr, nullptr) < 0)
         throw zkexcept::ptrace_error("ptrace attach failed\n");
 
-    p_state = WaitForProcess();
+    p_state = WaitForProcess(0);
     if(p_state == PROCESS_STATE_FAILED) 
         throw zkexcept::ptrace_error("ptrace attach failed\n");
 }
@@ -80,7 +90,7 @@ Process::PROCESS_STATE Process::Ptrace::StartProcess(char **pathname)
             std::exit(EXIT_FAILURE);
     }
     else if(p_pid > 0) {
-        p_state= WaitForProcess();
+        p_state= WaitForProcess(0);
         return p_state;
     }
     throw zkexcept::process_error("forking failed\n");
@@ -93,23 +103,36 @@ void Process::Ptrace::DetachFromProcess(void)
     p_state = PROCESS_STATE_DETACHED;
 }
 
-Process::PROCESS_STATE Process::Ptrace::SignalProcess(void)
+void Process::Ptrace::KillProcess(void)
 {
-    /* TODO */
-    return PROCESS_STATE_CONTINUED;
+    if (ptrace(PTRACE_KILL, p_pid, nullptr, nullptr) < 0)
+        throw zkexcept::ptrace_error("ptrace kill failed\n");
+    p_state = PROCESS_STATE_KILLED; 
 }
 
-Process::PROCESS_STATE Process::Ptrace::SignalStopProcess()
+/*
+Process::PROCESS_STATE Process::Ptrace::InterruptProcess(void)
 {
-    /* TODO */
-    return PROCESS_STATE_STOPPED;
+    if (ptrace(PTRACE_INTERRUPT, p_pid, nullptr, nullptr) < 0)
+        throw zkexcept::ptrace_error("ptrace interrupt failedb\n");
+    
 }
+*/
+
+/* find a way to extract ptrace-stop information from status
+ * find a way to stop processes 
+ */
 
 Process::PROCESS_STATE Process::Ptrace::WaitForProcess(int options) const
 {
     assert(p_pid != 0 && "Process ID is not set");
     int wstatus = 0;
-    waitpid(p_pid, &wstatus, options);
+    if (options ==  0) {
+        waitpid(p_pid, &wstatus, __WALL);
+    }
+    else {
+        waitpid(__pid_t __pid, int *__stat_loc, int __options)
+    }
     if(WIFEXITED(wstatus)) return PROCESS_STATE_EXITED;
     else if(WIFSTOPPED(wstatus)) {
         /* set p_stop_state */
@@ -159,6 +182,8 @@ addr_t Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
 {
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
+
+    CHECK_PTRACE_STOP
 
     addr_t addr = address;
 
@@ -242,6 +267,8 @@ void Process::Ptrace::ReadRegisters(registers_t* registers)
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
+    CHECK_PTRACE_STOP
+
     if(ptrace(PTRACE_GETREGS, p_pid, nullptr, registers)  < 0)
         throw zkexcept::ptrace_error();
 
@@ -253,6 +280,8 @@ void Process::Ptrace::WriteRegisters(registers_t* registers)
 {
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
+
+    CHECK_PTRACE_STOP
 
     if(ptrace(PTRACE_SETREGS, p_pid, nullptr, registers) < 0)
         throw zkexcept::ptrace_error();
@@ -266,6 +295,8 @@ void *Process::Ptrace::ReplacePage(addr_t addr, void *buffer, int
 {
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
+
+    CHECK_PTRACE_STOP
 
     void *data = malloc(PAGE_ALIGN_UP(buffer_size));
     if (data == NULL) {
