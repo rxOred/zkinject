@@ -53,17 +53,33 @@ namespace Process {
     };
 
     /* 
-     * These are not to be mistaken for ptrace process state
+     * These are not to be confused with ptrace process state
+     * There are only two process states in ptrace context
+     *      1. running      2. stopped
+     * 
      */
     enum PROCESS_STATE : u8 {
         PROCESS_NOT_STARTED     = 1,
         PROCESS_STATE_DETACHED,
         PROCESS_STATE_EXITED,
-        PROCESS_STATE_KILLED,
         PROCESS_STATE_SIGNALED,
         PROCESS_STATE_STOPPED,
         PROCESS_STATE_CONTINUED,
         PROCESS_STATE_FAILED
+    };
+
+    /* exit status of the process */
+    union PROCESS_STATE_INFO {
+        struct exited_normally {
+            int exit_status;
+        };
+        struct signal_terminate {
+            int term_sig;
+            bool is_coredumped;
+        };
+        struct signal_stop {
+            int stop_sig;
+        };
     };
 
     enum PTRACE_STOP_STATE : u8 {
@@ -159,6 +175,7 @@ namespace Process {
             u8 p_flags = 0;
             PROCESS_STATE p_state = PROCESS_NOT_STARTED;
             PTRACE_STOP_STATE p_ptrace_stop = PTRACE_STOP_NOT_STOPPED;
+            EXIT_STATUS p_exit_status;
             std::shared_ptr<MemoryMap> p_memmap;
             pid_t p_pid;
         public:
@@ -189,11 +206,21 @@ namespace Process {
             void DetachFromProcess(void);
 
             void KillProcess(void);
-            
-            /* wait until process stops/continues/exits */
+
+            void ContinueProcess(void);
+
+            /* wait for process state changes */
             PROCESS_STATE WaitForProcess(int options) const;
 
-            /* generate a random address */
+            PROCESS_STATE SignalProcess(int signal);
+
+            PROCESS_STATE SignalStopProcess(void);
+
+            PROCESS_STATE SignalKillProcess(void);
+
+            PROCESS_STATE SignalContinueProcess(void);
+
+            /* generate a random unallocated userland address */
             addr_t GenerateAddress(int seed) const;
             /* 
              * read from process to an allocated buffer starting at address, 

@@ -110,6 +110,13 @@ void Process::Ptrace::KillProcess(void)
     p_state = PROCESS_STATE_KILLED; 
 }
 
+void Process::Ptrace::ContinueProcess(void)
+{
+    if (ptrace(PTRACE_CONT, p_pid, nullptr, nullptr) < 0)
+        throw zkexcept::ptrace_error("ptrace continue failed\n");
+    p_state = PROCESS_STATE_CONTINUED;
+}
+
 /*
 Process::PROCESS_STATE Process::Ptrace::InterruptProcess(void)
 {
@@ -127,19 +134,22 @@ Process::PROCESS_STATE Process::Ptrace::WaitForProcess(int options) const
 {
     assert(p_pid != 0 && "Process ID is not set");
     int wstatus = 0;
-    if (options ==  0) {
-        waitpid(p_pid, &wstatus, __WALL);
-    }
-    else {
-        waitpid(__pid_t __pid, int *__stat_loc, int __options)
-    }
-    if(WIFEXITED(wstatus)) return PROCESS_STATE_EXITED;
-    else if(WIFSTOPPED(wstatus)) {
+    waitpid(p_pid, &wstatus, 0);
+    /* if child exited normally */
+    if (WIFEXITED(wstatus)) {
+        return PROCESS_STATE_EXITED;
+    } 
+    /* if child was stopped by a singal */
+    else if (WIFSTOPPED(wstatus)) {
         /* set p_stop_state */
         return PROCESS_STATE_STOPPED;
     }
-    else if(WIFSIGNALED(wstatus)) return PROCESS_STATE_SIGNALED;
-    else if(WIFCONTINUED(wstatus)) return PROCESS_STATE_CONTINUED;
+    /* if child was terminated by a signal */
+    else if (WIFSIGNALED(wstatus)) {
+
+        return PROCESS_STATE_SIGNALED;
+    }
+    else if (WIFCONTINUED(wstatus)) return PROCESS_STATE_CONTINUED;
     // more
 
 
