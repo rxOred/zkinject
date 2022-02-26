@@ -56,7 +56,9 @@ namespace Process {
      * These are not to be confused with ptrace process state
      * There are only two process states in ptrace context
      *      1. running      2. stopped
+     * zkinject treats process state in more detailed manner.
      * 
+     *
      */
     enum PROCESS_STATE : u8 {
         PROCESS_NOT_STARTED     = 1,
@@ -70,26 +72,28 @@ namespace Process {
 
     /* exit status of the process */
     union PROCESS_STATE_INFO {
-        struct exited_normally {
+        struct {
             int exit_status;
-        };
-        struct signal_terminate {
+        } exited;
+        struct{
             int term_sig;
             bool is_coredumped;
-        };
-        struct signal_stop {
+        } signal_terminated;
+        struct {
             int stop_sig;
-        };
+        } signal_stopped;
     };
 
+    /* This enum describes ptrace stopped process state */
     enum PTRACE_STOP_STATE : u8 {
+        /* ptrace-stop state - tracee is ready accept ptrace commands */
         PTRACE_STOP_NOT_STOPPED = 0,
-        PTRACE_STOP_SIGNAL_DELIVERY_STOP,   //  <---|
-        PTRACE_STOP_GROUP_STOP,             //      |___ ptrace_stop
-        PTRACE_STOP_SYSCALL_STOP,           //      |
-        PTRACE_STOP_PTRACE_EVENT,           //  <---|
+        PTRACE_STOP_SIGNAL_DELIVERY_STOP,
+        PTRACE_STOP_GROUP_STOP, 
+        PTRACE_STOP_TRAP_STOP,
+        PTRACE_STOP_PTRACE_EVENT, 
         
-
+        /* */
     };
 
     enum TRACE_OPTIONS: u16 {
@@ -173,10 +177,14 @@ namespace Process {
     class Ptrace {
         private:
             u8 p_flags = 0;
+
             PROCESS_STATE p_state = PROCESS_NOT_STARTED;
+            PROCESS_STATE_INFO p_state_info; 
+
             PTRACE_STOP_STATE p_ptrace_stop = PTRACE_STOP_NOT_STOPPED;
-            EXIT_STATUS p_exit_status;
+            
             std::shared_ptr<MemoryMap> p_memmap;
+            
             pid_t p_pid;
         public:
             /* 
@@ -207,11 +215,12 @@ namespace Process {
 
             void KillProcess(void);
 
-            void ContinueProcess(void);
+            void ContinueProcess(bool pass_signal);
 
             /* wait for process state changes */
-            PROCESS_STATE WaitForProcess(int options) const;
+            PROCESS_STATE WaitForProcess(int options);
 
+            /* TODO implement signal management methods */
             PROCESS_STATE SignalProcess(int signal);
 
             PROCESS_STATE SignalStopProcess(void);

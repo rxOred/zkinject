@@ -1,6 +1,8 @@
 #include "zkexcept.hh"
 #include "zkproc.hh"
 #include "zktypes.hh"
+#include <asm-generic/errno-base.h>
+#include <cerrno>
 #include <cstdint>
 #include <cstdlib>
 #include <stdexcept>
@@ -11,7 +13,8 @@
 bool Process::Ptrace::isPtraceStopped(void) const
 {
     if (p_ptrace_stop != PTRACE_STOP_NOT_STOPPED && 
-            p_ptrace_stop < PTRACE_STOP_PTRACE_EVENT) {
+            p_ptrace_stop < PTRACE_STOP_PTRACE_EVENT &&
+            p_state == PROCESS_STATE_STOPPED) {
         return true;
     }
     return false;
@@ -20,9 +23,10 @@ bool Process::Ptrace::isPtraceStopped(void) const
 Process::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
     :p_pid(pid), p_flags(flags)
 {
-    if (CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) && CHECK_FLAGS(PTRACE_START_NOW, p_flags)){
-        throw std::invalid_argument("flags ATTACH_NOW and START_NOW cannot be used at the \
-                same time");
+    if (CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) && 
+            CHECK_FLAGS(PTRACE_START_NOW, p_flags)){
+        throw std::invalid_argument("flags ATTACH_NOW and START_NOW     \
+                cannot be used at the same time");
     }
     /* if a pid and PTRACE_ATTACH_NOW is specified, attach to the pid */
     else if(CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) && p_pid != 0){
@@ -33,8 +37,9 @@ Process::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
             std::exit(1);
         }
         p_memmap = std::make_shared<MemoryMap>(p_pid, 0);
-    /* if pathname is specified and pid is not, a process will be spawed */
-    }else if(CHECK_FLAGS(PTRACE_START_NOW, p_flags) && pathname != nullptr
+    }
+    /* if pathname is specified and pid is not,a process will be spawed */
+    else if(CHECK_FLAGS(PTRACE_START_NOW, p_flags) && pathname != nullptr
             && p_pid == 0){
         try{
             PROCESS_STATE ret = StartProcess((char **)pathname);
@@ -65,7 +70,6 @@ void Process::Ptrace::AttachToPorcess(void)
 {
     if(ptrace(PTRACE_ATTACH, p_pid, nullptr, nullptr) < 0)
         throw zkexcept::ptrace_error("ptrace attach failed\n");
-
     p_state = WaitForProcess(0);
     if(p_state == PROCESS_STATE_FAILED) 
         throw zkexcept::ptrace_error("ptrace attach failed\n");
@@ -107,13 +111,25 @@ void Process::Ptrace::KillProcess(void)
 {
     if (ptrace(PTRACE_KILL, p_pid, nullptr, nullptr) < 0)
         throw zkexcept::ptrace_error("ptrace kill failed\n");
-    p_state = PROCESS_STATE_KILLED; 
+    p_state = PROCESS_STATE_SIGNALED;
+    p_state_info.signal_terminated.term_sig = SIGKILL; 
 }
 
-void Process::Ptrace::ContinueProcess(void)
+void Process::Ptrace::ContinueProcess(bool pass_signal)
 {
-    if (ptrace(PTRACE_CONT, p_pid, nullptr, nullptr) < 0)
-        throw zkexcept::ptrace_error("ptrace continue failed\n");
+    if (p_state == PROCESS_STATE_STOPPED) {
+        if (p_ptrace_stop == PTRACE_STOP_SIGNAL_DELIVERY_STOP) {
+            if (ptrace(PTRACE_CONT, p_pid, nullptr, 
+                        p_state_info.signal_stopped.stop_sig) < 0) {
+                throw zkexcept::ptrace_error("ptrace continue failed\n");
+            }
+        }
+        else {
+            if (ptrace(PTRACE_CONT, p_pid, nullptr, nullptr) < 0)
+                throw zkexcept::ptrace_error("ptrace continue failed\n");
+        }
+
+    }
     p_state = PROCESS_STATE_CONTINUED;
 }
 
@@ -130,29 +146,59 @@ Process::PROCESS_STATE Process::Ptrace::InterruptProcess(void)
  * find a way to stop processes 
  */
 
-Process::PROCESS_STATE Process::Ptrace::WaitForProcess(int options) const
+Process::PROCESS_STATE Process::Ptrace::WaitForProcess(int options)
 {
     assert(p_pid != 0 && "Process ID is not set");
     int wstatus = 0;
-    waitpid(p_pid, &wstatus, 0);
+    waitpid(p_pid, &wstatus, options);
     /* if child exited normally */
     if (WIFEXITED(wstatus)) {
+        p_state_info.exited.exit_status = WEXITSTATUS(wstatus);
         return PROCESS_STATE_EXITED;
+    } 
+    /* if child was terminated by a signal */
+    else if (WIFSIGNALED(wstatus)) {
+        p_state_info.signal_terminated.term_sig = WTERMSIG(wstatus);    
+        p_state_info.signal_terminated.is_coredumped = WCOREDUMP(wstatus);
+        return PROCESS_STATE_SIGNALED;
     } 
     /* if child was stopped by a singal */
     else if (WIFSTOPPED(wstatus)) {
-        /* set p_stop_state */
+        p_state_info.signal_stopped.stop_sig = WSTOPSIG(wstatus);
+        if (p_state_info.signal_stopped.stop_sig == SIGSTOP ||
+                p_state_info.signal_stopped.stop_sig == SIGTSTP ||
+                p_state_info.signal_stopped.stop_sig == SIGTTOU ||
+                p_state_info.signal_stopped.stop_sig ==  SIGTTIN) {
+            /* 
+             * if result of the query GETSETINGO is EINVAL or ESRCH 
+             * it is a group stop.
+             */ 
+            siginfo_t siginfo; 
+            if (ptrace(PTRACE_GETSIGINFO, p_pid, nullptr, &siginfo) < 0) {
+                if (errno == EINVAL || errno ==  ESRCH) {
+                    p_ptrace_stop = PTRACE_STOP_GROUP_STOP;
+                }
+            }
+            /*
+             * if status >> 16 ==  PTRACE_EVENT_STOP, it is a 
+             * ptrace event
+             */
+            if (wstatus >> 16 ==  PTRACE_EVENT_STOP) {
+                p_ptrace_stop = PTRACE_STOP_PTRACE_EVENT;
+            }
+        }
+        else if (p_state_info.signal_stopped.stop_sig == SIGTRAP) {
+            p_ptrace_stop = PTRACE_STOP_TRAP_STOP;
+        }
+        else {
+            p_ptrace_stop = PTRACE_STOP_SIGNAL_DELIVERY_STOP;
+        }
         return PROCESS_STATE_STOPPED;
     }
-    /* if child was terminated by a signal */
-    else if (WIFSIGNALED(wstatus)) {
-
-        return PROCESS_STATE_SIGNALED;
+    else if (WIFCONTINUED(wstatus)) {
+        return PROCESS_STATE_CONTINUED;
     }
-    else if (WIFCONTINUED(wstatus)) return PROCESS_STATE_CONTINUED;
-    // more
-
-
+        
     return PROCESS_STATE_FAILED;
 }
 
