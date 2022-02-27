@@ -48,6 +48,7 @@
 namespace Process {
 
     enum PROCESS_INFO : u8 {
+        PTRACE_SEIZE            = 0,    // TODO
         PTRACE_ATTACH_NOW       = 1 << 0,
         PTRACE_START_NOW        = 1 << 1,
         PTRACE_DISABLE_ASLR     = 1 << 2,
@@ -177,6 +178,22 @@ namespace Process {
              * Implement VirtualAlloc
              * Implement VirtualProtect
              */
+    };
+
+    class Signal {
+        private:
+            siginfo_t s_siginfo;
+            pid_t s_pid;
+        public:
+            Signal(pid_t pid);
+
+            PROCESS_STATE SignalProcess(int signal);
+
+            PROCESS_STATE SignalStopProcess(void);
+
+            PROCESS_STATE SignalKillProcess(void);
+
+            PROCESS_STATE SignalContinueProcess(void);
     };
 
     class Ptrace {

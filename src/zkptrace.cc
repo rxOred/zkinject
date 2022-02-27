@@ -328,7 +328,7 @@ addr_t Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
         for (int i = 0; i < (buffer_sz / sizeof(addr_t)); 
                 addr+=sizeof(addr_t), 
                 src+=sizeof(addr_t)){
-            if(ptrace(PTRACE_POKETEXT, p_pid, addr, src)  < 0){
+            if (ptrace(PTRACE_POKETEXT, p_pid, addr, src)  < 0) {
                 throw zkexcept::ptrace_error();
             }
         }
@@ -345,7 +345,7 @@ addr_t Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
             ReadProcess(&o_buffer, addr, sizeof(addr_t));
             o_buffer = (((o_buffer) & (0xffffffffffffffff << (buffer_sz 
                                 * 8))) | o_buffer);     
-            if(ptrace(PTRACE_POKETEXT, p_pid, addr, &o_buffer)  < 0){
+            if (ptrace(PTRACE_POKETEXT, p_pid, addr, &o_buffer)  < 0) {
                 throw zkexcept::ptrace_error();
             }
         } catch(zkexcept::ptrace_error& e){
@@ -360,7 +360,7 @@ addr_t Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
         /* write sizeof(addr_t) size chunks */
         u8 *src = (u8 *)buffer;
         for (int i = 0; i < count; addr+=sizeof(addr_t), 
-                src+=sizeof(addr_t)){
+                src+=sizeof(addr_t)) {
             if(ptrace(PTRACE_POKETEXT, p_pid, addr, src)  < 0){
                 throw zkexcept::ptrace_error();
             }
@@ -379,7 +379,7 @@ addr_t Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
             std::exit(1);
         }
     }
-    if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) ||
+    if (!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) ||
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();
     return addr;
 }
@@ -446,7 +446,6 @@ void *Process::Ptrace::ReplacePage(addr_t addr, void *buffer, int
         std::cerr << e.what();
         std::exit(1);
     }
-
     return data;
 }
 
