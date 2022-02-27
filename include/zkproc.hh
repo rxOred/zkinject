@@ -37,6 +37,8 @@
         throw zkexcept::ptrace_error("process is not stopped");     \
     }                                   
 
+#define GET_PTRACE_EVENT_VALUE(x) (((x) << (8)) | SIGTRAP )
+
 /*
  * following class stores information about a process.
  * such information include, memory map, command line args
@@ -70,6 +72,19 @@ namespace Process {
         PROCESS_STATE_FAILED
     };
 
+
+    /* This enum describes ptrace stopped process state */
+    enum PTRACE_STOP_STATE : u8 {
+        /* ptrace-stop state - tracee is ready accept ptrace commands */
+        PTRACE_STOP_NOT_STOPPED = 0,
+        PTRACE_STOP_SIGNAL_DELIVERY,
+        PTRACE_STOP_GROUP, 
+        PTRACE_STOP_SYSCALL,
+        PTRACE_STOP_PTRACE_EVENT, 
+        
+        /* */
+    };
+
     /* exit status of the process */
     union PROCESS_STATE_INFO {
         struct {
@@ -81,19 +96,9 @@ namespace Process {
         } signal_terminated;
         struct {
             int stop_sig;
+            PTRACE_STOP_STATE ptrace_stop;
+            __ptrace_eventcodes ptrace_event;
         } signal_stopped;
-    };
-
-    /* This enum describes ptrace stopped process state */
-    enum PTRACE_STOP_STATE : u8 {
-        /* ptrace-stop state - tracee is ready accept ptrace commands */
-        PTRACE_STOP_NOT_STOPPED = 0,
-        PTRACE_STOP_SIGNAL_DELIVERY_STOP,
-        PTRACE_STOP_GROUP_STOP, 
-        PTRACE_STOP_TRAP_STOP,
-        PTRACE_STOP_PTRACE_EVENT, 
-        
-        /* */
     };
 
     enum TRACE_OPTIONS: u16 {
@@ -180,8 +185,6 @@ namespace Process {
 
             PROCESS_STATE p_state = PROCESS_NOT_STARTED;
             PROCESS_STATE_INFO p_state_info; 
-
-            PTRACE_STOP_STATE p_ptrace_stop = PTRACE_STOP_NOT_STOPPED;
             
             std::shared_ptr<MemoryMap> p_memmap;
             
@@ -218,7 +221,7 @@ namespace Process {
             void ContinueProcess(bool pass_signal);
 
             /* wait for process state changes */
-            PROCESS_STATE WaitForProcess(int options);
+            void WaitForProcess(int options);
 
             /* TODO implement signal management methods */
             PROCESS_STATE SignalProcess(int signal);
