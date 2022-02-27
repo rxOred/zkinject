@@ -187,13 +187,15 @@ namespace Process {
         public:
             Signal(pid_t pid);
 
-            PROCESS_STATE SignalProcess(int signal);
+            bool SignalProcess(int signal) const;
 
-            PROCESS_STATE SignalStopProcess(void);
+            bool SignalStopProcess(void) const;
 
-            PROCESS_STATE SignalKillProcess(void);
+            bool SignalKillProcess(void) const;
 
-            PROCESS_STATE SignalContinueProcess(void);
+            bool SignalContinueProcess(void) const;
+
+            bool SignalTrapProcess(void) const;
     };
 
     class Ptrace {
