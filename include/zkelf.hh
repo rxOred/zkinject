@@ -19,30 +19,45 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-//#define PAGE_SIZE   sysconf(_SC_PAGESIZE);
+#define AUTOSAVE                                                    \
+    if(elf_flags ==  ELF_AUTO_SAVE) {                               \
+        SaveElf()                                                   \
+    }
 
-namespace Binary{
-    /* class which defines important parts of an elf binary */
+namespace ZkElf {
+
+    enum ELFFLAGS : u8 {
+        ELF_AUTO_SAVE,
+        ELF_SAVE_AT_EXIT,
+        ELF_NO_SAVE
+    };
+
     class Elf {
-        protected: 
-            void    *elf_memmap;
-            /* load address of elf */
+        protected:
+            ELFFLAGS      elf_flags;
+
+            const char *elf_pathname;
+
+            size_t      elf_size;
+
+            void        *elf_memmap;
+
             u64     elf_baseaddr;
-            /* elf header */
+
             ehdr_t    *elf_ehdr;
-            /* elf program header table */
+
             phdr_t    *elf_phdr;
-            /* elf section header table */
+
             shdr_t    *elf_shdr;
-            /* elf symbol table */
+
             symtab_t *elf_symtab;
-            /* elf symbol string table */
+
             strtab_t  elf_strtab;
-            /* elf dynamic symbol table optional */
+
             dynamic_t *elf_dynamic;
-            /* elf dynamic symtab optional */
+
             symtab_t  *elf_dynsym;
-            /* elf dynamic string table optional */
+
             strtab_t  elf_dynstr;
 
             enum ELF_SHDR_TABLE : short{
@@ -58,14 +73,23 @@ namespace Binary{
             int elf_indexes[ELF_INDEX_TABLE_SIZE];
             void LoadFile(int fd);
         public:
-            const char *elf_pathname;
-            size_t      elf_size;
+            Elf(ELFFLAGS flags);
 
-            Elf();
             Elf(const char *pathname);
             ~Elf();
+
             void OpenElf(void);
-            
+
+            inline const char *GetPathname(void) const 
+            {
+                return elf_pathname;
+            }
+
+            inline int GetElfSize(void) const
+            {
+                return elf_size;
+            }
+
             void LoadDynamicData(void);
             bool VerifyElf(void) const;
             void RemoveMap(void);
@@ -106,17 +130,17 @@ namespace Binary{
             int GetSymbolIndexbyName(const char *name) const;
             int GetDynSymbolIndexbyName(const char *name) const;
             int GetSectionIndexbyName(const char *name) const;
+
             void *ElfRead(off_t readoff, size_t size) const;
             void ElfWrite(void *buffer, off_t writeoff, size_t size) const;
+
+            void PatchAddress(u8 *buffer, size_t len, addr_t addr, u8 *magic);
+
+            void SaveElf(void) const;
+            void SaveBufferToDisk(const char *pathname, off_t offset, void 
+                *buffer, int buffer_size) const;
     };
-   /* data segment infection */
 
-    /* reverse text padding infection */
-
-    /* patch addresses and shit */
-    void PatchAddress(u8 *buffer, size_t len, addr_t addr, u8 *magic);
-    void WriteBufferToDisk(const char *pathname, off_t offset, void 
-        *buffer, int buffer_size);
 };
 
 #endif /* ZKELF_HH */

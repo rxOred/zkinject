@@ -21,8 +21,6 @@
 #include <sys/ptrace.h>
 #include <random>
 
-#define PATH_LEN  64
-
 #define MAPPATH     "/proc/%d/maps"
 #define MEMPATH     "/proc/%d/mem"
 #define CMDLINE     "/proc/%d/cmdline"
@@ -30,12 +28,10 @@
 #define DEFAULT_SNAPSHOT_STACK_SZ   1024
 #define DEFAULT_SNAPSHOT_INSTR      64
 
-#define CHECK_FLAGS(x, y) ((x) & (y))
-#define PAGE_ALIGN_UP(x) ((x) & ~(4095))
 #define CHECK_PTRACE_STOP                                           \
     if(!isPtraceStopped()) {                                        \
         throw zkexcept::ptrace_error("process is not stopped");     \
-    }                                   
+    }
 
 #define GET_PTRACE_EVENT_VALUE(x) (((x) << (8)) | SIGTRAP )
 
@@ -45,7 +41,7 @@
  * and more
  */
 
-namespace Process {
+namespace ZkProcess {
 
     enum PROCESS_INFO : u8 {
         PTRACE_SEIZE            = 0,    // TODO
@@ -204,9 +200,9 @@ namespace Process {
 
             PROCESS_STATE p_state = PROCESS_NOT_STARTED;
             PROCESS_STATE_INFO p_state_info; 
-            
+
             std::shared_ptr<MemoryMap> p_memmap;
-            
+
             pid_t p_pid;
         public:
             /* 
@@ -242,7 +238,6 @@ namespace Process {
             /* wait for process state changes */
             void WaitForProcess(int options);
 
-            /* TODO implement signal management methods */
             PROCESS_STATE SignalProcess(int signal);
 
             PROCESS_STATE SignalStopProcess(void);
@@ -357,8 +352,8 @@ namespace Process {
                 }
             }
 
-            bool SaveSnapshot(Process::Ptrace &ptrace, u8 flags);
-            bool RestoreSnapshot(Process::Ptrace &ptrace);
+            bool SaveSnapshot(ZkProcess::Ptrace &ptrace, u8 flags);
+            bool RestoreSnapshot(ZkProcess::Ptrace &ptrace);
             /*inline registers_t *GetSnapshotRegisters(void) const
             {
                 return snap_state->GetRegisters();
