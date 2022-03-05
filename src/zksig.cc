@@ -3,13 +3,13 @@
 #include "zkproc.hh"
 #include <signal.h>
 
-Process::Signal::Signal(pid_t pid)
+ZkProcess::Signal::Signal(pid_t pid)
     :s_pid(pid)
 {
     s_siginfo = {0};
 }
 
-bool Process::Signal::SignalProcess(int signal) const
+bool ZkProcess::Signal::SignalProcess(int signal) const
 {
     if (kill(s_pid, signal) < -1) 
         return false;
@@ -17,22 +17,22 @@ bool Process::Signal::SignalProcess(int signal) const
         return true;
 }
 
-bool Process::Signal::SignalStopProcess(void) const 
+bool ZkProcess::Signal::SignalStopProcess(void) const 
 {
     return SignalProcess(SIGSTOP);
 }
 
-bool Process::Signal::SignalKillProcess(void) const 
+bool ZkProcess::Signal::SignalKillProcess(void) const 
 {
     return SignalProcess(SIGKILL);
 }
 
-bool Process::Signal::SignalContinueProcess(void) const 
+bool ZkProcess::Signal::SignalContinueProcess(void) const 
 {
     return SignalProcess(SIGCONT);
 }
 
-bool Process::Signal::SignalTrapProcess(void) const 
+bool ZkProcess::Signal::SignalTrapProcess(void) const 
 {
     return SignalProcess(SIGTRAP);
 }

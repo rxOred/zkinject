@@ -1,12 +1,16 @@
 #include "zkelf.hh"
 #include "zkexcept.hh"
 #include "zktypes.hh"
+#include "zkutils.hh"
+#include <asm-generic/errno-base.h>
+#include <cerrno>
 #include <elf.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-void Binary::PatchAddress(u8 *buffer, size_t len, u64 addr, u8 *magic)
+void ZkElf::Elf::PatchAddress(u8 *buffer, size_t len, u64 addr, 
+        u8 *magic)
 {
     int count = 0;
     for (int i = 0; i < len; i++){
@@ -26,14 +30,14 @@ error:
     throw zkexcept::magic_not_found_error();
 }
 
-Binary::Elf::Elf()
+ZkElf::Elf::Elf(ZkElf::ELFFLAGS flags)
     :elf_memmap(nullptr), elf_pathname(nullptr), elf_baseaddr(0), 
     elf_ehdr(nullptr), elf_phdr(nullptr), elf_shdr(nullptr), elf_size(0),
     elf_dynamic(nullptr), elf_symtab(nullptr), elf_dynsym(nullptr),
-    elf_dynstr(nullptr), elf_strtab(nullptr)
+    elf_dynstr(nullptr), elf_strtab(nullptr), elf_flags(flags)
 {}
 
-Binary::Elf::Elf(const char *pathname)
+ZkElf::Elf::Elf(const char *pathname)
     :elf_memmap(nullptr), elf_pathname(pathname), elf_baseaddr(0),
     elf_ehdr(nullptr), elf_phdr(nullptr), elf_shdr(nullptr), elf_size(0),
     elf_dynamic(nullptr), elf_symtab(nullptr), elf_dynsym(nullptr),
@@ -48,8 +52,11 @@ Binary::Elf::Elf(const char *pathname)
     }
 }
 
-Binary::Elf::~Elf()
+ZkElf::Elf::~Elf()
 {
+    if (elf_flags == ELF_SAVE_AT_EXIT) {
+        SaveElf();
+    }
     try{
         RemoveMap();
     } catch(std::exception& e){
@@ -58,7 +65,7 @@ Binary::Elf::~Elf()
     }
 }
 
-void Binary::Elf::OpenElf(void)
+void ZkElf::Elf::OpenElf(void)
 {
     assert(elf_pathname != nullptr && "pathname is not specified");
 
@@ -75,7 +82,7 @@ void Binary::Elf::OpenElf(void)
 }
 
 /* load the elf binary into memory, parse most essential headers */
-void Binary::Elf::LoadFile(int fd)
+void ZkElf::Elf::LoadFile(int fd)
 {
     assert(fd != 0 && "file descriptor is empty");
 
@@ -113,7 +120,7 @@ void Binary::Elf::LoadFile(int fd)
         sh_offset];
 }
 
-void Binary::Elf::LoadDynamicData(void)
+void ZkElf::Elf::LoadDynamicData(void)
 {
     int dynamic_index = 0;
     try{
@@ -141,7 +148,7 @@ void Binary::Elf::LoadDynamicData(void)
     elf_dynsym = (symtab_t *)&memmap[elf_shdr[dynsym_index].sh_offset];
 }
 
-bool Binary::Elf::VerifyElf(void) const
+bool ZkElf::Elf::VerifyElf(void) const
 {
     if(elf_ehdr->e_ident[0] != 0x7f || elf_ehdr->e_ident[1] != 0x45 ||
             elf_ehdr->e_ident[2] != 0x4c || elf_ehdr->e_ident[4] != 0x46)
@@ -166,7 +173,7 @@ bool Binary::Elf::VerifyElf(void) const
     return true;
 }
 
-void Binary::Elf::RemoveMap(void)
+void ZkElf::Elf::RemoveMap(void)
 {
     assert(elf_memmap != nullptr && "memory is not mapped to unmap");
     if(munmap(elf_memmap, elf_size) < 0)
@@ -175,7 +182,7 @@ void Binary::Elf::RemoveMap(void)
     elf_memmap = nullptr;
 }
 
-int Binary::Elf::GetSegmentIndexbyAttr(u32 type, u32 flags, u32 prev_flags)
+int ZkElf::Elf::GetSegmentIndexbyAttr(u32 type, u32 flags, u32 prev_flags)
     const
 {
     for(int i = 0; i < elf_ehdr->e_phnum; i++){
@@ -190,7 +197,7 @@ int Binary::Elf::GetSegmentIndexbyAttr(u32 type, u32 flags, u32 prev_flags)
     throw zkexcept::segment_not_found_error();
 }
 
-int Binary::Elf::GetSectionIndexbyAttr(u32 type, u32 flags) const
+int ZkElf::Elf::GetSectionIndexbyAttr(u32 type, u32 flags) const
 {
     for(int i = 0; i < elf_ehdr->e_shnum; i++){
         if(elf_shdr[i].sh_type == type && elf_shdr[i].sh_flags == 
@@ -202,7 +209,7 @@ int Binary::Elf::GetSectionIndexbyAttr(u32 type, u32 flags) const
 
 /* duh you cant get a segment by name */
 
-int Binary::Elf::GetSectionIndexbyName(const char *name) const
+int ZkElf::Elf::GetSectionIndexbyName(const char *name) const
 {
     if(elf_ehdr->e_shstrndx == 0)
         throw zkexcept::stripped_binary_error("section header string    \
@@ -217,7 +224,7 @@ int Binary::Elf::GetSectionIndexbyName(const char *name) const
     throw zkexcept::section_not_found_error();
 }
 
-int Binary::Elf::GetSymbolIndexbyName(const char *name)
+int ZkElf::Elf::GetSymbolIndexbyName(const char *name)
     const
 {
     int index = elf_indexes[ELF_SYMTAB_INDEX];
@@ -229,7 +236,7 @@ int Binary::Elf::GetSymbolIndexbyName(const char *name)
     throw zkexcept::symbol_not_found_error();
 }
 
-int Binary::Elf::GetDynSymbolIndexbyName(const char *name)
+int ZkElf::Elf::GetDynSymbolIndexbyName(const char *name)
     const
 {
     assert(elf_indexes[ELF_DYNSYM_INDEX] != 0 && 
@@ -243,7 +250,7 @@ int Binary::Elf::GetDynSymbolIndexbyName(const char *name)
     throw zkexcept::symbol_not_found_error();
 }
 
-void *Binary::Elf::ElfRead(off_t readoff, size_t size) const
+void *ZkElf::Elf::ElfRead(off_t readoff, size_t size) const
 {
     u8 *buffer = (u8 *)calloc(size, sizeof(u8));
     if(buffer == nullptr)
@@ -257,7 +264,7 @@ void *Binary::Elf::ElfRead(off_t readoff, size_t size) const
     return buffer;
 }
 
-void Binary::Elf::ElfWrite(void *buffer, off_t writeoff, size_t size) 
+void ZkElf::Elf::ElfWrite(void *buffer, off_t writeoff, size_t size) 
     const
 {
     u8 *memmap = (u8 *)elf_memmap;
@@ -265,15 +272,29 @@ void Binary::Elf::ElfWrite(void *buffer, off_t writeoff, size_t size)
     for(int i = 0; i < writeoff + size; i++){
         _buffer[i] = memmap[i];
     }
-    WriteBufferToDisk(elf_pathname, writeoff, buffer, size);
+    SaveBufferToDisk(elf_pathname, writeoff, buffer, size);
 }
 
-void WriteBufferToDisk(const char *pathname, off_t offset, 
-        void *buffer, int buffer_size)
+void ZkElf::Elf::SaveElf(void) const
+{
+    int fd = open(GetPathname(), O_CREAT | O_TRUNC | O_WRONLY, 0666);
+    if (fd < 0) {
+        throw zkexcept::file_not_found_error();
+    }
+
+    if (write(fd, elf_memmap, GetElfSize()) < GetElfSize()) {
+        throw zkexcept::file_not_found_error();
+    }
+}
+
+void ZkElf::Elf::SaveBufferToDisk(const char *pathname, off_t offset, 
+        void *buffer, int buffer_size) const
 {
     int fd = open(pathname, O_CREAT | O_WRONLY, 0666);
     if (fd < 0)
         throw zkexcept::file_not_found_error();
 
-    int ret = pwrite(fd, buffer, buffer_size, offset);
+    if (pwrite(fd, buffer, buffer_size, offset) < buffer_size) {
+        throw zkexcept::file_not_found_error();
+    }
 }

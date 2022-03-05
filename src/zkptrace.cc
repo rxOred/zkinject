@@ -1,6 +1,7 @@
 #include "zkexcept.hh"
 #include "zkproc.hh"
 #include "zktypes.hh"
+#include "zkutils.hh"
 #include <asm-generic/errno-base.h>
 #include <bits/types/siginfo_t.h>
 #include <cerrno>
@@ -11,7 +12,7 @@
 #include <cstring>
 #include <sys/wait.h>
 
-bool Process::Ptrace::isPtraceStopped(void) const
+bool ZkProcess::Ptrace::isPtraceStopped(void) const
 {
     if (p_state_info.signal_stopped.ptrace_stop >
             PTRACE_STOP_NOT_STOPPED && 
@@ -23,7 +24,7 @@ bool Process::Ptrace::isPtraceStopped(void) const
     return false;
 }
 
-Process::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
+ZkProcess::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
     :p_pid(pid), p_flags(flags)
 {
     if (CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) && 
@@ -62,30 +63,32 @@ Process::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
     }
 }
 
-Process::Ptrace::~Ptrace()
+ZkProcess::Ptrace::~Ptrace()
 {
     if(CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             CHECK_FLAGS(PTRACE_START_NOW, p_flags))
         DetachFromProcess();
 }
 
-void Process::Ptrace::AttachToPorcess(void)
+void ZkProcess::Ptrace::AttachToPorcess(void)
 {
-    if(ptrace(PTRACE_ATTACH, p_pid, nullptr, nullptr) < 0)
+    if (ptrace(PTRACE_ATTACH, p_pid, nullptr, nullptr) < 0)
         throw zkexcept::ptrace_error("ptrace attach failed\n");
-    p_state = WaitForProcess(0);
+    WaitForProcess(0);
     if(p_state == PROCESS_STATE_FAILED) 
         throw zkexcept::ptrace_error("ptrace attach failed\n");
 }
 
-void Process::Ptrace::SeizeProcess(void)
+
+void ZkProcess::Ptrace::SeizeProcess(void)
 {
-    if (ptrace(PTRACE_SEIZE, p_pid, nullptr, nullptr) < 0)
-        throw zkexcept::ptrace_error("ptrace seize failed\n");
+//    if (ptrace(PTRACE_SEIZE, p_pid, nullptr, nullptr) < 0)
+//      throw zkexcept::ptrace_error("ptrace seize failed\n");
     p_state = PROCESS_STATE_CONTINUED;
 }
 
-Process::PROCESS_STATE Process::Ptrace::StartProcess(char **pathname)
+
+ZkProcess::PROCESS_STATE ZkProcess::Ptrace::StartProcess(char **pathname)
 {
     p_pid = fork();
     if(p_pid == 0){
@@ -97,20 +100,20 @@ Process::PROCESS_STATE Process::Ptrace::StartProcess(char **pathname)
             std::exit(EXIT_FAILURE);
     }
     else if(p_pid > 0) {
-        p_state= WaitForProcess(0);
+        WaitForProcess(0);
         return p_state;
     }
     throw zkexcept::process_error("forking failed\n");
 }
 
-void Process::Ptrace::DetachFromProcess(void)
+void ZkProcess::Ptrace::DetachFromProcess(void)
 {
     if(ptrace(PTRACE_DETACH, p_pid, nullptr, nullptr) < 0)
         throw zkexcept::ptrace_error("ptrace detach failed\n");
     p_state = PROCESS_STATE_DETACHED;
 }
 
-void Process::Ptrace::KillProcess(void)
+void ZkProcess::Ptrace::KillProcess(void)
 {
     if (ptrace(PTRACE_KILL, p_pid, nullptr, nullptr) < 0)
         throw zkexcept::ptrace_error("ptrace kill failed\n");
@@ -118,7 +121,7 @@ void Process::Ptrace::KillProcess(void)
     p_state_info.signal_terminated.term_sig = SIGKILL; 
 }
 
-void Process::Ptrace::ContinueProcess(bool pass_signal)
+void ZkProcess::Ptrace::ContinueProcess(bool pass_signal)
 {
     if (p_state == PROCESS_STATE_STOPPED) {
         if (p_state_info.signal_stopped.ptrace_stop == 
@@ -137,7 +140,7 @@ void Process::Ptrace::ContinueProcess(bool pass_signal)
 }
 
 /*
-Process::PROCESS_STATE Process::Ptrace::InterruptProcess(void)
+ZkProcess::PROCESS_STATE ZkProcess::Ptrace::InterruptProcess(void)
 {
     if (ptrace(PTRACE_INTERRUPT, p_pid, nullptr, nullptr) < 0)
         throw zkexcept::ptrace_error("ptrace interrupt failedb\n");
@@ -149,7 +152,7 @@ Process::PROCESS_STATE Process::Ptrace::InterruptProcess(void)
  * find a way to stop processes 
  */
 
-void Process::Ptrace::WaitForProcess(int options)
+void ZkProcess::Ptrace::WaitForProcess(int options)
 {
     assert(p_pid != 0 && "Process ID is not set");
     int wstatus = 0;
@@ -268,7 +271,7 @@ void Process::Ptrace::WaitForProcess(int options)
 }
 
 /* generate a random address */
-addr_t Process::Ptrace::GenerateAddress(int seed) const 
+addr_t ZkProcess::Ptrace::GenerateAddress(int seed) const 
 {
     std::mt19937_64 gen(seed);
     std::uniform_int_distribution<u64> distr(0, 0x7ffffffffffffff);
@@ -276,7 +279,7 @@ addr_t Process::Ptrace::GenerateAddress(int seed) const
     return distr(gen);
 }
 
-void Process::Ptrace::ReadProcess(void *buffer, addr_t address, size_t 
+void ZkProcess::Ptrace::ReadProcess(void *buffer, addr_t address, size_t 
         buffer_sz) 
 {
     /* if not already attached or started, attach */
@@ -299,7 +302,7 @@ void Process::Ptrace::ReadProcess(void *buffer, addr_t address, size_t
     return;
 }
 
-addr_t Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t 
+addr_t ZkProcess::Ptrace::WriteProcess(void *buffer, addr_t address, size_t 
         buffer_sz) 
 {
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
@@ -384,7 +387,7 @@ addr_t Process::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
     return addr;
 }
 
-void Process::Ptrace::ReadRegisters(registers_t* registers)
+void ZkProcess::Ptrace::ReadRegisters(registers_t* registers)
 {
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
@@ -398,7 +401,7 @@ void Process::Ptrace::ReadRegisters(registers_t* registers)
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();
 }
 
-void Process::Ptrace::WriteRegisters(registers_t* registers)
+void ZkProcess::Ptrace::WriteRegisters(registers_t* registers)
 {
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
@@ -412,7 +415,7 @@ void Process::Ptrace::WriteRegisters(registers_t* registers)
             !CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();
 }
 
-void *Process::Ptrace::ReplacePage(addr_t addr, void *buffer, int 
+void *ZkProcess::Ptrace::ReplacePage(addr_t addr, void *buffer, int 
         buffer_size)
 {
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 
@@ -455,7 +458,7 @@ void *Process::Ptrace::ReplacePage(addr_t addr, void *buffer, int
  * if protection is not null or something, inject another shellcode that 
  * calls mprotect
  */
-void *Process::Ptrace::MemAlloc(void *mmap_shellcode, int protection, 
+void *ZkProcess::Ptrace::MemAlloc(void *mmap_shellcode, int protection, 
         int size)
 {
     if(!CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) || 

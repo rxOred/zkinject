@@ -1,5 +1,6 @@
 #include "zkexcept.hh"
 #include "zkproc.hh"
+#include "zkutils.hh"
 #include "zktypes.hh"
 #include <stdexcept>
 #include <sys/ptrace.h>
@@ -7,7 +8,7 @@
 
 /* BUG - this may not work */
 
-bool Process::Snapshot::SaveSnapshot(Process::Ptrace &ptrace, u8 flags)
+bool ZkProcess::Snapshot::SaveSnapshot(ZkProcess::Ptrace &ptrace, u8 flags)
 {
     registers_t *regs = nullptr;
     void *stack = nullptr;
@@ -81,7 +82,7 @@ bool Process::Snapshot::SaveSnapshot(Process::Ptrace &ptrace, u8 flags)
     return true;
 }
 
-bool Process::Snapshot::RestoreSnapshot(Process::Ptrace &ptrace)
+bool ZkProcess::Snapshot::RestoreSnapshot(ZkProcess::Ptrace &ptrace)
 {
     ProcessSnapshot *curr = snap_state;
     snap_state = curr->GetNext();

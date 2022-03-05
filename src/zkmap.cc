@@ -1,9 +1,10 @@
 #include "zkproc.hh"
 #include "zkexcept.hh"
+#include "zkutils.hh"
 #include <cstdint>
 #include <cstdio>
 
-Process::MemoryMap::MemoryMap(pid_t pid, u8 flag)
+ZkProcess::MemoryMap::MemoryMap(pid_t pid, u8 flag)
     :mm_flags(flag)
 {
     char buffer[24];
@@ -39,8 +40,8 @@ Process::MemoryMap::MemoryMap(pid_t pid, u8 flag)
     }
 }
 
-std::shared_ptr<Process::page_t> Process::MemoryMap::GetModulePage(const 
-        char *module_name) const
+std::shared_ptr<ZkProcess::page_t> ZkProcess::MemoryMap::GetModulePage(
+        const char *module_name) const
 {
     for(auto const& x : mm_pageinfo){
         if(x->GetPageName().compare(module_name)){
@@ -50,7 +51,7 @@ std::shared_ptr<Process::page_t> Process::MemoryMap::GetModulePage(const
     throw zkexcept::page_not_found_error();
 }
 
-addr_t Process::MemoryMap::GetModuleBaseAddress(const char *module_name) 
+addr_t ZkProcess::MemoryMap::GetModuleBaseAddress(const char *module_name)
     const
 {
     for(auto const& x : mm_pageinfo){
@@ -61,7 +62,7 @@ addr_t Process::MemoryMap::GetModuleBaseAddress(const char *module_name)
     throw zkexcept::page_not_found_error();
 }
 
-addr_t Process::MemoryMap::GetModuleEndAddress(const char *module_name) 
+addr_t ZkProcess::MemoryMap::GetModuleEndAddress(const char *module_name) 
     const
 {
     for(auto const& x: mm_pageinfo){
@@ -72,7 +73,7 @@ addr_t Process::MemoryMap::GetModuleEndAddress(const char *module_name)
     throw zkexcept::page_not_found_error();
 }
 
-bool Process::MemoryMap::IsMapped(addr_t addr) const
+bool ZkProcess::MemoryMap::IsMapped(addr_t addr) const
 {
     /* check if given address is kernel allocated */
     if (addr >= 0x7fffffffffffff){
