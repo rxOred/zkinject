@@ -9,27 +9,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-void ZkElf::Elf::PatchAddress(u8 *buffer, size_t len, u64 addr, 
-        u8 *magic)
-{
-    int count = 0;
-    for (int i = 0; i < len; i++){
-        printf("%x\n", buffer[i]);
-        if(buffer[i] == magic[0]){
-            for (int j = 0; j < MAGIC_LEN; j++){
-                if(buffer[i + j] == magic[j])
-                    count++;
-            }
-            if(count == MAGIC_LEN)
-                *(u64 *)((void *)(buffer + i)) = addr;
-            else
-                continue;
-        }
-    }
-error:
-    throw zkexcept::magic_not_found_error();
-}
-
 ZkElf::Elf::Elf(ZkElf::ELFFLAGS flags)
     :elf_memmap(nullptr), elf_pathname(nullptr), elf_baseaddr(0), 
     elf_ehdr(nullptr), elf_phdr(nullptr), elf_shdr(nullptr), elf_size(0),

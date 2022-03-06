@@ -181,17 +181,37 @@ namespace ZkProcess {
             siginfo_t s_siginfo;
             pid_t s_pid;
         public:
-            Signal(pid_t pid);
+            Signal(pid_t pid)
+                :s_pid(pid)
+            {
+                memset(s_siginfo, 0x0, sizeof(s_siginfo));
+            }
 
-            bool SignalProcess(int signal) const;
+            bool SignalProcess(int signal) const
+            {
+                if (kill(s_pid, signal) < 0) return false;
+                else return true;
+            }
 
-            bool SignalStopProcess(void) const;
+            inline bool SignalStopProcess(void) const
+            {
+                return SignalProcess(SIGSTOP);
+            }
 
-            bool SignalKillProcess(void) const;
+            inline bool SignalKillProcess(void) const
+            {
+                return SignalProcess(SIGKILL);
+            }
 
-            bool SignalContinueProcess(void) const;
+            inline bool SignalContinueProcess(void) const
+            {
+                return SignalProcess(SIGCONT);
+            }
 
-            bool SignalTrapProcess(void) const;
+            inline bool SignalTrapProcess(void) const
+            {
+                return SignalProcess(SIGTRAP);
+            }
     };
 
     class Ptrace {
