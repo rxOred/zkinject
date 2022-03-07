@@ -388,53 +388,74 @@ void ZkElf::Elf::SetSectionData(int shdr_index, void *data)
         AUTOSAVE
 }
 
-/* TODO set phdr */
 void ZkElf::Elf::SetSegmentType(int phdr_index, u32 new_type)
 {
     elf_phdr[phdr_index].p_type = new_type;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
 
 }
 void ZkElf::Elf::SetSegmentOffset(int phdr_index, off_t new_offset)
 {
     elf_phdr[phdr_index].p_offset = new_offset;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
 }
 void ZkElf::Elf::SetSegmentVAddress(int phdr_index, addr_t new_address)
 {
     elf_phdr[phdr_index].p_vaddr = new_address;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
 }
 void ZkElf::Elf::SetSegmentPAddress(int phdr_index, addr_t new_address)
 {
     elf_phdr[phdr_index].p_paddr = new_address;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
 }
 void ZkElf::Elf::SetSegmentFlags(int phdr_index, u32 new_flags)
 {
     elf_phdr[phdr_index].p_flags = new_flags;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
 }
 #ifdef __x86_64__
 void ZkElf::Elf::SetSegmentFileSize(int phdr_index, u64 new_size)
 {
     elf_phdr[phdr_index].p_filesz = new_size;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
 }
 void ZkElf::Elf::SetSegmentMemorySize(int phdr_index, u64 new_size)
 {
     elf_phdr[phdr_index].p_memsz = new_size;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
 }
 void ZkElf::Elf::SetSegmentAlignment(int phdr_index, u64 new_alignment)
 {
     elf_phdr[phdr_index].p_align = new_alignment;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
 }
 #elif __i386__
 void ZkElf::Elf::SetSegmentFileSize(int phdr_index, u32 new_size)
 {
     elf_phdr[phdr_index].p_filesz = new_size;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
 }
 void ZkElf::Elf::SetSegmentMemorySize(int phdr_index, u32 new_size)
 {
     elf_phdr[phdr_index].p_memsz = new_size;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
 }
 void ZkElf::Elf::SetSegmentAlignment(int phdr_index, u32 new_alignment)
 {
     elf_phdr[phdr_index].p_align = new_alignment;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
 }
 #endif
 
