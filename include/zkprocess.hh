@@ -44,7 +44,7 @@
 namespace ZkProcess {
 
     enum PROCESS_INFO : u8 {
-        PTRACE_SEIZE            = 0,    // TODO
+        PTRACE_SEIZE            = 0,    // TODO ptrace seize
         PTRACE_ATTACH_NOW       = 1 << 0,
         PTRACE_START_NOW        = 1 << 1,
         PTRACE_DISABLE_ASLR     = 1 << 2,
@@ -99,7 +99,7 @@ namespace ZkProcess {
     };
 
     enum TRACE_OPTIONS: u16 {
-        /* TODO 
+        /* TODO trace options
          * options for ptrace 
          */
     };
@@ -169,11 +169,8 @@ namespace ZkProcess {
             }
 
             bool IsMapped(addr_t addr) const;
-           /*
-             * TODO
-             * Implement VirtualAlloc
-             * Implement VirtualProtect
-             */
+
+           /* TODO virtualAlloc /protect */
     };
 
     class Signal {
@@ -290,8 +287,7 @@ namespace ZkProcess {
                 return p_memmap->GetBasePage()->GetPageName();
             }
             /* 
-             * TODO
-             * methods to read thread state using registers
+             * TODO methods to read thread state using registers
              * CreateThread
              */
 

@@ -34,7 +34,7 @@ ZkElf::Elf::Elf(const char *pathname)
 ZkElf::Elf::~Elf()
 {
     if (elf_flags == ELF_SAVE_AT_EXIT) {
-        SaveElf();
+        ZkUtils::SaveMemoryMap(GetPathname(), GetMemoryMap(), GetElfSize());
     }
     try{
         RemoveMap();
@@ -229,6 +229,215 @@ int ZkElf::Elf::GetDynSymbolIndexbyName(const char *name)
     throw zkexcept::symbol_not_found_error();
 }
 
+void ZkElf::Elf::SetElfType(u16 new_type)
+{
+    elf_ehdr->e_type = new_type;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+
+void ZkElf::Elf::SetElfMachine(u16 new_machine)
+{
+    elf_ehdr->e_machine = new_machine;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+
+void ZkElf::Elf::SetElfVersion(u32 new_version)
+{
+    elf_ehdr->e_version = new_version;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+
+void ZkElf::Elf::SetElfEntryPoint(addr_t new_entry)
+{
+   elf_ehdr->e_entry = new_entry;
+   if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+
+void ZkElf::Elf::SetElfPhdrOffset(off_t new_offset)
+{
+    elf_ehdr->e_phoff = new_offset;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+
+void ZkElf::Elf::SetElfShdrOffset(off_t new_offset)
+{
+    elf_ehdr->e_shoff = new_offset;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+
+void ZkElf::Elf::SetElfFlags(u32 new_flags)
+{
+    elf_ehdr->e_flags = new_flags;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+
+void ZkElf::Elf::SetPhdrCount(u16 new_count)
+{
+    elf_ehdr->e_phnum = new_count;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+
+void ZkElf::Elf::SetShdrCount(u16 new_count)
+{
+    elf_ehdr->e_shnum = new_count;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+
+void ZkElf::Elf::SetShstrndx(u16 new_index)
+{
+    elf_ehdr->e_shstrndx = new_index;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+
+void ZkElf::Elf::SetElfHeader(ehdr_t *new_ehdr)
+{
+    memcpy(elf_ehdr, new_ehdr, GetElfHeaderSize());
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+
+void ZkElf::Elf::SetSectionNameIndex(int shdr_index, int new_index)
+{
+    elf_shdr[shdr_index].sh_name = new_index;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+void ZkElf::Elf::SetSectionType(int shdr_index, u32 new_type)
+{
+    elf_shdr[shdr_index].sh_type = new_type;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+void ZkElf::Elf::SetSectionAddress(int shdr_index, addr_t new_addr)
+{
+    elf_shdr[shdr_index].sh_addr = new_addr;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+void ZkElf::Elf::SetSectionOffset(int shdr_index, off_t new_offset)
+{
+    elf_shdr[shdr_index].sh_offset = new_offset;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+
+#ifdef __x86_64__
+void ZkElf::Elf::SetSectionSize(int shdr_index, u64 new_size)
+{
+    elf_shdr[shdr_index].sh_size = new_size;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+void ZkElf::Elf::SetSectionAddressAlign(int shdr_index, u64 new_address_align)
+{
+    elf_shdr[shdr_index].sh_addralign = new_address_align;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+void ZkElf::Elf::SetSectionEntrySize(int shdr_index, u64 new_size)
+{
+    elf_shdr[shdr_index].sh_entsize = new_size;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+
+#elif __i386__
+void ZkElf::Elf::SetSectionSize(int shdr_index, u32 new_size)
+{
+    elf_shdr[shdr_index].sh_size = new_size;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+void ZkElf::Elf::SetSectionAddressAlign(int shdr_index, u32 new_address_align)
+{
+    elf_shdr[shdr_index].sh_addralign = new_address_align;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+void ZkElf::Elf::SetSectionEntrySize(int shdr_index, u32 new_size)
+{
+    elf_shdr[shdr_index].sh_entsize = new_size;
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+
+#endif
+
+void ZkElf::Elf::SetSectionHeader(int shdr_index, shdr_t *new_shdr)
+{
+    memcpy(&elf_shdr[shdr_index], new_shdr, GetElfShdrEntrySize());
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+
+void ZkElf::Elf::SetSectionData(int shdr_index, void *data)
+{
+    auto offset = GetSectionOffset(shdr_index);
+    memcpy(((u8 *)GetMemoryMap() + offset), data, GetSectionSize(shdr_index));
+    if (elf_flags == ELF_AUTO_SAVE)
+        AUTOSAVE
+}
+
+/* TODO set phdr */
+void ZkElf::Elf::SetSegmentType(int phdr_index, u32 new_type)
+{
+    elf_phdr[phdr_index].p_type = new_type;
+
+}
+void ZkElf::Elf::SetSegmentOffset(int phdr_index, off_t new_offset)
+{
+    elf_phdr[phdr_index].p_offset = new_offset;
+}
+void ZkElf::Elf::SetSegmentVAddress(int phdr_index, addr_t new_address)
+{
+    elf_phdr[phdr_index].p_vaddr = new_address;
+}
+void ZkElf::Elf::SetSegmentPAddress(int phdr_index, addr_t new_address)
+{
+    elf_phdr[phdr_index].p_paddr = new_address;
+}
+void ZkElf::Elf::SetSegmentFlags(int phdr_index, u32 new_flags)
+{
+    elf_phdr[phdr_index].p_flags = new_flags;
+}
+#ifdef __x86_64__
+void ZkElf::Elf::SetSegmentFileSize(int phdr_index, u64 new_size)
+{
+    elf_phdr[phdr_index].p_filesz = new_size;
+}
+void ZkElf::Elf::SetSegmentMemorySize(int phdr_index, u64 new_size)
+{
+    elf_phdr[phdr_index].p_memsz = new_size;
+}
+void ZkElf::Elf::SetSegmentAlignment(int phdr_index, u64 new_alignment)
+{
+    elf_phdr[phdr_index].p_align = new_alignment;
+}
+#elif __i386__
+void ZkElf::Elf::SetSegmentFileSize(int phdr_index, u32 new_size)
+{
+    elf_phdr[phdr_index].p_filesz = new_size;
+}
+void ZkElf::Elf::SetSegmentMemorySize(int phdr_index, u32 new_size)
+{
+    elf_phdr[phdr_index].p_memsz = new_size;
+}
+void ZkElf::Elf::SetSegmentAlignment(int phdr_index, u32 new_alignment)
+{
+    elf_phdr[phdr_index].p_align = new_alignment;
+}
+#endif
+
 void *ZkElf::Elf::ElfRead(off_t readoff, size_t size) const
 {
     u8 *buffer = (u8 *)calloc(size, sizeof(u8));
@@ -251,29 +460,8 @@ void ZkElf::Elf::ElfWrite(void *buffer, off_t writeoff, size_t size)
     for(int i = 0; i < writeoff + size; i++){
         _buffer[i] = memmap[i];
     }
-    SaveBufferToDisk(elf_pathname, writeoff, buffer, size);
-}
 
-void ZkElf::Elf::SaveElf(void) const
-{
-    int fd = open(GetPathname(), O_CREAT | O_TRUNC | O_WRONLY, 0666);
-    if (fd < 0) {
-        throw zkexcept::file_not_found_error();
-    }
-
-    if (write(fd, elf_memmap, GetElfSize()) < GetElfSize()) {
-        throw zkexcept::file_not_found_error();
-    }
-}
-
-void ZkElf::Elf::SaveBufferToDisk(const char *pathname, off_t offset, 
-        void *buffer, int buffer_size) const
-{
-    int fd = open(pathname, O_CREAT | O_WRONLY, 0666);
-    if (fd < 0)
-        throw zkexcept::file_not_found_error();
-
-    if (pwrite(fd, buffer, buffer_size, offset) < buffer_size) {
-        throw zkexcept::file_not_found_error();
+    if (elf_flags == ELF_AUTO_SAVE) {
+        AUTOSAVE
     }
 }

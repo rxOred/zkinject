@@ -22,7 +22,6 @@ namespace ZkUtils {
             void *buffer, int buffer_size);
 
     void PatchAddress(u8 *buffer, size_t len, u64 addr, u8 *magic);
-
 };
 
 #endif /* ZKUTIL_HH */
