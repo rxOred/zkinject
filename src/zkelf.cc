@@ -9,6 +9,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+/* TODO narrow down errno to report user about the error that cause expection */
+
 ZkElf::Elf::Elf(ZkElf::ELFFLAGS flags)
     :elf_memmap(nullptr), elf_pathname(nullptr), elf_baseaddr(0), 
     elf_ehdr(nullptr), elf_phdr(nullptr), elf_shdr(nullptr), elf_size(0),
@@ -56,7 +58,7 @@ void ZkElf::Elf::OpenElf(void)
     if(fstat(fd, &st) < 0)
         throw std::runtime_error("fstat failed");
 
-    elf_size = st.st_size;
+    SetElfSize(st.st_size);
     LoadFile(fd); 
 }
 
@@ -65,12 +67,13 @@ void ZkElf::Elf::LoadFile(int fd)
 {
     assert(fd != 0 && "file descriptor is empty");
 
-    elf_memmap = mmap(elf_memmap, elf_size, PROT_READ | PROT_WRITE, 
+    elf_memmap = mmap(nullptr, GetElfSize(), PROT_READ | PROT_WRITE,
             MAP_PRIVATE, fd, 0);
     if(elf_memmap == MAP_FAILED)
         throw std::runtime_error("mmap failed\n");
 
-    close(fd);
+    if (close(fd) < 0)
+        throw std::runtime_error("close failed\n");
     
     elf_ehdr = (ehdr_t *)elf_memmap;
     assert(VerifyElf() != true && "File is not an Elf binary");
@@ -135,15 +138,11 @@ bool ZkElf::Elf::VerifyElf(void) const
         return false;
     }
 
-// if libzkinject.so is compiled in a 64 bit envirnment, it cant parse 
-// 32bit elf binaries
 #ifdef __BITS_64__
     if(elf_ehdr->e_ident[EI_CLASS] == ELFCLASS32) {
         return false;
     }
 
-// if libzkinject.so is compiled in a 32 bit envirnment, it cant parse 
-// 64bit elf binaries
 #elif __BITS32__
     if(elf_ehdr->e_ident[EI_CLASS] == ELFCLASS64) {
         return false;
@@ -232,122 +231,122 @@ int ZkElf::Elf::GetDynSymbolIndexbyName(const char *name)
 void ZkElf::Elf::SetElfType(u16 new_type)
 {
     elf_ehdr->e_type = new_type;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 
 void ZkElf::Elf::SetElfMachine(u16 new_machine)
 {
     elf_ehdr->e_machine = new_machine;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 
 void ZkElf::Elf::SetElfVersion(u32 new_version)
 {
     elf_ehdr->e_version = new_version;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 
 void ZkElf::Elf::SetElfEntryPoint(addr_t new_entry)
 {
     elf_ehdr->e_entry = new_entry;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 
 void ZkElf::Elf::SetElfPhdrOffset(off_t new_offset)
 {
     elf_ehdr->e_phoff = new_offset;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 
 void ZkElf::Elf::SetElfShdrOffset(off_t new_offset)
 {
     elf_ehdr->e_shoff = new_offset;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 
 void ZkElf::Elf::SetElfFlags(u32 new_flags)
 {
     elf_ehdr->e_flags = new_flags;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 
 void ZkElf::Elf::SetPhdrCount(u16 new_count)
 {
     elf_ehdr->e_phnum = new_count;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 
 void ZkElf::Elf::SetShdrCount(u16 new_count)
 {
     elf_ehdr->e_shnum = new_count;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 
 void ZkElf::Elf::SetShstrndx(u16 new_index)
 {
     elf_ehdr->e_shstrndx = new_index;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 
 void ZkElf::Elf::SetElfHeader(ehdr_t *new_ehdr)
 {
     memcpy(elf_ehdr, new_ehdr, GetElfHeaderSize());
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 
 void ZkElf::Elf::SetSectionNameIndex(int shdr_index, int new_index)
 {
     elf_shdr[shdr_index].sh_name = new_index;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 void ZkElf::Elf::SetSectionType(int shdr_index, u32 new_type)
 {
     elf_shdr[shdr_index].sh_type = new_type;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 void ZkElf::Elf::SetSectionAddress(int shdr_index, addr_t new_addr)
 {
     elf_shdr[shdr_index].sh_addr = new_addr;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 void ZkElf::Elf::SetSectionOffset(int shdr_index, off_t new_offset)
 {
     elf_shdr[shdr_index].sh_offset = new_offset;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 
 #ifdef __x86_64__
 void ZkElf::Elf::SetSectionSize(int shdr_index, u64 new_size)
 {
     elf_shdr[shdr_index].sh_size = new_size;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 void ZkElf::Elf::SetSectionAddressAlign(int shdr_index, u64 new_address_align)
 {
     elf_shdr[shdr_index].sh_addralign = new_address_align;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 void ZkElf::Elf::SetSectionEntrySize(int shdr_index, u64 new_size)
 {
     elf_shdr[shdr_index].sh_entsize = new_size;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 
 #elif __i386__
 void ZkElf::Elf::SetSectionSize(int shdr_index, u32 new_size)
 {
     elf_shdr[shdr_index].sh_size = new_size;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 void ZkElf::Elf::SetSectionAddressAlign(int shdr_index, u32 new_address_align)
 {
     elf_shdr[shdr_index].sh_addralign = new_address_align;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 void ZkElf::Elf::SetSectionEntrySize(int shdr_index, u32 new_size)
 {
     elf_shdr[shdr_index].sh_entsize = new_size;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 
 #endif
@@ -355,87 +354,87 @@ void ZkElf::Elf::SetSectionEntrySize(int shdr_index, u32 new_size)
 void ZkElf::Elf::SetSectionHeader(int shdr_index, shdr_t *new_shdr)
 {
     memcpy(&elf_shdr[shdr_index], new_shdr, GetElfShdrEntrySize());
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 
 void ZkElf::Elf::SetSectionData(int shdr_index, void *data)
 {
     auto offset = GetSectionOffset(shdr_index);
     memcpy(((u8 *)GetMemoryMap() + offset), data, GetSectionSize(shdr_index));
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 
 void ZkElf::Elf::SetSegmentType(int phdr_index, u32 new_type)
 {
     elf_phdr[phdr_index].p_type = new_type;
-    AUTOSAVE
+    autoSaveMemoryMap();
 
 }
 void ZkElf::Elf::SetSegmentOffset(int phdr_index, off_t new_offset)
 {
     elf_phdr[phdr_index].p_offset = new_offset;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 void ZkElf::Elf::SetSegmentVAddress(int phdr_index, addr_t new_address)
 {
     elf_phdr[phdr_index].p_vaddr = new_address;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 void ZkElf::Elf::SetSegmentPAddress(int phdr_index, addr_t new_address)
 {
     elf_phdr[phdr_index].p_paddr = new_address;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 void ZkElf::Elf::SetSegmentFlags(int phdr_index, u32 new_flags)
 {
     elf_phdr[phdr_index].p_flags = new_flags;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 #ifdef __x86_64__
 void ZkElf::Elf::SetSegmentFileSize(int phdr_index, u64 new_size)
 {
     elf_phdr[phdr_index].p_filesz = new_size;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 void ZkElf::Elf::SetSegmentMemorySize(int phdr_index, u64 new_size)
 {
     elf_phdr[phdr_index].p_memsz = new_size;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 void ZkElf::Elf::SetSegmentAlignment(int phdr_index, u64 new_alignment)
 {
     elf_phdr[phdr_index].p_align = new_alignment;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 #elif __i386__
 void ZkElf::Elf::SetSegmentFileSize(int phdr_index, u32 new_size)
 {
     elf_phdr[phdr_index].p_filesz = new_size;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 void ZkElf::Elf::SetSegmentMemorySize(int phdr_index, u32 new_size)
 {
     elf_phdr[phdr_index].p_memsz = new_size;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 void ZkElf::Elf::SetSegmentAlignment(int phdr_index, u32 new_alignment)
 {
     elf_phdr[phdr_index].p_align = new_alignment;
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 #endif
 
 void ZkElf::Elf::SetSegmentHeader(int phdr_index, phdr_t *new_phdr)
 {
     memcpy(&elf_phdr[phdr_index], new_phdr, sizeof(phdr_t));
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 
 void ZkElf::Elf::SetSegmentData(int phdr_index, void *data)
 {
     auto offset = GetSegmentOffset(phdr_index);
     memcpy(((u8 *)GetMemoryMap() + offset), data, GetSegmentFileSize(phdr_index));
-    AUTOSAVE
+    autoSaveMemoryMap();
 }
 
 void *ZkElf::Elf::ElfRead(off_t readoff, size_t size) const
@@ -460,5 +459,13 @@ void ZkElf::Elf::ElfWrite(void *buffer, off_t writeoff, size_t size)
     for(int i = 0; i < writeoff + size; i++){
         _buffer[i] = memmap[i];
     }
-    AUTOSAVE
+    autoSaveMemoryMap();
+}
+
+void ZkElf::Elf::autoSaveMemoryMap(void) const
+{
+    if (elf_flags == ELF_AUTO_SAVE) {
+        remove(GetPathname());
+        ZkUtils::SaveMemoryMap(GetPathname(), GetMemoryMap(), GetElfSize());
+    }
 }

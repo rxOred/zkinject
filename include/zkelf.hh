@@ -20,11 +20,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#define AUTOSAVE                                                             \
-    if(elf_flags ==  ELF_AUTO_SAVE) {                                        \
-        ZkUtils::SaveMemoryMap(GetPathname(), GetMemoryMap(), GetElfSize()); \
-    }
-
 namespace ZkElf {
 
     enum ELFFLAGS : u8 {
@@ -63,7 +58,6 @@ namespace ZkElf {
             void LoadFile(int fd);
         public:
             Elf(ELFFLAGS flags);
-
             Elf(const char *pathname, ELFFLAGS flags);
             ~Elf();
 
@@ -290,9 +284,8 @@ namespace ZkElf {
             void *ElfRead(off_t readoff, size_t size) const;
             void ElfWrite(void *buffer, off_t writeoff, size_t size) const;
 
-            void PatchAddress(u8 *buffer, size_t len, addr_t addr, u8 *magic);
+        private:
+            void autoSaveMemoryMap(void) const;
     };
-
 };
-
 #endif /* ZKELF_HH */

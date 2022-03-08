@@ -6,11 +6,13 @@ void ZkUtils::SaveMemoryMap(const char *pathname, void *memmap,
 {
     int fd = open(pathname, O_CREAT | O_TRUNC | O_WRONLY, 0666);
     if (fd < 0) {
-        throw zkexcept::file_not_found_error();
+        throw std::runtime_error("open failed\n");
     }
-
     if (write(fd, memmap, map_size) < map_size) {
-        throw zkexcept::file_not_found_error();
+        throw std::runtime_error("write failed\n");
+    }
+    if (close(fd) < 0) {
+        throw std::runtime_error("close failed\n");
     }
 }
 
@@ -22,7 +24,11 @@ void ZkUtils::SaveBufferToFile(const char *pathname, off_t offset,
         throw zkexcept::file_not_found_error();
 
     if (pwrite(fd, buffer, buffer_size, offset) < buffer_size) {
-        throw zkexcept::file_not_found_error();
+        throw std::runtime_error("write failed\n");
+    }
+    if (close(fd) < 0)
+    {
+        throw std::runtime_error("close failed\n");
     }
 }
 
