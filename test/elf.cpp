@@ -1,39 +1,43 @@
-#include <zkinject/zkelf.hh>
 #include <memory>
 
-int main(int argc, char *argv[]) 
+#include <zkinject/zkelf.hh>
+
+int main(int argc, char *argv[])
 {
     if (argc < 2) {
+        printf("Expected a program");
         return -1;
     }
 
-    // testing elf headers
-    Binary::Elf elf(const_cast<char*>(argv[1]));
+    using namespace ZkElf;
+    Elf elf(const_cast<char *>(argv[1]), ELF_AUTO_SAVE);
+    // elf header methods
     auto ehdr = elf.GetElfHeader();
-    printf("ehsize %x\n", ehdr->e_ehsize); 
-    printf("entry %lx\n", ehdr->e_entry);
-    printf("flags %x\n", ehdr->e_flags); 
+    printf("ehsize %x\n", ehdr->e_ehsize);
     printf("phentrysize %x\n", ehdr->e_phentsize);
     printf("section haeders %d\n", ehdr->e_shnum);
 
-    // testing section headers
+    // other methods to parse ehdr
+    printf("machine %x\n", elf.GetElfMachine());
+    printf("version %x\n", elf.GetElfVersion());
+
+    printf("changing entry point to 0x1234\n");
+    elf.SetElfEntryPoint(0x1234);
+    printf("new entry point %lx\n", elf.GetElfEntryPoint());
+
+    printf("\n");
+    // testing section header table
     auto shdrtab = elf.GetSectionHeaderTable();
-    printf("[1] %lx\n", shdrtab[1].sh_addr);
-    printf("[2] %lx\n", shdrtab[1].sh_addralign);
-    printf("[3] %lx\n", shdrtab[1].sh_offset);
-    printf("[4] %lx\n", shdrtab[1].sh_size);
+    printf("section [1] address %lx\n", shdrtab[1].sh_addr);
+    printf("section [2] entry size %lx\n", shdrtab[2].sh_entsize);
+    printf("section [3] size %lx\n", shdrtab[3].sh_size);
 
-    // testing program headers 
-    auto phdrtab = elf.GetProgramHeaderTable();
-    printf("filesz %lx\n", phdrtab[1].p_filesz);
-    printf("offset %lx\n", phdrtab[1].p_offset);
-    printf("vadr %lx\n", phdrtab[1].p_vaddr);
-    printf("flags %x\n", phdrtab[1].p_flags);
+    //other shdr methods
+    printf("section [4] %lx\n", elf.GetSectionAddressAlign(4));
+    printf("section [5] %lx\n", elf.GetSectionOffset(5));
 
-    auto type = elf.GetElfType();
-    printf("elf type %x\n", type);
+    printf("chaning offset of [4] to 0x1234\n");
+    elf.SetSectionOffset(4, 0x1234);
+    printf("changed offset %lx\n", elf.GetSectionOffset(4));
 
-    auto entry = 0x1234;
-    elf.SetEntryPoint(entry); 
-    printf("new entry point %lx\n", elf.GetElfHeader()->e_entry);
 }

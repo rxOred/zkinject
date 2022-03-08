@@ -64,7 +64,7 @@ namespace ZkElf {
         public:
             Elf(ELFFLAGS flags);
 
-            Elf(const char *pathname);
+            Elf(const char *pathname, ELFFLAGS flags);
             ~Elf();
 
             void OpenElf(void);
@@ -284,6 +284,8 @@ namespace ZkElf {
             void SetSegmentMemorySize(int phdr_index, u32 new_size);
             void SetSegmentAlignment(int phdr_index, u32 new_alignment);
 #endif
+            void SetSegmentHeader(int phdr_index, phdr_t *new_phdr);
+            void SetSegmentData(int phdr_index, void *data);
 
             void *ElfRead(off_t readoff, size_t size) const;
             void ElfWrite(void *buffer, off_t writeoff, size_t size) const;

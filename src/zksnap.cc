@@ -1,5 +1,5 @@
 #include "zkexcept.hh"
-#include "zkproc.hh"
+#include "zkprocess.hh"
 #include "zkutils.hh"
 #include "zktypes.hh"
 #include <stdexcept>
@@ -14,7 +14,7 @@ bool ZkProcess::Snapshot::SaveSnapshot(ZkProcess::Ptrace &ptrace, u8 flags)
     void *stack = nullptr;
     void *instr = nullptr;
 
-    if (CHECK_FLAGS(PROCESS_SNAP_ALL, flags)) {
+    if (ZK_CHECK_FLAGS(PROCESS_SNAP_ALL, flags)) {
         regs = (registers_t *)calloc(sizeof(registers_t), 1);
         if (regs ==  nullptr) {
             throw std::runtime_error("failed to allocate memory\n");
@@ -44,7 +44,7 @@ bool ZkProcess::Snapshot::SaveSnapshot(ZkProcess::Ptrace &ptrace, u8 flags)
         }
     }
 
-    if (CHECK_FLAGS(PROCESS_SNAP_FUNC, flags)) {
+    if (ZK_CHECK_FLAGS(PROCESS_SNAP_FUNC, flags)) {
         regs = (registers_t *)calloc(sizeof(registers_t), 1);
         if (regs ==  nullptr) {
             throw std::runtime_error("failed to allocate memory\n");
@@ -89,7 +89,7 @@ bool ZkProcess::Snapshot::RestoreSnapshot(ZkProcess::Ptrace &ptrace)
 
     registers_t *regs = curr->GetRegisters();
     ptrace.WriteRegisters(curr->GetRegisters());
-    if (CHECK_FLAGS(PROCESS_SNAP_ALL, curr->GetFlags()))
+    if (ZK_CHECK_FLAGS(PROCESS_SNAP_ALL, curr->GetFlags()))
         ptrace.WriteProcess(curr->GetStack(), regs->rsp, 
                 DEFAULT_SNAPSHOT_STACK_SZ);
     else {

@@ -1,5 +1,5 @@
-#ifndef ZKPROC_HH
-#define ZKPROC_HH
+#ifndef ZKPROCESS_HH
+#define ZKPROCESS_HH
 
 #include "zktypes.hh"
 #include "zkexcept.hh"
@@ -180,8 +180,7 @@ namespace ZkProcess {
         public:
             Signal(pid_t pid)
                 :s_pid(pid)
-            {
-                memset(s_siginfo, 0x0, sizeof(s_siginfo));
+            {// initialize s_siginfo to 0x0
             }
 
             bool SignalProcess(int signal) const
@@ -377,4 +376,4 @@ namespace ZkProcess {
     };
 };
 
-#endif /* ZKPROC_HH */
+#endif /* ZKPROCESS_HH */

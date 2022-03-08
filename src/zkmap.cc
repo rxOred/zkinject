@@ -1,4 +1,4 @@
-#include "zkproc.hh"
+#include "zkprocess.hh"
 #include "zkexcept.hh"
 #include "zkutils.hh"
 #include <cstdint>
@@ -36,7 +36,7 @@ ZkProcess::MemoryMap::MemoryMap(pid_t pid, u8 flag)
                 _eaddr, permissions, name);
         mm_pageinfo.push_back(page);
 
-        if(CHECK_FLAGS(MEMMAP_ONLY_BASE_ADDR, mm_flags)) break;
+        if(ZK_CHECK_FLAGS(MEMMAP_ONLY_BASE_ADDR, mm_flags)) break;
     }
 }
 

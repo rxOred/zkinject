@@ -1,1 +1,32 @@
-Debug/compile_commands.json
+[
+{
+  "directory": "/home/rxored/repos/zkinject",
+  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -fPIC -o CMakeFiles/zkinject.dir/src/zkelf.cc.o -c /home/rxored/repos/zkinject/src/zkelf.cc",
+  "file": "/home/rxored/repos/zkinject/src/zkelf.cc"
+},
+{
+  "directory": "/home/rxored/repos/zkinject",
+  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -fPIC -o CMakeFiles/zkinject.dir/src/zkhooks.cc.o -c /home/rxored/repos/zkinject/src/zkhooks.cc",
+  "file": "/home/rxored/repos/zkinject/src/zkhooks.cc"
+},
+{
+  "directory": "/home/rxored/repos/zkinject",
+  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -fPIC -o CMakeFiles/zkinject.dir/src/zkmap.cc.o -c /home/rxored/repos/zkinject/src/zkmap.cc",
+  "file": "/home/rxored/repos/zkinject/src/zkmap.cc"
+},
+{
+  "directory": "/home/rxored/repos/zkinject",
+  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -fPIC -o CMakeFiles/zkinject.dir/src/zkptrace.cc.o -c /home/rxored/repos/zkinject/src/zkptrace.cc",
+  "file": "/home/rxored/repos/zkinject/src/zkptrace.cc"
+},
+{
+  "directory": "/home/rxored/repos/zkinject",
+  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -fPIC -o CMakeFiles/zkinject.dir/src/zksnap.cc.o -c /home/rxored/repos/zkinject/src/zksnap.cc",
+  "file": "/home/rxored/repos/zkinject/src/zksnap.cc"
+},
+{
+  "directory": "/home/rxored/repos/zkinject",
+  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -fPIC -o CMakeFiles/zkinject.dir/src/zkutils.cc.o -c /home/rxored/repos/zkinject/src/zkutils.cc",
+  "file": "/home/rxored/repos/zkinject/src/zkutils.cc"
+}
+]
