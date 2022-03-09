@@ -28,6 +28,8 @@
 #define DEFAULT_SNAPSHOT_STACK_SZ   1024
 #define DEFAULT_SNAPSHOT_INSTR      64
 
+// TODO checks here
+
 #define CHECK_PTRACE_STOP                                           \
     if(!isPtraceStopped()) {                                        \
         throw zkexcept::ptrace_error("process is not stopped");     \
@@ -126,17 +128,14 @@ namespace ZkProcess {
             {
                 return page_saddr;
             }
-
             inline addr_t GetPageEndAddress(void) const
             {
                 return page_eaddr;
             }
-
             inline std::string GetPagePermissions(void) const
             {
                 return page_permissions;
             }
-
             inline std::string GetPageName(void) const
             {
                 return page_name;
@@ -144,6 +143,7 @@ namespace ZkProcess {
     };
 
     class MemoryMap  {
+        private:
             u8 mm_flags = 0;
             std::vector<std::shared_ptr<page_t>> mm_pageinfo;
         public:
@@ -157,17 +157,38 @@ namespace ZkProcess {
             {
                 return  mm_pageinfo[0];
             }
-
+            inline std::shared_ptr<page_t> GetLastPage(void) const
+            {
+                return *mm_pageinfo.end();
+            }
+            inline std::vector<std::shared_ptr<page_t>>::const_iterator
+            GetIteratorBegin(void) const
+            {
+                return mm_pageinfo.begin();
+            }
+            inline std::vector<std::shared_ptr<page_t>>::const_iterator
+            GetIteratorLast(void) const
+            {
+                return mm_pageinfo.end();
+            }
+            inline std::pair<std::vector<std::shared_ptr<page_t>>::const_iterator,
+                      std::vector<std::shared_ptr<page_t>>::const_iterator>
+            GetIteratorsBeginEnd(void) const
+            {
+                return std::make_pair(mm_pageinfo.begin(), mm_pageinfo.end());
+            }
             inline addr_t GetBaseAddress(void) const
             {
                 return mm_pageinfo[0]->GetPageStartAddress();
             }
-
             inline addr_t GetBaseEndAddress(void) const
             {
                 return mm_pageinfo[0]->GetPageEndAddress();
             }
-
+            inline std::vector<std::shared_ptr<page_t>> GetMemoryPages(void) const
+            {
+                return mm_pageinfo;
+            }
             bool IsMapped(addr_t addr) const;
 
            /* TODO virtualAlloc /protect */
@@ -182,28 +203,23 @@ namespace ZkProcess {
                 :s_pid(pid)
             {// initialize s_siginfo to 0x0
             }
-
             bool SignalProcess(int signal) const
             {
                 if (kill(s_pid, signal) < 0) return false;
                 else return true;
             }
-
             inline bool SignalStopProcess(void) const
             {
                 return SignalProcess(SIGSTOP);
             }
-
             inline bool SignalKillProcess(void) const
             {
                 return SignalProcess(SIGKILL);
             }
-
             inline bool SignalContinueProcess(void) const
             {
                 return SignalProcess(SIGCONT);
             }
-
             inline bool SignalTrapProcess(void) const
             {
                 return SignalProcess(SIGTRAP);
@@ -234,32 +250,31 @@ namespace ZkProcess {
             {
                 return p_memmap;
             }
+            inline PROCESS_STATE GetProcessState(void) const
+            {
+                return p_state;
+            }
+            inline PROCESS_STATE_INFO GetProcessStateInfo(void) const
+            {
+                return p_state_info;
+            }
 
             /* attach to the process, stopping it */
             void AttachToPorcess(void);
-
             /* attach to the process but without stopping it */ 
             void SeizeProcess(void);
-
             /* Start the proces, stopping it */
-            PROCESS_STATE StartProcess(char **pathname);
-
+            void StartProcess(char **pathname);
             /* detach from attached / started process */
             void DetachFromProcess(void);
-
             void KillProcess(void);
-
             void ContinueProcess(bool pass_signal);
-
             /* wait for process state changes */
             void WaitForProcess(int options);
 
             PROCESS_STATE SignalProcess(int signal);
-
             PROCESS_STATE SignalStopProcess(void);
-
             PROCESS_STATE SignalKillProcess(void);
-
             PROCESS_STATE SignalContinueProcess(void);
 
             /* generate a random unallocated userland address */
@@ -268,16 +283,12 @@ namespace ZkProcess {
              * read from process to an allocated buffer starting at address, 
              * sizeof buffer_sz len.
              */
-            void ReadProcess(void *buffer, addr_t address, size_t 
+            size_t ReadProcess(void *buffer, addr_t address, size_t
                     buffer_sz);
-
             addr_t WriteProcess(void *buffer, addr_t address, size_t 
                     buffer_sz);
-            
             void ReadRegisters(registers_t* registers);
-            
             void WriteRegisters(registers_t* registers);
-            
             void *ReplacePage(addr_t addr, void *buffer, int buffer_size);
             
             void *MemAlloc(void *mmap_shellcode, int protection, int size);
@@ -322,27 +333,22 @@ namespace ZkProcess {
             {
                 return ps_flags;
             }
-
             inline void SetNext(ProcessSnapshot *next)
             {
                 ps_next = next;
             }
-
             inline ProcessSnapshot *GetNext(void) const
             {
                 return ps_next;
             }
-
             inline registers_t *GetRegisters(void) const 
             {
                 return ps_registers;
             }
-
             inline void *GetStack(void) const 
             {
                 return ps_stack;
             }
-
             inline void *GetInstructions(void) const 
             {
                 return ps_instructions;

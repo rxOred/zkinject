@@ -17,7 +17,7 @@ bool ZkProcess::Ptrace::isPtraceStopped(void) const
     if (p_state_info.signal_stopped.ptrace_stop >
             PTRACE_STOP_NOT_STOPPED && 
             p_state_info.signal_stopped.ptrace_stop < 
-            PTRACE_STOP_PTRACE_EVENT &&
+            PTRACE_STOP_PTRACE_EVENT ||
             p_state == PROCESS_STATE_STOPPED) {
         return true;
     }
@@ -25,7 +25,7 @@ bool ZkProcess::Ptrace::isPtraceStopped(void) const
 }
 
 ZkProcess::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
-    :p_pid(pid), p_flags(flags)
+    : p_pid(pid), p_flags(flags)
 {
     if (ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
             ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)){
@@ -36,6 +36,10 @@ ZkProcess::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
     else if(ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) && p_pid != 0){
         try{
             AttachToPorcess();
+            if (p_state == PROCESS_STATE_FAILED)
+                throw zkexcept::ptrace_error("ptrace attach failed\n");
+            else if (p_state == PROCESS_STATE_EXITED)
+                throw zkexcept::ptrace_error("child process exited\n");
         } catch(zkexcept::ptrace_error& e){
             std::cerr << e.what() << std::endl;
             std::exit(1);
@@ -46,9 +50,11 @@ ZkProcess::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
     else if(ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags) && pathname != nullptr
             && p_pid == 0){
         try{
-            PROCESS_STATE ret = StartProcess((char **)pathname);
-            if(ret == PROCESS_STATE_EXITED || ret == PROCESS_STATE_FAILED)
+            StartProcess((char **)pathname);
+            if(p_state == PROCESS_STATE_FAILED)
                 throw zkexcept::ptrace_error("start process failed\n");
+            else if (p_state == PROCESS_STATE_EXITED)
+                throw zkexcept::ptrace_error("child process exited\n");
         } catch (zkexcept::ptrace_error& e){
             std::cerr << e.what() << std::endl;
             std::exit(1);
@@ -65,18 +71,17 @@ ZkProcess::Ptrace::Ptrace(const char **pathname , pid_t pid, u8 flags)
 
 ZkProcess::Ptrace::~Ptrace()
 {
-    if(ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) ||
+    if(ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
             ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags))
         DetachFromProcess();
 }
 
 void ZkProcess::Ptrace::AttachToPorcess(void)
 {
-    if (ptrace(PTRACE_ATTACH, p_pid, nullptr, nullptr) < 0)
+    if (ptrace(PTRACE_ATTACH, p_pid, nullptr, nullptr) < 0) {
         throw zkexcept::ptrace_error("ptrace attach failed\n");
+    }
     WaitForProcess(0);
-    if(p_state == PROCESS_STATE_FAILED) 
-        throw zkexcept::ptrace_error("ptrace attach failed\n");
 }
 
 
@@ -88,22 +93,22 @@ void ZkProcess::Ptrace::SeizeProcess(void)
 }
 
 
-ZkProcess::PROCESS_STATE ZkProcess::Ptrace::StartProcess(char **pathname)
+void ZkProcess::Ptrace::StartProcess(char **pathname)
 {
     p_pid = fork();
     if(p_pid == 0){
         if(ZK_CHECK_FLAGS(p_flags, PTRACE_DISABLE_ASLR))
             personality(ADDR_NO_RANDOMIZE);
         if(ptrace(PTRACE_TRACEME, 0, nullptr, nullptr) < 0)
-            throw zkexcept::ptrace_error("aslr disabling failed\n");
+            throw zkexcept::ptrace_error("ptrace traceme failed\n");
         if(execvp(pathname[0], pathname) == -1)
             std::exit(EXIT_FAILURE);
     }
     else if(p_pid > 0) {
         WaitForProcess(0);
-        return p_state;
     }
-    throw zkexcept::process_error("forking failed\n");
+    else
+        throw zkexcept::process_error("forking failed\n");
 }
 
 void ZkProcess::Ptrace::DetachFromProcess(void)
@@ -267,7 +272,9 @@ void ZkProcess::Ptrace::WaitForProcess(int options)
     else if (WIFCONTINUED(wstatus)) {
         p_state = PROCESS_STATE_CONTINUED;
     }
-    p_state = PROCESS_STATE_FAILED;
+    else {
+        p_state = PROCESS_STATE_FAILED;
+    }
 }
 
 /* generate a random address */
@@ -279,33 +286,38 @@ addr_t ZkProcess::Ptrace::GenerateAddress(int seed) const
     return distr(gen);
 }
 
-void ZkProcess::Ptrace::ReadProcess(void *buffer, addr_t address, size_t 
+size_t ZkProcess::Ptrace::ReadProcess(void *buffer, addr_t address, size_t
         buffer_sz) 
 {
     /* if not already attached or started, attach */
-    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) ||
+    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
             !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
+
+    if (p_state == PROCESS_STATE_EXITED) {
+        return -1;
+    }
+
+    CHECK_PTRACE_STOP
 
     addr_t addr = address;
     u8 *dst = (u8 *)buffer;
     addr_t data;
     for (int i = 0; i < (buffer_sz /  sizeof(addr_t)); addr+=sizeof(
-                addr_t)
-            , dst+=sizeof(addr_t)){
+                addr_t), dst+=sizeof(addr_t)){
         data = ptrace(PTRACE_PEEKTEXT, p_pid, addr, nullptr);
         if(data < 0)
-            throw zkexcept::ptrace_error();
+            throw zkexcept::ptrace_error("ptrace peektext failed\n");
         *(addr_t *)dst = data;
     }
-    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) ||
+    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
             !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();
-    return;
+    return buffer_sz;
 }
 
 addr_t ZkProcess::Ptrace::WriteProcess(void *buffer, addr_t address, size_t 
         buffer_sz) 
 {
-    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) ||
+    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
             !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
     CHECK_PTRACE_STOP
@@ -332,7 +344,7 @@ addr_t ZkProcess::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
                 addr+=sizeof(addr_t), 
                 src+=sizeof(addr_t)){
             if (ptrace(PTRACE_POKETEXT, p_pid, addr, src)  < 0) {
-                throw zkexcept::ptrace_error();
+                throw zkexcept::ptrace_error("ptrace poketext failed\n");
             }
         }
     }
@@ -349,7 +361,7 @@ addr_t ZkProcess::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
             o_buffer = (((o_buffer) & (0xffffffffffffffff << (buffer_sz 
                                 * 8))) | o_buffer);     
             if (ptrace(PTRACE_POKETEXT, p_pid, addr, &o_buffer)  < 0) {
-                throw zkexcept::ptrace_error();
+                throw zkexcept::ptrace_error("ptrace poketext failed");
             }
         } catch(zkexcept::ptrace_error& e){
             std::cerr << e.what();
@@ -365,7 +377,7 @@ addr_t ZkProcess::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
         for (int i = 0; i < count; addr+=sizeof(addr_t), 
                 src+=sizeof(addr_t)) {
             if(ptrace(PTRACE_POKETEXT, p_pid, addr, src)  < 0){
-                throw zkexcept::ptrace_error();
+                throw zkexcept::ptrace_error("ptrace poketext failed\n");
             }
         }
         /* write remaining bytes */ 
@@ -375,50 +387,50 @@ addr_t ZkProcess::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
             o_buffer = (((o_buffer) & (0xffffffffffffffff << (remainder 
                                 * 8))) | o_buffer);     
             if(ptrace(PTRACE_POKETEXT, p_pid, addr, &o_buffer)  < 0){
-                throw zkexcept::ptrace_error();
+                throw zkexcept::ptrace_error("ptrace poketext failed\n");
             }
         } catch(zkexcept::ptrace_error& e){
             std::cerr << e.what();
             std::exit(1);
         }
     }
-    if (!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) ||
+    if (!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
             !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();
     return addr;
 }
 
 void ZkProcess::Ptrace::ReadRegisters(registers_t* registers)
 {
-    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) ||
-            !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
+    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
+       !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
     CHECK_PTRACE_STOP
 
     if(ptrace(PTRACE_GETREGS, p_pid, nullptr, registers)  < 0)
-        throw zkexcept::ptrace_error();
+        throw zkexcept::ptrace_error("ptrace getregs failed\n");
 
-    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) ||
+    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
             !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();
 }
 
 void ZkProcess::Ptrace::WriteRegisters(registers_t* registers)
 {
-    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) ||
+    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
             !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
     CHECK_PTRACE_STOP
 
     if(ptrace(PTRACE_SETREGS, p_pid, nullptr, registers) < 0)
-        throw zkexcept::ptrace_error();
+        throw zkexcept::ptrace_error("ptrace setregs failed\n");
 
-    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) ||
+    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
             !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();
 }
 
 void *ZkProcess::Ptrace::ReplacePage(addr_t addr, void *buffer, int 
         buffer_size)
 {
-    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) ||
+    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
             !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
     CHECK_PTRACE_STOP
@@ -461,7 +473,7 @@ void *ZkProcess::Ptrace::ReplacePage(addr_t addr, void *buffer, int
 void *ZkProcess::Ptrace::MemAlloc(void *mmap_shellcode, int protection, 
         int size)
 {
-    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) ||
+    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
             !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
     Snapshot snapshot = Snapshot();
