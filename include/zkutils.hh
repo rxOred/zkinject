@@ -21,4 +21,4 @@ namespace ZkUtils {
     void PatchAddress(u8 *buffer, size_t len, u64 addr, u8 *magic);
 };
 
-#endif /* ZKUTILS_HH */
+#endif // ZKUTILS_HH

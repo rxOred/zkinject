@@ -9,7 +9,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-/* TODO narrow down errno to report user about the error that cause expection */
+/* TODO narrow down errno to report user about the error that caused expection */
 
 ZkElf::Elf::Elf(ZkElf::ELFFLAGS flags)
     :elf_memmap(nullptr), elf_pathname(nullptr), elf_baseaddr(0), 
@@ -36,7 +36,8 @@ ZkElf::Elf::Elf(const char *pathname, ZkElf::ELFFLAGS flags)
 ZkElf::Elf::~Elf()
 {
     if (elf_flags == ELF_SAVE_AT_EXIT) {
-        ZkUtils::SaveMemoryMap(GetPathname(), GetMemoryMap(), GetElfSize());
+        ZkUtils::SaveMemoryMap(GetPathname(), GetMemoryMap(), 
+                GetElfSize());
     }
     try{
         RemoveMap();

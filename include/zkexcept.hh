@@ -88,4 +88,4 @@ namespace zkexcept {
     };
 }
 
-#endif /* ZKEXCEPT_HH */
+#endif // ZKEXCEPT_HH

@@ -9,6 +9,7 @@
 #include <memory>
 #include <sys/types.h>
 #include <vector>
+#include <queue>
 #include <fcntl.h>
 #include <fstream>
 #include <string>
@@ -25,12 +26,26 @@
 #define MEMPATH     "/proc/%d/mem"
 #define CMDLINE     "/proc/%d/cmdline"
 
+#define DEFAULT_SNAPSHOT_COUNT      5
 #define DEFAULT_SNAPSHOT_STACK_SZ   1024
 #define DEFAULT_SNAPSHOT_INSTR      64
 
-// TODO checks here
+// TODO implement some error queue to store errors caused by the programmer
 
-#define CHECK_PTRACE_STOP                                           \
+#define CHECK_AND_ATTACH                                             \
+    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&                \
+      !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
+
+#define CHECK_AND_DETACH                                             \
+    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&                \
+      !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();
+
+#define CHECK_PTRACE_EXITED                                         \
+    if(GetProcessState() == PROCESS_STATE_EXITED) {                 \
+        return -1;                                                  \
+    }
+
+#define CHECK_PTRACE_STOPPED                                        \
     if(!isPtraceStopped()) {                                        \
         throw zkexcept::ptrace_error("process is not stopped");     \
     }
@@ -80,7 +95,7 @@ namespace ZkProcess {
         PTRACE_STOP_GROUP, 
         PTRACE_STOP_SYSCALL,
         PTRACE_STOP_PTRACE_EVENT, 
-        
+
         /* */
     };
 
@@ -119,10 +134,7 @@ namespace ZkProcess {
 
         public:
             page_t(addr_t saddr, addr_t eaddr, std::string permissions, 
-                    std::string name)
-                :page_saddr(saddr), page_eaddr(eaddr), page_permissions
-                 (permissions),page_name(name)
-            {}
+                    std::string name);
 
             inline addr_t GetPageStartAddress(void) const
             {
@@ -148,6 +160,8 @@ namespace ZkProcess {
             std::vector<std::shared_ptr<page_t>> mm_pageinfo;
         public:
             MemoryMap(pid_t pid, u8 flag);
+            ~MemoryMap();
+
             addr_t GetModuleBaseAddress(const char *module_name) const;
             addr_t GetModuleEndAddress(const char *module_name) const;
             std::shared_ptr<page_t> GetModulePage(const char *module_name) 
@@ -201,7 +215,7 @@ namespace ZkProcess {
         public:
             Signal(pid_t pid)
                 :s_pid(pid)
-            {// initialize s_siginfo to 0x0
+            {// TODO initialize s_siginfo to 0x0
             }
             bool SignalProcess(int signal) const
             {
@@ -305,41 +319,23 @@ namespace ZkProcess {
             bool isPtraceStopped(void) const;
     };
 
-    /* singly-linked list (queue) to store recent process state */
-    class ProcessSnapshot {
+    /* queue to store process state */
+    class snapshot_t {
         private:
             /* generic information about amount of the captured data */
             u8              ps_flags;
             registers_t     *ps_registers;
             void            *ps_stack;      /* 100 bytes from rsp */
             void            *ps_instructions;
-            ProcessSnapshot *ps_next;
         public:
-            ProcessSnapshot(u8 flags, registers_t *regs, void *stack, 
-                    void *instr)
-                :ps_flags(flags), ps_registers(regs), 
-                ps_instructions(instr), ps_stack(stack), 
-                ps_next(nullptr)
-            {}
+            snapshot_t(u8 flags, registers_t *regs, void *stack, 
+                    void *instr);
 
-            ~ProcessSnapshot()
-            {
-                if (ps_registers) { free(ps_registers); }
-                if (ps_instructions) { free(ps_instructions); }
-                if (ps_stack) { free(ps_stack); }
-            }
+            ~snapshot_t();
 
             inline u8 GetFlags(void) const
             {
                 return ps_flags;
-            }
-            inline void SetNext(ProcessSnapshot *next)
-            {
-                ps_next = next;
-            }
-            inline ProcessSnapshot *GetNext(void) const
-            {
-                return ps_next;
             }
             inline registers_t *GetRegisters(void) const 
             {
@@ -356,30 +352,17 @@ namespace ZkProcess {
     };
 
     class Snapshot {
-        private:
-            ProcessSnapshot *snap_state;   // head
+        private: 
+            int s_count = DEFAULT_SNAPSHOT_COUNT;
+            std::queue<std::shared_ptr<snapshot_t>> s_snapshots;
         public:
-            Snapshot(void)
-                :snap_state(nullptr)
-            {}
-
-            ~Snapshot(void)
-            {
-                ProcessSnapshot *curr = snap_state;
-                while (curr != nullptr) {
-                    auto next = curr->GetNext();
-                    delete curr;
-                    curr = next;
-                }
-            }
+            Snapshot();
+            Snapshot(int count);
+            ~Snapshot();
 
             bool SaveSnapshot(ZkProcess::Ptrace &ptrace, u8 flags);
             bool RestoreSnapshot(ZkProcess::Ptrace &ptrace);
-            /*inline registers_t *GetSnapshotRegisters(void) const
-            {
-                return snap_state->GetRegisters();
-            }*/
     };
 };
 
-#endif /* ZKPROCESS_HH */
+#endif // ZKPROCESS_HH

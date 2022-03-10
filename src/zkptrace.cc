@@ -297,7 +297,7 @@ size_t ZkProcess::Ptrace::ReadProcess(void *buffer, addr_t address, size_t
         return -1;
     }
 
-    CHECK_PTRACE_STOP
+    CHECK_PTRACE_STOPPED
 
     addr_t addr = address;
     u8 *dst = (u8 *)buffer;
@@ -320,7 +320,7 @@ addr_t ZkProcess::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
     if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
             !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
-    CHECK_PTRACE_STOP
+    CHECK_PTRACE_STOPPED
 
     addr_t addr = address;
 
@@ -404,7 +404,7 @@ void ZkProcess::Ptrace::ReadRegisters(registers_t* registers)
     if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
        !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
-    CHECK_PTRACE_STOP
+    CHECK_PTRACE_STOPPED
 
     if(ptrace(PTRACE_GETREGS, p_pid, nullptr, registers)  < 0)
         throw zkexcept::ptrace_error("ptrace getregs failed\n");
@@ -418,7 +418,7 @@ void ZkProcess::Ptrace::WriteRegisters(registers_t* registers)
     if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
             !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
-    CHECK_PTRACE_STOP
+    CHECK_PTRACE_STOPPED
 
     if(ptrace(PTRACE_SETREGS, p_pid, nullptr, registers) < 0)
         throw zkexcept::ptrace_error("ptrace setregs failed\n");
@@ -433,7 +433,7 @@ void *ZkProcess::Ptrace::ReplacePage(addr_t addr, void *buffer, int
     if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
             !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
 
-    CHECK_PTRACE_STOP
+    CHECK_PTRACE_STOPPED
 
     void *data = malloc(ZK_PAGE_ALIGN_UP(buffer_size));
     if (data == NULL) {

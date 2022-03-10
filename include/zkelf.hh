@@ -288,4 +288,4 @@ namespace ZkElf {
             void autoSaveMemoryMap(void) const;
     };
 };
-#endif /* ZKELF_HH */
+#endif // ZKELF_HH

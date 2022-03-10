@@ -75,4 +75,4 @@ typedef struct user_regs_struct registers_t;
 /* macros and struff */
 #define MAGIC_LEN   3   /* for magic numbers */
 
-#endif /* ZKTYPES_HH */
+#endif // ZKTYPES_HH

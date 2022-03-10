@@ -4,6 +4,12 @@
 #include <cstdint>
 #include <cstdio>
 
+ZkProcess::page_t::page_t(addr_t saddr, addr_t eaddr, std::string 
+        permissions, std::string name)
+    :page_saddr(saddr), page_eaddr(eaddr), page_permissions
+     (permissions),page_name(name)
+{}
+
 ZkProcess::MemoryMap::MemoryMap(pid_t pid, u8 flag)
     :mm_flags(flag)
 {
@@ -32,8 +38,8 @@ ZkProcess::MemoryMap::MemoryMap(pid_t pid, u8 flag)
         std::sscanf(saddr.c_str(), "%lx", &_saddr);
         std::sscanf(eaddr.c_str(), "%lx", &_eaddr);
 
-        std::shared_ptr<page_t> page = std::make_shared<page_t>(_saddr, 
-                _eaddr, permissions, name);
+        auto page = std::make_shared<page_t>(_saddr, _eaddr, permissions, 
+                name);
         mm_pageinfo.push_back(page);
 
         if(ZK_CHECK_FLAGS(MEMMAP_ONLY_BASE_ADDR, mm_flags)) break;
