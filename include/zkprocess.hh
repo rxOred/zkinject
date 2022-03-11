@@ -3,6 +3,7 @@
 
 #include "zktypes.hh"
 #include "zkexcept.hh"
+#include "zklog.hh"
 #include <cstdint>
 #include <iostream>
 #include <cstddef>
@@ -32,22 +33,34 @@
 
 // TODO implement some error queue to store errors caused by the programmer
 
-#define CHECK_AND_ATTACH                                             \
+#define CHECKFLAGS_AND_ATTACH                                        \
     if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&                \
-      !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) AttachToPorcess();
-
-#define CHECK_AND_DETACH                                             \
-    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&                \
-      !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) DetachFromProcess();
-
-#define CHECK_PTRACE_EXITED                                         \
-    if(GetProcessState() == PROCESS_STATE_EXITED) {                 \
-        return -1;                                                  \
+       !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) {                 \
+        p_log->PushLog("attaching tp process",                       \
+            ZkLog::LOG_LEVEL_DEBUG);                                 \
+        DetachFromProcess();                                         \
     }
 
-#define CHECK_PTRACE_STOPPED                                        \
-    if(!isPtraceStopped()) {                                        \
-        throw zkexcept::ptrace_error("process is not stopped");     \
+#define CHECKFLAGS_AND_DETACH                                        \
+    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&                \
+       !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) {                 \
+        p_log->PushLog("detaching from process",                     \
+            ZkLog::LOG_LEVEL_DEBUG);                                 \
+        DetachFromProcess();                                         \
+    }
+
+#define RETURN_IF_EXITED(x)                                          \
+    if(GetProcessState() == PROCESS_STATE_EXITED) {                  \
+        p_log->PushLog("process has exited", ZkLog::LOG_LEVEL_ERROR);\
+        return (x);                                                  \
+    }
+
+#define RETURN_IF_NOT_STOPPED(x)                                     \
+    if(!isPtraceStopped()) {                                         \
+        p_log->PushLog                                               \
+        ("process needs to be in PROCESS_STATE_STOPPED to call the method", \
+         ZkLog::LOG_LEVEL_ERROR);                                    \
+        return (x);                                                  \
     }
 
 #define GET_PTRACE_EVENT_VALUE(x) (((x) << (8)) | SIGTRAP )
@@ -248,7 +261,7 @@ namespace ZkProcess {
             PROCESS_STATE_INFO p_state_info; 
 
             std::shared_ptr<MemoryMap> p_memmap;
-
+            ZkLog::Log *p_log;
             pid_t p_pid;
         public:
             /* 
@@ -257,6 +270,7 @@ namespace ZkProcess {
              * pid = pid for a currently active process
              * regs = register struct
              */
+            Ptrace(const char **pathname, pid_t pid, u8 flags, ZkLog::Log *log);
             Ptrace(const char **pathname, pid_t pid, u8 flags);
             ~Ptrace();
 
@@ -282,7 +296,7 @@ namespace ZkProcess {
             /* detach from attached / started process */
             void DetachFromProcess(void);
             void KillProcess(void);
-            void ContinueProcess(bool pass_signal);
+            bool ContinueProcess(bool pass_signal);
             /* wait for process state changes */
             void WaitForProcess(int options);
 
@@ -297,12 +311,12 @@ namespace ZkProcess {
              * read from process to an allocated buffer starting at address, 
              * sizeof buffer_sz len.
              */
-            size_t ReadProcess(void *buffer, addr_t address, size_t
+            bool ReadProcess(void *buffer, addr_t address, size_t
                     buffer_sz);
             addr_t WriteProcess(void *buffer, addr_t address, size_t 
                     buffer_sz);
-            void ReadRegisters(registers_t* registers);
-            void WriteRegisters(registers_t* registers);
+            bool ReadRegisters(registers_t* registers);
+            bool WriteRegisters(registers_t* registers);
             void *ReplacePage(addr_t addr, void *buffer, int buffer_size);
             
             void *MemAlloc(void *mmap_shellcode, int protection, int size);

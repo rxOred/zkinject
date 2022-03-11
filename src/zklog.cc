@@ -8,7 +8,7 @@ ZkLog::Log::~Log()
     }
 }
 
-void ZkLog::Log::PushLog(std::string *log_string, ZkLog::ZK_LOG_LEVEL level)
+void ZkLog::Log::PushLog(std::string log_string, ZkLog::ZK_LOG_LEVEL level)
 {
     auto msg = std::make_shared<logmessage_t>(log_string, level);
     log.push(msg);

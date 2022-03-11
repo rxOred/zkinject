@@ -38,7 +38,7 @@ namespace ZkLog {
             std::queue<std::shared_ptr<logmessage_t>> log;
         public:
             ~Log();
-            void PushLog(std::string *log_string, ZK_LOG_LEVEL level);
+            void PushLog(std::string log_string, ZK_LOG_LEVEL level);
             std::pair<std::string, ZK_LOG_LEVEL> PopLog(void);
     };
 
