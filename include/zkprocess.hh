@@ -348,7 +348,7 @@ namespace ZkProcess {
             }
         private:
             // generic information about amount of the captured data
-            u8_t              ps_flags;
+            u8_t            ps_flags;
             registers_t     *ps_registers;
             void            *ps_stack;
             void            *ps_instructions;

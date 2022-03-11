@@ -14,9 +14,9 @@
 
 bool ZkProcess::Ptrace::isPtraceStopped(void) const
 {
-    if (p_state_info.signal_stopped.ptrace_stop >
+    if (p_state_info.signal_stopped.ss_ptrace_stop >
             PTRACE_STOP_NOT_STOPPED && 
-            p_state_info.signal_stopped.ptrace_stop < 
+            p_state_info.signal_stopped.ss_ptrace_stop <
             PTRACE_STOP_PTRACE_EVENT ||
             p_state == PROCESS_STATE_STOPPED) {
         return true;
@@ -169,7 +169,7 @@ void ZkProcess::Ptrace::KillProcess(void)
     if (ptrace(PTRACE_KILL, p_pid, nullptr, nullptr) < 0)
         throw ZkExcept::ptrace_error("ptrace kill failed\n");
     p_state = PROCESS_STATE_SIGNALED;
-    p_state_info.signal_terminated.term_sig = SIGKILL; 
+    p_state_info.signal_terminated.st_term_sig = SIGKILL;
 }
 
 bool ZkProcess::Ptrace::ContinueProcess(bool pass_signal)
@@ -177,10 +177,10 @@ bool ZkProcess::Ptrace::ContinueProcess(bool pass_signal)
     RETURN_IF_EXITED(false)
     RETURN_IF_NOT_STOPPED(false)
 
-    if (p_state_info.signal_stopped.ptrace_stop ==
+    if (p_state_info.signal_stopped.ss_ptrace_stop ==
             PTRACE_STOP_SIGNAL_DELIVERY) {
         if (ptrace(PTRACE_CONT, p_pid, nullptr,
-                    p_state_info.signal_stopped.stop_sig) < 0) {
+                    p_state_info.signal_stopped.ss_stop_sig) < 0) {
             throw ZkExcept::ptrace_error("ptrace continue failed\n");
         }
     }
@@ -218,20 +218,20 @@ void ZkProcess::Ptrace::WaitForProcess(int options)
     } 
     /* if child was terminated by a signal */
     else if (WIFSIGNALED(wstatus)) {
-        p_state_info.signal_terminated.term_sig = WTERMSIG(wstatus);    
-        p_state_info.signal_terminated.is_coredumped = WCOREDUMP(wstatus);
+        p_state_info.signal_terminated.st_term_sig = WTERMSIG(wstatus);
+        p_state_info.signal_terminated.st_is_coredumped = WCOREDUMP(wstatus);
         p_state = PROCESS_STATE_SIGNALED;
         return;
     } 
     /* if child was stopped by a singal */
     else if (WIFSTOPPED(wstatus)) {
         p_state = PROCESS_STATE_STOPPED;
-        p_state_info.signal_stopped.stop_sig = WSTOPSIG(wstatus);
+        p_state_info.signal_stopped.ss_stop_sig = WSTOPSIG(wstatus);
         /* if the signal is a stop signal */
-        if (p_state_info.signal_stopped.stop_sig == SIGSTOP ||
-                p_state_info.signal_stopped.stop_sig == SIGTSTP ||
-                p_state_info.signal_stopped.stop_sig == SIGTTOU ||
-                p_state_info.signal_stopped.stop_sig ==  SIGTTIN) {
+        if (p_state_info.signal_stopped.ss_stop_sig == SIGSTOP ||
+                p_state_info.signal_stopped.ss_stop_sig == SIGTSTP ||
+                p_state_info.signal_stopped.ss_stop_sig == SIGTTOU ||
+                p_state_info.signal_stopped.ss_stop_sig ==  SIGTTIN) {
             /* 
              * if result of the query GETSETINGO is EINVAL or ESRCH 
              * it is a group stop.
@@ -239,7 +239,7 @@ void ZkProcess::Ptrace::WaitForProcess(int options)
             siginfo_t siginfo; 
             if (ptrace(PTRACE_GETSIGINFO, p_pid, nullptr, &siginfo) < 0) {
                 if (errno == EINVAL || errno ==  ESRCH) {
-                    p_state_info.signal_stopped.ptrace_stop = 
+                    p_state_info.signal_stopped.ss_ptrace_stop =
                         PTRACE_STOP_GROUP;
                     return;
                 }
@@ -249,55 +249,55 @@ void ZkProcess::Ptrace::WaitForProcess(int options)
              * ptrace event
              */
             if (wstatus >> 16 ==  PTRACE_EVENT_STOP) {
-                p_state_info.signal_stopped.ptrace_stop = 
+                p_state_info.signal_stopped.ss_ptrace_stop =
                     PTRACE_STOP_PTRACE_EVENT;
-                p_state_info.signal_stopped.ptrace_event = 
+                p_state_info.signal_stopped.ss_ptrace_event =
                     PTRACE_EVENT_STOP;
             }
         }
         /* if signal is a debug trap */
-        else if (p_state_info.signal_stopped.stop_sig == SIGTRAP) {
+        else if (p_state_info.signal_stopped.ss_stop_sig == SIGTRAP) {
             switch (wstatus >> 8) {
                 case GET_PTRACE_EVENT_VALUE(PTRACE_EVENT_VFORK):
-                    p_state_info.signal_stopped.ptrace_stop = 
+                    p_state_info.signal_stopped.ss_ptrace_stop =
                         PTRACE_STOP_PTRACE_EVENT;
-                    p_state_info.signal_stopped.ptrace_event = 
+                    p_state_info.signal_stopped.ss_ptrace_event =
                         PTRACE_EVENT_VFORK;
                     return;
                 case GET_PTRACE_EVENT_VALUE(PTRACE_EVENT_FORK):
-                    p_state_info.signal_stopped.ptrace_stop = 
+                    p_state_info.signal_stopped.ss_ptrace_stop =
                         PTRACE_STOP_PTRACE_EVENT;
-                    p_state_info.signal_stopped.ptrace_event = 
+                    p_state_info.signal_stopped.ss_ptrace_event =
                         PTRACE_EVENT_FORK;
                     return;
                 case GET_PTRACE_EVENT_VALUE(PTRACE_EVENT_CLONE):
-                    p_state_info.signal_stopped.ptrace_stop = 
+                    p_state_info.signal_stopped.ss_ptrace_stop =
                         PTRACE_STOP_PTRACE_EVENT;
-                    p_state_info.signal_stopped.ptrace_event = 
+                    p_state_info.signal_stopped.ss_ptrace_event =
                         PTRACE_EVENT_CLONE;
                     return;
                 case GET_PTRACE_EVENT_VALUE(PTRACE_EVENT_VFORK_DONE):
-                    p_state_info.signal_stopped.ptrace_stop = 
+                    p_state_info.signal_stopped.ss_ptrace_stop =
                         PTRACE_STOP_PTRACE_EVENT;
-                    p_state_info.signal_stopped.ptrace_event = 
+                    p_state_info.signal_stopped.ss_ptrace_event =
                         PTRACE_EVENT_VFORK_DONE;
                     return;
                 case GET_PTRACE_EVENT_VALUE(PTRACE_EVENT_EXEC):
-                    p_state_info.signal_stopped.ptrace_stop = 
+                    p_state_info.signal_stopped.ss_ptrace_stop =
                         PTRACE_STOP_PTRACE_EVENT;
-                    p_state_info.signal_stopped.ptrace_event =
+                    p_state_info.signal_stopped.ss_ptrace_event =
                         PTRACE_EVENT_EXEC;
                     return;
                 case GET_PTRACE_EVENT_VALUE(PTRACE_EVENT_EXIT):
-                    p_state_info.signal_stopped.ptrace_stop = 
+                    p_state_info.signal_stopped.ss_ptrace_stop =
                         PTRACE_STOP_PTRACE_EVENT;
-                    p_state_info.signal_stopped.ptrace_event = 
+                    p_state_info.signal_stopped.ss_ptrace_event =
                         PTRACE_EVENT_EXIT;
                     return;
                 case GET_PTRACE_EVENT_VALUE(PTRACE_EVENT_SECCOMP):
-                    p_state_info.signal_stopped.ptrace_stop = 
+                    p_state_info.signal_stopped.ss_ptrace_stop =
                         PTRACE_STOP_PTRACE_EVENT;
-                    p_state_info.signal_stopped.ptrace_event = 
+                    p_state_info.signal_stopped.ss_ptrace_event =
                         PTRACE_EVENT_SECCOMP;
                     return;
             }
@@ -306,13 +306,13 @@ void ZkProcess::Ptrace::WaitForProcess(int options)
                 throw ZkExcept::ptrace_error("ptrace getsiginfo failed");
             if (siginfo.si_code == SIGTRAP || siginfo.si_code == 
                     (SIGTRAP | 0x80)) {
-                p_state_info.signal_stopped.ptrace_stop = 
+                p_state_info.signal_stopped.ss_ptrace_stop =
                     PTRACE_STOP_SYSCALL;
                 return;
             }
         }
         else {
-            p_state_info.signal_stopped.ptrace_stop = 
+            p_state_info.signal_stopped.ss_ptrace_stop =
                 PTRACE_STOP_SIGNAL_DELIVERY;
             return;
         }
