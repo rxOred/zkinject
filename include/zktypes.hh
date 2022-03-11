@@ -8,12 +8,12 @@
 #include <sys/ptrace.h>
 #include <sys/types.h>
 
-typedef uint64_t    u64;
-typedef uint32_t    u32;
-typedef uint16_t    u16;
-typedef uint8_t     u8;
+typedef uint64_t    u64_t;
+typedef uint32_t    u32_t;
+typedef uint16_t    u16_t;
+typedef uint8_t     u8_t;
 
-/* architecture specific types */
+// architecture specific types
 #if defined(__x86_64__) || defined (__aarch64__)
 
     #define __BITS_64__
@@ -33,7 +33,7 @@ typedef uint8_t     u8;
 
     #ifndef ELF_R_SYM
     #define ELF_R_SYM     ELF64_R_SYM
-    #endif /* ELF_R_SYM */
+    #endif // ELF_R_SYM
 
 #elif(__i386__)
 
@@ -54,25 +54,17 @@ typedef uint8_t     u8;
 
     #ifndef ELF_R_SYM
     #define ELF_R_SYM   ELF32_R_SYM
-    #endif /* ELF_R_SYM */
+    #endif // ELF_R_SYM
 
-#endif /* (__x86_64__) */
+#endif // (__x86_64__)
 
-/* 
- * NOTE that since we are using char *, someone can make a special elf 
- * binary with
- * 1 less null terminator at the end and fuck us up. so validate it
- */
+// TODO that since we are using char *, someone can make a special elf
+// binary with
+// 1 less null terminator at the end and fuck us up. so validate it
+
 typedef char * strtab_t;
 
-/* 
-* a type that represent start and end address of a 
-* memory mapped page 
-*/ 
-
+typedef __ptrace_eventcodes eventcodes_t;
 typedef struct user_regs_struct registers_t;
-
-/* macros and struff */
-#define MAGIC_LEN   3   /* for magic numbers */
 
 #endif // ZKTYPES_HH

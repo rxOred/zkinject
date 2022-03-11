@@ -31,7 +31,7 @@
 #define DEFAULT_SNAPSHOT_STACK_SZ   1024
 #define DEFAULT_SNAPSHOT_INSTR      64
 
-// TODO implement some error queue to store errors caused by the programmer
+// TODO check if p_log is null. if so dont queue the log
 
 #define CHECKFLAGS_AND_ATTACH                                        \
     if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&                \
@@ -65,15 +65,15 @@
 
 #define GET_PTRACE_EVENT_VALUE(x) (((x) << (8)) | SIGTRAP )
 
-/*
- * following class stores information about a process.
- * such information include, memory map, command line args
- * and more
- */
+
+// following class stores information about a process.
+// such information include, memory map, command line args
+// and more
+
 
 namespace ZkProcess {
 
-    enum PROCESS_INFO : u8 {
+    enum PROCESS_INFO : u8_t {
         PTRACE_SEIZE            = 0,    // TODO ptrace seize
         PTRACE_ATTACH_NOW       = 1 << 0,
         PTRACE_START_NOW        = 1 << 1,
@@ -81,15 +81,12 @@ namespace ZkProcess {
         MEMMAP_ONLY_BASE_ADDR   = 1 << 3
     };
 
-    /* 
-     * These are not to be confused with ptrace process state
-     * There are only two process states in ptrace context
-     *      1. running      2. stopped
-     * zkinject treats process state in more detailed manner.
-     * 
-     *
-     */
-    enum PROCESS_STATE : u8 {
+
+    // These are not to be confused with ptrace process state
+    // There are only two process states in ptrace context
+    //      1. running      2. stopped
+    // zkinject treats process state in more detailed manner.
+    enum PROCESS_STATE : u8_t {
         PROCESS_NOT_STARTED     = 1,
         PROCESS_STATE_DETACHED,
         PROCESS_STATE_EXITED,
@@ -100,51 +97,46 @@ namespace ZkProcess {
     };
 
 
-    /* This enum describes ptrace stopped process state */
-    enum PTRACE_STOP_STATE : u8 {
-        /* ptrace-stop state - tracee is ready accept ptrace commands */
+    // This enum describes ptrace stopped process state
+    enum PTRACE_STOP_STATE : u8_t {
+        // ptrace-stop state - tracee is ready accept ptrace commands
         PTRACE_STOP_NOT_STOPPED = 0,
         PTRACE_STOP_SIGNAL_DELIVERY,
         PTRACE_STOP_GROUP, 
         PTRACE_STOP_SYSCALL,
         PTRACE_STOP_PTRACE_EVENT, 
 
-        /* */
+
     };
 
-    /* exit status of the process */
+    // exit status of the process
     union PROCESS_STATE_INFO {
         struct {
-            int exit_status;
+            int e_exit_status;
         } exited;
         struct{
-            int term_sig;
-            bool is_coredumped;
+            int st_term_sig;
+            bool st_is_coredumped;
         } signal_terminated;
         struct {
-            int stop_sig;
-            PTRACE_STOP_STATE ptrace_stop;
-            __ptrace_eventcodes ptrace_event;
+            int ss_stop_sig;
+            PTRACE_STOP_STATE ss_ptrace_stop;
+            eventcodes_t ss_ptrace_event;
         } signal_stopped;
     };
 
-    enum TRACE_OPTIONS: u16 {
-        /* TODO trace options
-         * options for ptrace 
-         */
+    enum TRACE_OPTIONS: u16_t {
+         // TODO trace options
+         // options for ptrace
+         //
     };
 
-    enum PROCESS_SNAPSHOT : u8 {
+    enum PROCESS_SNAPSHOT : u8_t {
         PROCESS_SNAP_ALL     = 1,
         PROCESS_SNAP_FUNC
     };
 
-    class page_t {
-            addr_t      page_saddr;
-            addr_t      page_eaddr;
-            std::string page_permissions;
-            std::string page_name;
-
+    struct page_t {
         public:
             page_t(addr_t saddr, addr_t eaddr, std::string permissions, 
                     std::string name);
@@ -165,14 +157,19 @@ namespace ZkProcess {
             {
                 return page_name;
             }
+        private:
+            addr_t      page_saddr;
+            addr_t      page_eaddr;
+            std::string page_permissions;
+            std::string page_name;
     };
 
     class MemoryMap  {
         private:
-            u8 mm_flags = 0;
+            u8_t mm_flags = 0;
             std::vector<std::shared_ptr<page_t>> mm_pageinfo;
         public:
-            MemoryMap(pid_t pid, u8 flag);
+            MemoryMap(pid_t pid, u8_t flag);
             ~MemoryMap();
 
             addr_t GetModuleBaseAddress(const char *module_name) const;
@@ -218,7 +215,7 @@ namespace ZkProcess {
             }
             bool IsMapped(addr_t addr) const;
 
-           /* TODO virtualAlloc /protect */
+           // TODO virtualAlloc /protect
     };
 
     class Signal {
@@ -255,7 +252,7 @@ namespace ZkProcess {
 
     class Ptrace {
         private:
-            u8 p_flags = 0;
+            u8_t p_flags = 0;
 
             PROCESS_STATE p_state = PROCESS_NOT_STARTED;
             PROCESS_STATE_INFO p_state_info; 
@@ -264,14 +261,13 @@ namespace ZkProcess {
             ZkLog::Log *p_log;
             pid_t p_pid;
         public:
-            /* 
-             * pathname = filepath to elf binary which should be forkd 
-             * and execed with ptrace 
-             * pid = pid for a currently active process
-             * regs = register struct
-             */
-            Ptrace(const char **pathname, pid_t pid, u8 flags, ZkLog::Log *log);
-            Ptrace(const char **pathname, pid_t pid, u8 flags);
+
+            // pathname = filepath to elf binary which should be forkd
+            // and execed with ptrace
+            // pid = pid for a currently active process
+            // regs = register struct
+            Ptrace(const char **pathname, pid_t pid, u8_t flags, ZkLog::Log *log);
+            Ptrace(const char **pathname, pid_t pid, u8_t flags);
             ~Ptrace();
 
             inline std::shared_ptr<MemoryMap> GetMemoryMap(void) const 
@@ -287,17 +283,13 @@ namespace ZkProcess {
                 return p_state_info;
             }
 
-            /* attach to the process, stopping it */
             void AttachToPorcess(void);
-            /* attach to the process but without stopping it */ 
             void SeizeProcess(void);
-            /* Start the proces, stopping it */
             void StartProcess(char **pathname);
-            /* detach from attached / started process */
             void DetachFromProcess(void);
             void KillProcess(void);
             bool ContinueProcess(bool pass_signal);
-            /* wait for process state changes */
+
             void WaitForProcess(int options);
 
             PROCESS_STATE SignalProcess(int signal);
@@ -305,12 +297,9 @@ namespace ZkProcess {
             PROCESS_STATE SignalKillProcess(void);
             PROCESS_STATE SignalContinueProcess(void);
 
-            /* generate a random unallocated userland address */
+
             addr_t GenerateAddress(int seed) const;
-            /* 
-             * read from process to an allocated buffer starting at address, 
-             * sizeof buffer_sz len.
-             */
+
             bool ReadProcess(void *buffer, addr_t address, size_t
                     buffer_sz);
             addr_t WriteProcess(void *buffer, addr_t address, size_t 
@@ -324,30 +313,24 @@ namespace ZkProcess {
             {
                 return p_memmap->GetBasePage()->GetPageName();
             }
-            /* 
-             * TODO methods to read thread state using registers
-             * CreateThread
-             */
+
+            //TODO methods to read thread state using registers
+            // CreateThread
+
 
         private:
             bool isPtraceStopped(void) const;
     };
 
-    /* queue to store process state */
-    class snapshot_t {
-        private:
-            /* generic information about amount of the captured data */
-            u8              ps_flags;
-            registers_t     *ps_registers;
-            void            *ps_stack;      /* 100 bytes from rsp */
-            void            *ps_instructions;
+    // queue to store process state
+    struct snapshot_t {
         public:
-            snapshot_t(u8 flags, registers_t *regs, void *stack, 
+            snapshot_t(u8_t flags, registers_t *regs, void *stack, 
                     void *instr);
 
             ~snapshot_t();
 
-            inline u8 GetFlags(void) const
+            inline u8_t GetFlags(void) const
             {
                 return ps_flags;
             }
@@ -363,18 +346,26 @@ namespace ZkProcess {
             {
                 return ps_instructions;
             }
+        private:
+            // generic information about amount of the captured data
+            u8_t              ps_flags;
+            registers_t     *ps_registers;
+            void            *ps_stack;
+            void            *ps_instructions;
     };
 
     class Snapshot {
         private: 
             int s_count = DEFAULT_SNAPSHOT_COUNT;
             std::queue<std::shared_ptr<snapshot_t>> s_snapshots;
+            ZkLog::Log *s_log;
         public:
             Snapshot();
             Snapshot(int count);
+            Snapshot(int count, ZkLog::Log *log);
             ~Snapshot();
 
-            bool SaveSnapshot(ZkProcess::Ptrace &ptrace, u8 flags);
+            bool SaveSnapshot(ZkProcess::Ptrace &ptrace, u8_t flags);
             bool RestoreSnapshot(ZkProcess::Ptrace &ptrace);
     };
 };

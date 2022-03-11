@@ -21,7 +21,7 @@ void ZkUtils::SaveBufferToFile(const char *pathname, off_t offset,
 {
     int fd = open(pathname, O_CREAT | O_WRONLY, 0666);
     if (fd < 0)
-        throw zkexcept::file_not_found_error();
+        throw ZkExcept::file_not_found_error();
 
     if (pwrite(fd, buffer, buffer_size, offset) < buffer_size) {
         throw std::runtime_error("write failed\n");
@@ -32,7 +32,7 @@ void ZkUtils::SaveBufferToFile(const char *pathname, off_t offset,
     }
 }
 
-void ZkUtils::PatchAddress(u8 *buffer, size_t len, u64 addr, u8 *magic)
+void ZkUtils::PatchAddress(u8_t *buffer, size_t len, u64_t addr, u8_t *magic)
 {
     int count = 0;
     for (int i = 0; i < len; i++){
@@ -43,11 +43,11 @@ void ZkUtils::PatchAddress(u8 *buffer, size_t len, u64 addr, u8 *magic)
                     count++;
             }
             if(count == MAGIC_LEN)
-                *(u64 *)((void *)(buffer + i)) = addr;
+                *(u64_t *)((void *)(buffer + i)) = addr;
             else
                 continue;
         }
     }
 error:
-    throw zkexcept::magic_not_found_error();
+    throw ZkExcept::magic_not_found_error();
 }

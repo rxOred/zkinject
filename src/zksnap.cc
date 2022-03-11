@@ -6,9 +6,10 @@
 #include <stdexcept>
 #include <sys/ptrace.h>
 #include <cstring>
+#include <functional>
 
-/* BUG - this may not work */
-ZkProcess::snapshot_t::snapshot_t(u8 flags, registers_t *regs, 
+// BUG - this may not work
+ZkProcess::snapshot_t::snapshot_t(u8_t flags, registers_t *regs, 
         void *stack, void *instr)
     :ps_flags(flags), ps_registers(regs), 
     ps_instructions(instr), ps_stack(stack)
@@ -21,9 +22,27 @@ ZkProcess::snapshot_t::~snapshot_t()
     if (ps_stack) { free(ps_stack); }
 }
 
+ZkProcess::Snapshot::Snapshot()
+    :s_log(nullptr)
+{}
+
 ZkProcess::Snapshot::Snapshot(int count)
+    :s_log(nullptr)
 {
     if (count > 0 || count <= 10) {
+        s_count = count;
+    }
+}
+
+ZkProcess::Snapshot::Snapshot(int count, ZkLog::Log *log)
+    :s_log(log)
+{
+    if (count > 0 || count <= 10) {
+        if (s_log != nullptr) {
+            s_log->PushLog(
+                "snapshot count cannot be less than 0 or greater than 10",
+                ZkLog::LOG_LEVEL_DEBUG);
+        }
         s_count = count;
     }
 }
@@ -36,43 +55,44 @@ ZkProcess::Snapshot::~Snapshot()
     }
 }
 
-bool ZkProcess::Snapshot::SaveSnapshot(ZkProcess::Ptrace &ptrace, u8 flags)
+bool ZkProcess::Snapshot::SaveSnapshot(ZkProcess::Ptrace &ptrace, u8_t flags)
 {
     registers_t *regs = nullptr;
     void *stack = nullptr;
     void *instr = nullptr;
 
-    /*
-    if (s_snapshots.size() + 1 > s_count) {
-        s_snapshots.back().reset();
-        s_snapshots.
-    }
-    */
+    // TODO
+    //if (s_snapshots.size() + 1 > s_count) {
+    //    s_snapshots.back().reset();
+    //    s_snapshots.
+    //}
+    //
     if (ZK_CHECK_FLAGS(PROCESS_SNAP_ALL, flags)) {
         regs = (registers_t *)calloc(sizeof(registers_t), 1);
         if (regs ==  nullptr) {
             throw std::runtime_error("failed to allocate memory\n");
         }
+        //std::__invoke(&ZkProcess::Ptrace::ReadRegisters, ptrace, regs);
         ptrace.ReadRegisters(regs);
 
-        stack = calloc(sizeof(u8), DEFAULT_SNAPSHOT_STACK_SZ);
+        stack = calloc(sizeof(u8_t), DEFAULT_SNAPSHOT_STACK_SZ);
         if (stack ==  nullptr) {
             throw std::runtime_error("failed to allocate memory\n");
         }
         try { ptrace.ReadProcess(stack, regs->rsp, 
                 DEFAULT_SNAPSHOT_STACK_SZ); }
-        catch (zkexcept::ptrace_error& e) {
+        catch (ZkExcept::ptrace_error& e) {
             std::cerr << e.what();
             std::exit(1);
         }
 
-        instr = calloc(sizeof(u8), DEFAULT_SNAPSHOT_INSTR);
+        instr = calloc(sizeof(u8_t), DEFAULT_SNAPSHOT_INSTR);
         if (instr ==  nullptr) {
             throw std::runtime_error("failed to allocate memory\n");
         }
         try { ptrace.ReadProcess(instr, regs->rip, 
                 DEFAULT_SNAPSHOT_INSTR); }
-        catch (zkexcept::ptrace_error& e) {
+        catch (ZkExcept::ptrace_error& e) {
             std::cerr << e.what();
             std::exit(1);
         }
@@ -86,23 +106,23 @@ bool ZkProcess::Snapshot::SaveSnapshot(ZkProcess::Ptrace &ptrace, u8 flags)
         ptrace.ReadRegisters(regs);
 
         int stack_frame_sz = regs->rbp - regs->rsp;
-        stack = calloc(sizeof(u8), stack_frame_sz);
+        stack = calloc(sizeof(u8_t), stack_frame_sz);
         if (stack ==  nullptr) {
             throw std::runtime_error("failed to allocate memory\n");
         }
         try { ptrace.ReadProcess(stack, regs->rsp, stack_frame_sz); }
-        catch (zkexcept::ptrace_error& e) {
+        catch (ZkExcept::ptrace_error& e) {
             std::cerr << e.what();
             std::exit(1);
         }
 
-        instr = calloc(sizeof(u8), DEFAULT_SNAPSHOT_INSTR);
+        instr = calloc(sizeof(u8_t), DEFAULT_SNAPSHOT_INSTR);
         if (instr ==  nullptr) {
             throw std::runtime_error("failed to allocate memory\n");
         }
         try { ptrace.ReadProcess(instr, regs->rip, 
                 DEFAULT_SNAPSHOT_INSTR); }
-        catch (zkexcept::ptrace_error& e) {
+        catch (ZkExcept::ptrace_error& e) {
             std::cerr << e.what();
             std::exit(1);
         }
@@ -118,6 +138,9 @@ bool ZkProcess::Snapshot::SaveSnapshot(ZkProcess::Ptrace &ptrace, u8 flags)
 bool ZkProcess::Snapshot::RestoreSnapshot(ZkProcess::Ptrace &ptrace)
 {
     if (s_snapshots.empty()) {
+        if (s_log != nullptr)
+            s_log->PushLog("snapshot queue is empty",
+                           ZkLog::LOG_LEVEL_ERROR);
         return false;
     }
 

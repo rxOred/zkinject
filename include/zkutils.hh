@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 
+#define MAGIC_LEN   3
+
 #define ZK_PATH_LEN            64
 #define ZK_CHECK_FLAGS(x, y)   ((x) & (y))
 #define ZK_PAGE_ALIGN_UP(x)    ((x) & ~(4095))
@@ -18,7 +20,7 @@ namespace ZkUtils {
     void SaveBufferToFile(const char *pathname, off_t offset, 
             void *buffer, int buffer_size);
 
-    void PatchAddress(u8 *buffer, size_t len, u64 addr, u8 *magic);
+    void PatchAddress(u8_t *buffer, size_t len, u64_t addr, u8_t *magic);
 };
 
 #endif // ZKUTILS_HH

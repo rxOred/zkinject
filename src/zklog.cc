@@ -21,3 +21,11 @@ std::pair<std::string, ZkLog::ZK_LOG_LEVEL> ZkLog::Log::PopLog(void)
     log.pop();
     return pair;
 }
+
+void ZkLog::Log::ClearLog(void)
+{
+    for (int i = 0; i < log.size(); i++) {
+        log.front().reset();
+        log.pop();
+    }
+}

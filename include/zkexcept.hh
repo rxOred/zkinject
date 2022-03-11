@@ -3,7 +3,9 @@
 
 #include <stdexcept>
 
-namespace zkexcept {
+// TODO remove some of these useless exceptions and replace them with errors
+
+namespace ZkExcept {
     struct some_weird_error : public std::runtime_error{
         some_weird_error(const char *what) : runtime_error(what) {}
         some_weird_error() : runtime_error("some weird error occured\n")
@@ -15,7 +17,6 @@ namespace zkexcept {
         opration_failed_error() : runtime_error("operation failed"){}
     };
 
-    /* type stuff */
     struct not_exec_error : public std::runtime_error{
         not_exec_error() : runtime_error("not an executable file") {}
     };
@@ -24,7 +25,6 @@ namespace zkexcept {
         not_dyn_error() : runtime_error("not a shared object") {}
     };
 
-    /* not found stuff */
     struct segment_not_found_error : public std::runtime_error{
         segment_not_found_error(const char *what) : runtime_error(what)
         {}

@@ -14,10 +14,7 @@ namespace ZkLog {
         LOG_LEVEL_CRITICAL
     };
 
-    class logmessage_t {
-        private:
-            std::string log_string;
-            ZK_LOG_LEVEL log_level;
+    struct logmessage_t {
         public:
             logmessage_t(std::string string, ZK_LOG_LEVEL level)
                 :log_string(string), log_level(level)
@@ -30,6 +27,9 @@ namespace ZkLog {
             {
                 return log_level;
             }
+        private:
+            std::string log_string;
+            ZK_LOG_LEVEL log_level;
     };
 
     class Log {
@@ -40,6 +40,7 @@ namespace ZkLog {
             ~Log();
             void PushLog(std::string log_string, ZK_LOG_LEVEL level);
             std::pair<std::string, ZK_LOG_LEVEL> PopLog(void);
+            void ClearLog(void);
     };
 
     //void IniteZkLog(void);
