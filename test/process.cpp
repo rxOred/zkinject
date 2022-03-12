@@ -32,9 +32,6 @@ int main(int argc, char *argv[])
     puts("[+] parsing memory map");
     auto memmap = process.GetMemoryMap();
     printf("base address %lx\n", memmap->GetBaseAddress());
-    std::pair<std::vector<std::shared_ptr<page_t>>::const_iterator,
-        std::vector<std::shared_ptr<page_t>>::const_iterator>
-        pair = memmap->GetIteratorsBeginEnd();
     printf("start addr\tend address\tpermissions\tpage name\n");
     std::vector<std::shared_ptr<page_t>> pages = memmap->GetMemoryPages();
     for (auto & page : pages) {

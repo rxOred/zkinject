@@ -22,10 +22,10 @@ ZkProcess::MemoryMap::MemoryMap(pid_t pid, u8_t flag)
     }
 
     std::ifstream fh(buffer);
-    std::string line, start_addr, end_addr, permissions, name = nullptr;
+    std::string line, start_addr, end_addr, permissions, name;
     addr_t s_addr = 0x0, e_addr = 0x0;
     std::smatch match;
-    std::regex regex(R"([a-f0-9]+)-([a-f0-9]+) ([rxwp-]{4}) (.*) (\[|/.*\n)");
+    std::regex regex(R"(([a-f0-9]+)-([a-f0-9]+) ([rxwp-]{4}) (.*))");
     while(std::getline(fh, line)) {
         std::regex_match(line, match, regex);
         start_addr = match.str(0);
@@ -63,6 +63,13 @@ ZkProcess::MemoryMap::MemoryMap(pid_t pid, u8_t flag)
 
     }
     */
+}
+
+ZkProcess::MemoryMap::~MemoryMap()
+{
+    for (auto & page : mm_pageinfo) {
+        page.reset();
+    }
 }
 
 std::shared_ptr<ZkProcess::page_t> ZkProcess::MemoryMap::GetModulePage(
