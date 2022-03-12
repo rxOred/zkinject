@@ -25,7 +25,8 @@ ZkProcess::MemoryMap::MemoryMap(pid_t pid, u8_t flag)
     std::string line, start_addr, end_addr, permissions, name;
     addr_t s_addr = 0x0, e_addr = 0x0;
     std::smatch match;
-    std::regex regex(R"(([a-f0-9]+)-([a-f0-9]+) ([rxwp-]{4}) (.*))");
+    std::regex regex(R"(([a-f0-9]+)-([a-f0-9]+) ([rxwp-]{4}) (.*))",
+        std::regex::optimize);
     while(std::getline(fh, line)) {
         std::regex_match(line, match, regex);
         start_addr = match.str(0);
