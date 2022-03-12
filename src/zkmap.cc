@@ -45,25 +45,6 @@ ZkProcess::MemoryMap::MemoryMap(pid_t pid, u8_t flag)
 
         if(ZK_CHECK_FLAGS(MEMMAP_ONLY_BASE_ADDR, mm_flags)) break;
     }
-
-    /*
-    std::string line, saddr, eaddr, permissions, name;
-    addr_t _saddr, _eaddr;
-    while(std::getline(fh, line)){
-        std::stringstream ss(line);
-
-        std::getline(ss, saddr, '-');
-
-        std::getline(ss, eaddr, ' ');
-
-        std::getline(ss, permissions, ' ');
-
-        while(std::getline(ss, line, '/') || std::getline(ss, line, '[')){
-            std::getline(ss, name, '\n');
-        }
-
-    }
-    */
 }
 
 ZkProcess::MemoryMap::~MemoryMap()
