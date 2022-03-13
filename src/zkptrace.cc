@@ -24,6 +24,51 @@ bool ZkProcess::Ptrace::isPtraceStopped(void) const
     return false;
 }
 
+ZkProcess::Ptrace::Ptrace(const char **pathname , pid_t pid, u8_t flags)
+    : p_pid(pid), p_flags(flags)
+{
+    if (ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
+            ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)){
+        throw std::invalid_argument("flags ATTACH_NOW and START_NOW     \
+                cannot be used at the same time");
+    }
+    /* if a pid and PTRACE_ATTACH_NOW is specified, attach to the pid */
+    else if(ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) && p_pid != 0){
+        try{
+            AttachToPorcess();
+            if (p_state == PROCESS_STATE_FAILED)
+                throw ZkExcept::ptrace_error("ptrace attach failed\n");
+            else if (p_state == PROCESS_STATE_EXITED)
+                throw ZkExcept::ptrace_error("child process exited\n");
+        } catch(ZkExcept::ptrace_error& e){
+            std::cerr << e.what() << std::endl;
+            std::exit(1);
+        }
+        p_memmap = std::make_shared<MemoryMap>(p_pid, 0);
+    }
+    /* if pathname is specified and pid is not,a process will be spawed */
+    else if(ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags) && pathname != nullptr
+            && p_pid == 0){
+        try{
+            StartProcess((char **)pathname);
+            if(p_state == PROCESS_STATE_FAILED)
+                throw ZkExcept::ptrace_error("start process failed\n");
+            else if (p_state == PROCESS_STATE_EXITED)
+                throw ZkExcept::ptrace_error("child process exited\n");
+        } catch (ZkExcept::ptrace_error& e){
+            std::cerr << e.what() << std::endl;
+            std::exit(1);
+        }
+        /* 
+         * StartProcess set p_pid so we can get the memory map of the 
+         * process 
+         */
+        p_memmap = std::make_shared<MemoryMap>(p_pid, 0);
+    }else {
+        throw std::invalid_argument("invalid flag\n");
+   }
+}
+
 ZkProcess::Ptrace::Ptrace(const char **pathname , pid_t pid, u8_t flags,
     ZkLog::Log *log)
     : p_pid(pid), p_flags(flags), p_log(log)
@@ -70,8 +115,9 @@ ZkProcess::Ptrace::Ptrace(const char **pathname , pid_t pid, u8_t flags,
     }
 }
 
-ZkProcess::Ptrace::Ptrace(const char **pathname , pid_t pid, u8_t flags)
-    : p_pid(pid), p_flags(flags)
+ZkProcess::Ptrace::Ptrace(const char **pathname, pid_t pid, u8_t flags,
+                          ZkProcess::Snapshot *snapshot)
+    :p_pid(pid), p_flags(flags), p_snapshot(snapshot)
 {
     if (ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
             ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)){
@@ -105,9 +151,55 @@ ZkProcess::Ptrace::Ptrace(const char **pathname , pid_t pid, u8_t flags)
             std::cerr << e.what() << std::endl;
             std::exit(1);
         }
-        /* 
-         * StartProcess set p_pid so we can get the memory map of the 
-         * process 
+        /*
+         * StartProcess set p_pid so we can get the memory map of the
+         * process
+         */
+        p_memmap = std::make_shared<MemoryMap>(p_pid, 0);
+    }else {
+        throw std::invalid_argument("invalid flag\n");
+    }
+}
+
+ZkProcess::Ptrace::Ptrace(const char **pathname, pid_t pid, u8_t flags,
+                          ZkLog::Log *log, ZkProcess::Snapshot *snapshot)
+    :p_pid(pid), p_flags(flags), p_log(log), p_snapshot(snapshot)
+{
+    if (ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
+            ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)){
+        throw std::invalid_argument("flags ATTACH_NOW and START_NOW     \
+                cannot be used at the same time");
+    }
+    /* if a pid and PTRACE_ATTACH_NOW is specified, attach to the pid */
+    else if(ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) && p_pid != 0){
+        try{
+            AttachToPorcess();
+            if (p_state == PROCESS_STATE_FAILED)
+                throw ZkExcept::ptrace_error("ptrace attach failed\n");
+            else if (p_state == PROCESS_STATE_EXITED)
+                throw ZkExcept::ptrace_error("child process exited\n");
+        } catch(ZkExcept::ptrace_error& e){
+            std::cerr << e.what() << std::endl;
+            std::exit(1);
+        }
+        p_memmap = std::make_shared<MemoryMap>(p_pid, 0);
+    }
+    /* if pathname is specified and pid is not,a process will be spawed */
+    else if(ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags) && pathname != nullptr
+            && p_pid == 0){
+        try{
+            StartProcess((char **)pathname);
+            if(p_state == PROCESS_STATE_FAILED)
+                throw ZkExcept::ptrace_error("start process failed\n");
+            else if (p_state == PROCESS_STATE_EXITED)
+                throw ZkExcept::ptrace_error("child process exited\n");
+        } catch (ZkExcept::ptrace_error& e){
+            std::cerr << e.what() << std::endl;
+            std::exit(1);
+        }
+        /*
+         * StartProcess set p_pid so we can get the memory map of the
+         * process
          */
         p_memmap = std::make_shared<MemoryMap>(p_pid, 0);
     }else {
@@ -177,14 +269,20 @@ bool ZkProcess::Ptrace::ContinueProcess(bool pass_signal)
     RETURN_IF_EXITED(false)
     RETURN_IF_NOT_STOPPED(false)
 
-    if (p_state_info.signal_stopped.ss_ptrace_stop ==
-            PTRACE_STOP_SIGNAL_DELIVERY) {
-        if (ptrace(PTRACE_CONT, p_pid, nullptr,
-                    p_state_info.signal_stopped.ss_stop_sig) < 0) {
-            throw ZkExcept::ptrace_error("ptrace continue failed\n");
+    if (pass_signal) {
+        if (p_state_info.signal_stopped.ss_ptrace_stop ==
+                PTRACE_STOP_SIGNAL_DELIVERY) {
+            if (ptrace(PTRACE_CONT, p_pid, nullptr,
+                        p_state_info.signal_stopped.ss_stop_sig) < 0) {
+                throw ZkExcept::ptrace_error("ptrace continue failed\n");
+            }
+        }
+        else {
+            goto cont_without_signal;
         }
     }
     else {
+cont_without_signal:
         if (ptrace(PTRACE_CONT, p_pid, nullptr, nullptr) < 0)
             throw ZkExcept::ptrace_error("ptrace continue failed\n");
     }
@@ -205,102 +303,108 @@ ZkProcess::PROCESS_STATE ZkProcess::Ptrace::InterruptProcess(void)
  * find a way to stop processes 
  */
 
-void ZkProcess::Ptrace::WaitForProcess(int options)
+ZkProcess::PROCESS_STATE ZkProcess::Ptrace::WaitForProcess(int options)
 {
-    assert(p_pid != 0 && "Process ID is not set");
+    if (p_log != nullptr) {
+        p_log->PushLog("process id is not specified", ZkLog::LOG_LEVEL_ERROR);
+        return ZkProcess::PROCESS_STATE_FAILED;
+    }
     int wstatus = 0;
-    waitpid(p_pid, &wstatus, options);
-    /* if child exited normally */
+    pid_t pid = waitpid(p_pid, &wstatus, options);
+    // if child exited normally
     if (WIFEXITED(wstatus)) {
         p_state_info.exited.e_exit_status = WEXITSTATUS(wstatus);
         p_state = PROCESS_STATE_EXITED;
-        return;
+        return p_state;
     } 
-    /* if child was terminated by a signal */
+    // if child was terminated by a signal
     else if (WIFSIGNALED(wstatus)) {
         p_state_info.signal_terminated.st_term_sig = WTERMSIG(wstatus);
         p_state_info.signal_terminated.st_is_coredumped = WCOREDUMP(wstatus);
         p_state = PROCESS_STATE_SIGNALED;
-        return;
+        return p_state;
     } 
-    /* if child was stopped by a singal */
-    else if (WIFSTOPPED(wstatus)) {
+    // if child was stopped by a singal
+    else if (WIFSTOPPED(wstatus) && pid > 0) {
         p_state = PROCESS_STATE_STOPPED;
         p_state_info.signal_stopped.ss_stop_sig = WSTOPSIG(wstatus);
-        /* if the signal is a stop signal */
+        // if the signal is a stop signal - SIGSTOP, SIGTSTP, SIGTTOU, SIGTTIN
         if (p_state_info.signal_stopped.ss_stop_sig == SIGSTOP ||
                 p_state_info.signal_stopped.ss_stop_sig == SIGTSTP ||
                 p_state_info.signal_stopped.ss_stop_sig == SIGTTOU ||
                 p_state_info.signal_stopped.ss_stop_sig ==  SIGTTIN) {
-            /* 
-             * if result of the query GETSETINGO is EINVAL or ESRCH 
-             * it is a group stop.
-             */ 
+            // if result of the query GETSETINGO is EINVAL or ESRCH
+            // it is a group stop.
+            //
             siginfo_t siginfo; 
             if (ptrace(PTRACE_GETSIGINFO, p_pid, nullptr, &siginfo) < 0) {
                 if (errno == EINVAL || errno ==  ESRCH) {
                     p_state_info.signal_stopped.ss_ptrace_stop =
                         PTRACE_STOP_GROUP;
-                    return;
+                    return p_state;
                 }
             }
-            /*
-             * if status >> 16 ==  PTRACE_EVENT_STOP, it is a 
-             * ptrace event
-             */
+            // if status >> 16 ==  PTRACE_EVENT_STOP, it is a stop
+            // caused by PTRACE_SEIZE and is a group stop.
+            // event code is set to PTRACE_EVENT_STOP
             if (wstatus >> 16 ==  PTRACE_EVENT_STOP) {
                 p_state_info.signal_stopped.ss_ptrace_stop =
-                    PTRACE_STOP_PTRACE_EVENT;
+                    PTRACE_STOP_GROUP;
                 p_state_info.signal_stopped.ss_ptrace_event =
                     PTRACE_EVENT_STOP;
             }
         }
-        /* if signal is a debug trap */
         else if (p_state_info.signal_stopped.ss_stop_sig == SIGTRAP) {
+            // if signal is a debugger trap - SIGTRAP. it is a PRTRACE_EVENT
+            // stop. (wstatus >> 8) indicates the event that caused the stop.
+            // These events are essentially set by PTRACE_O_TRACE options.
             switch (wstatus >> 8) {
                 case GET_PTRACE_EVENT_VALUE(PTRACE_EVENT_VFORK):
                     p_state_info.signal_stopped.ss_ptrace_stop =
                         PTRACE_STOP_PTRACE_EVENT;
                     p_state_info.signal_stopped.ss_ptrace_event =
                         PTRACE_EVENT_VFORK;
-                    return;
+                    return p_state;
                 case GET_PTRACE_EVENT_VALUE(PTRACE_EVENT_FORK):
                     p_state_info.signal_stopped.ss_ptrace_stop =
                         PTRACE_STOP_PTRACE_EVENT;
                     p_state_info.signal_stopped.ss_ptrace_event =
                         PTRACE_EVENT_FORK;
-                    return;
+                    return p_state;
                 case GET_PTRACE_EVENT_VALUE(PTRACE_EVENT_CLONE):
                     p_state_info.signal_stopped.ss_ptrace_stop =
                         PTRACE_STOP_PTRACE_EVENT;
                     p_state_info.signal_stopped.ss_ptrace_event =
                         PTRACE_EVENT_CLONE;
-                    return;
+                    return p_state;
                 case GET_PTRACE_EVENT_VALUE(PTRACE_EVENT_VFORK_DONE):
                     p_state_info.signal_stopped.ss_ptrace_stop =
                         PTRACE_STOP_PTRACE_EVENT;
                     p_state_info.signal_stopped.ss_ptrace_event =
                         PTRACE_EVENT_VFORK_DONE;
-                    return;
+                    return p_state;
                 case GET_PTRACE_EVENT_VALUE(PTRACE_EVENT_EXEC):
                     p_state_info.signal_stopped.ss_ptrace_stop =
                         PTRACE_STOP_PTRACE_EVENT;
                     p_state_info.signal_stopped.ss_ptrace_event =
                         PTRACE_EVENT_EXEC;
-                    return;
+                    return p_state;
                 case GET_PTRACE_EVENT_VALUE(PTRACE_EVENT_EXIT):
                     p_state_info.signal_stopped.ss_ptrace_stop =
                         PTRACE_STOP_PTRACE_EVENT;
                     p_state_info.signal_stopped.ss_ptrace_event =
                         PTRACE_EVENT_EXIT;
-                    return;
+                    return p_state;
                 case GET_PTRACE_EVENT_VALUE(PTRACE_EVENT_SECCOMP):
                     p_state_info.signal_stopped.ss_ptrace_stop =
                         PTRACE_STOP_PTRACE_EVENT;
                     p_state_info.signal_stopped.ss_ptrace_event =
                         PTRACE_EVENT_SECCOMP;
-                    return;
+                    return p_state;
             }
+            // if signal is a debugger trap and PTRACE_GETSIGINFO returns
+            // si_code == SIGTRAP or si_code == (SIGTRAP | 0x80),
+            // it is a syscall-enter-stop or syscall-exit-stop
             siginfo_t siginfo;
             if (ptrace(PTRACE_GETSIGINFO, p_pid, nullptr, &siginfo) < 0) 
                 throw ZkExcept::ptrace_error("ptrace getsiginfo failed");
@@ -308,13 +412,16 @@ void ZkProcess::Ptrace::WaitForProcess(int options)
                     (SIGTRAP | 0x80)) {
                 p_state_info.signal_stopped.ss_ptrace_stop =
                     PTRACE_STOP_SYSCALL;
-                return;
+                return p_state;
             }
         }
+        // if signal is not either a debug trap or a stop call, it is then
+        // a signal delivery stop.
+        //
         else {
             p_state_info.signal_stopped.ss_ptrace_stop =
                 PTRACE_STOP_SIGNAL_DELIVERY;
-            return;
+            return p_state;
         }
     }
     else if (WIFCONTINUED(wstatus)) {
@@ -323,6 +430,7 @@ void ZkProcess::Ptrace::WaitForProcess(int options)
     else {
         p_state = PROCESS_STATE_FAILED;
     }
+    return p_state;
 }
 
 /* generate a random address */
@@ -346,10 +454,11 @@ bool ZkProcess::Ptrace::ReadProcess(void *buffer, addr_t address, size_t
     u8_t *dst = (u8_t *)buffer;
     addr_t data;
     for (int i = 0; i < (buffer_sz /  sizeof(addr_t)); addr+=sizeof(
-                addr_t), dst+=sizeof(addr_t)){
+                addr_t), dst+=sizeof(addr_t), ++i){
         data = ptrace(PTRACE_PEEKTEXT, p_pid, addr, nullptr);
-        if(data < 0)
+        if(data < 0) {
             throw ZkExcept::ptrace_error("ptrace peektext failed\n");
+        }
         *(addr_t *)dst = data;
     }
 
@@ -367,38 +476,33 @@ addr_t ZkProcess::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
     RETURN_IF_NOT_STOPPED(0)
 
     addr_t addr = address;
-
     if (addr == 0x0){
         while (true){
             addr = GenerateAddress(buffer_sz);
+            std::cout << std::hex << addr << std::endl;
             if (p_memmap->IsMapped(addr) ==  false) {
                 break;
             }
         }
     }
-    /* 
-     * if buffer size is greater than the maximum size of data 
-     * ptrace can write from a single call - (sizeof(addr_t)) 
-     * and
-     * can be evenly divide by that size 
-     */
+    //
+    //  if buffer size is greater than the maximum size of data
+    //  ptrace can write from a single call - (sizeof(addr_t))
+    //  and
+    //  can be evenly divide by that size
+    //
     if (buffer_sz > sizeof(addr_t) && (buffer_sz % sizeof(addr_t)) ==  0){
         u8_t *src = (u8_t *)buffer;
-        for (int i = 0; i < (buffer_sz / sizeof(addr_t)); 
-                addr+=sizeof(addr_t), 
-                src+=sizeof(addr_t)){
+        for (int i = 0; i < (buffer_sz / sizeof(addr_t)); addr+=sizeof(addr_t),
+                src+=sizeof(addr_t), ++i){
             if (ptrace(PTRACE_POKETEXT, p_pid, addr, src)  < 0) {
                 throw ZkExcept::ptrace_error("ptrace poketext failed\n");
             }
         }
     }
-    /* 
-     * if buffer size is less than max size of ptace can write 
-     */
+    // if buffer size is less than max size of ptace can write
     else if (buffer_sz < sizeof(addr_t)) {
-        /* 
-         * read what is at that address, and replace original data 
-         */
+        // read what is at that address, and replace original data
         try{
             u64_t o_buffer = 0x0;
             ReadProcess(&o_buffer, addr, sizeof(addr_t));
@@ -416,7 +520,7 @@ addr_t ZkProcess::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
         int count = buffer_sz / sizeof(addr_t);
         int remainder = buffer_sz % sizeof(addr_t);
 
-        /* write sizeof(addr_t) size chunks */
+        // write sizeof(addr_t) size chunks
         u8_t *src = (u8_t *)buffer;
         for (int i = 0; i < count; addr+=sizeof(addr_t), 
                 src+=sizeof(addr_t)) {
@@ -424,7 +528,7 @@ addr_t ZkProcess::Ptrace::WriteProcess(void *buffer, addr_t address, size_t
                 throw ZkExcept::ptrace_error("ptrace poketext failed\n");
             }
         }
-        /* write remaining bytes */ 
+        // write remaining bytes
         try{
             u64_t o_buffer = 0x0;
             ReadProcess(&o_buffer, addr, sizeof(addr_t));
@@ -483,7 +587,7 @@ void *ZkProcess::Ptrace::ReplacePage(addr_t addr, void *buffer, int
     RETURN_IF_NOT_STOPPED(nullptr)
 
     void *data = malloc(ZK_PAGE_ALIGN_UP(buffer_size));
-    if (data == NULL) {
+    if (data == nullptr) {
         throw std::runtime_error("failed allocate memory\n");
         return nullptr;
     }
@@ -528,6 +632,9 @@ void *ZkProcess::Ptrace::MemAlloc(void *mmap_shellcode, int protection,
     RETURN_IF_EXITED(nullptr)
     RETURN_IF_NOT_STOPPED(nullptr)
 
+    if (p_snapshot != nullptr) {
+        // TODO
+    }
     Snapshot snapshot = Snapshot();
     snapshot.SaveSnapshot(*this, PROCESS_SNAP_FUNC);
     if (mmap_shellcode != nullptr){

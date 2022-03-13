@@ -1,5 +1,5 @@
-#ifndef ZKPROCESS_HH
-#define ZKPROCESS_HH
+#ifndef ZKPTRACE_HH
+#define ZKPTRACE_HH
 
 #include "zktypes.hh"
 #include "zkexcept.hh"
@@ -22,6 +22,14 @@
 #include <sys/personality.h>
 #include <sys/ptrace.h>
 #include <random>
+
+#define MAPPATH     "/proc/%d/maps"
+#define MEMPATH     "/proc/%d/mem"
+#define CMDLINE     "/proc/%d/cmdline"
+
+#define DEFAULT_SNAPSHOT_COUNT      5
+#define DEFAULT_SNAPSHOT_STACK_SZ   1024
+#define DEFAULT_SNAPSHOT_INSTR      64
 
 // TODO check if p_log is null. if so dont queue the log
 
@@ -128,6 +136,171 @@ namespace ZkProcess {
         PROCESS_SNAP_FUNC
     };
 
+    struct page_t {
+        public:
+            page_t(addr_t saddr, addr_t eaddr, std::string permissions, 
+                    std::string name);
+
+            inline addr_t GetPageStartAddress(void) const
+            {
+                return page_saddr;
+            }
+            inline addr_t GetPageEndAddress(void) const
+            {
+                return page_eaddr;
+            }
+            inline std::string GetPagePermissions(void) const
+            {
+                return page_permissions;
+            }
+            inline std::string GetPageName(void) const
+            {
+                return page_name;
+            }
+        private:
+            addr_t      page_saddr;
+            addr_t      page_eaddr;
+            std::string page_permissions;
+            std::string page_name;
+    };
+
+    class MemoryMap  {
+        public:
+            MemoryMap(pid_t pid, u8_t flag);
+            ~MemoryMap();
+
+            addr_t GetModuleBaseAddress(const char *module_name) const;
+            addr_t GetModuleEndAddress(const char *module_name) const;
+            std::shared_ptr<page_t> GetModulePage(const char *module_name) 
+                const;
+
+            inline std::shared_ptr<page_t> GetBasePage(void) const
+            {
+                return  mm_pageinfo[0];
+            }
+            inline std::shared_ptr<page_t> GetLastPage(void) const
+            {
+                return *mm_pageinfo.end();
+            }
+            inline std::vector<std::shared_ptr<page_t>>::const_iterator
+            GetIteratorBegin(void) const
+            {
+                return mm_pageinfo.begin();
+            }
+            inline std::vector<std::shared_ptr<page_t>>::const_iterator
+            GetIteratorLast(void) const
+            {
+                return mm_pageinfo.end();
+            }
+            inline std::pair<std::vector<std::shared_ptr<page_t>>::const_iterator,
+                      std::vector<std::shared_ptr<page_t>>::const_iterator>
+            GetIteratorsBeginEnd(void) const
+            {
+                return std::make_pair(mm_pageinfo.begin(), mm_pageinfo.end());
+            }
+            inline addr_t GetBaseAddress(void) const
+            {
+                return mm_pageinfo[0]->GetPageStartAddress();
+            }
+            inline addr_t GetBaseEndAddress(void) const
+            {
+                return mm_pageinfo[0]->GetPageEndAddress();
+            }
+            inline std::vector<std::shared_ptr<page_t>> GetMemoryPages(void) const
+            {
+                return mm_pageinfo;
+            }
+            bool IsMapped(addr_t addr) const;
+
+           // TODO virtualAlloc /protect
+         private:
+            u8_t mm_flags = 0;
+            std::vector<std::shared_ptr<page_t>> mm_pageinfo;
+    };
+
+    class Signal {
+        public:
+            Signal(pid_t pid)
+                :s_pid(pid)
+            {// TODO initialize s_siginfo to 0x0
+            }
+            bool SignalProcess(int signal) const
+            {
+                if (kill(s_pid, signal) < 0) return false;
+                else return true;
+            }
+            inline bool SignalStopProcess(void) const
+            {
+                return SignalProcess(SIGSTOP);
+            }
+            inline bool SignalKillProcess(void) const
+            {
+                return SignalProcess(SIGKILL);
+            }
+            inline bool SignalContinueProcess(void) const
+            {
+                return SignalProcess(SIGCONT);
+            }
+            inline bool SignalTrapProcess(void) const
+            {
+                return SignalProcess(SIGTRAP);
+            }
+        private:
+            siginfo_t s_siginfo;
+            pid_t s_pid;
+    };
+
+    // queue to store process state
+    struct snapshot_t {
+        public:
+            snapshot_t(u8_t flags, registers_t *regs, void *stack,
+                    void *instr);
+
+            ~snapshot_t();
+
+            inline u8_t GetFlags(void) const
+            {
+                return ps_flags;
+            }
+            inline registers_t *GetRegisters(void) const
+            {
+                return ps_registers;
+            }
+            inline void *GetStack(void) const
+            {
+                return ps_stack;
+            }
+            inline void *GetInstructions(void) const
+            {
+                return ps_instructions;
+            }
+        private:
+            // generic information about amount of the captured data
+            u8_t            ps_flags;
+            registers_t     *ps_registers;
+            void            *ps_stack;
+            void            *ps_instructions;
+    };
+
+    class Ptrace;
+
+    class Snapshot {
+        public:
+            Snapshot();
+            Snapshot(int count);
+            Snapshot(ZkLog::Log *log);
+            Snapshot(int count, ZkLog::Log *log);
+            ~Snapshot();
+
+            bool SaveSnapshot(ZkProcess::Ptrace &ptrace, u8_t flags);
+            bool RestoreSnapshot(ZkProcess::Ptrace &ptrace);
+            void ClearSnapshots(void);
+        private:
+            int s_count = DEFAULT_SNAPSHOT_COUNT;
+            std::queue<std::shared_ptr<snapshot_t>> s_snapshots;
+            ZkLog::Log *s_log;
+    };
+
     class Ptrace {
         public:
             Ptrace(const char **pathname, pid_t pid, u8_t flags);
@@ -192,12 +365,13 @@ namespace ZkProcess {
             PROCESS_STATE p_state = PROCESS_NOT_STARTED;
             PROCESS_STATE_INFO p_state_info;
             pid_t p_pid;
-            std::shared_ptr<ZkProcess::MemoryMap> p_memmap;
+            std::shared_ptr<MemoryMap> p_memmap;
 
             ZkLog::Log *p_log;
+            ZkProcess::Snapshot *p_snapshot;
 
             bool isPtraceStopped(void) const;
     };
 };
 
-#endif // ZKPROCESS_HH
+#endif // ZKPTRACE_HH

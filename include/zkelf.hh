@@ -21,6 +21,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+// TODO replace architecture dependant getters and setters with constexpr
+
 namespace ZkElf {
 
     enum ELFFLAGS : u8_t {

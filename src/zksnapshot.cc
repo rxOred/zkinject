@@ -34,6 +34,10 @@ ZkProcess::Snapshot::Snapshot(int count)
     }
 }
 
+ZkProcess::Snapshot::Snapshot(ZkLog::Log *log)
+    :s_log(log)
+{}
+
 ZkProcess::Snapshot::Snapshot(int count, ZkLog::Log *log)
     :s_log(log)
 {
@@ -49,10 +53,24 @@ ZkProcess::Snapshot::Snapshot(int count, ZkLog::Log *log)
 
 ZkProcess::Snapshot::~Snapshot()
 {
-    for (int i = 0; i < s_count; i++) {
+    for (int i = 0; i < s_snapshots.size(); i++) {
         s_snapshots.front().reset();
         s_snapshots.pop();
     }
+}
+
+void print_registers(registers_t *regs)
+{
+    std::cout << "---------------------------------------" << std::endl;
+    std::cout << "print registers from zkinject" << std::endl;
+    std::cout << "rax : " << std::hex << regs->rax << std::endl;
+    std::cout << "rbx : " << std::hex << regs->rbx << std::endl;
+    std::cout << "rcx : " << std::hex << regs->rcx << std::endl;
+    std::cout << "rdx : " << std::hex << regs->rdx << std::endl;
+    std::cout << "rsi : " << std::hex << regs->rsi << std::endl;
+    std::cout << "rdi : " << std::hex << regs->rdi << std::endl;
+    std::cout << "rip : " << std::hex << regs->rip << std::endl;
+    std::cout << "---------------------------------------" << std::endl;
 }
 
 bool ZkProcess::Snapshot::SaveSnapshot(ZkProcess::Ptrace &ptrace, u8_t flags)
@@ -73,14 +91,23 @@ bool ZkProcess::Snapshot::SaveSnapshot(ZkProcess::Ptrace &ptrace, u8_t flags)
             throw std::runtime_error("failed to allocate memory\n");
         }
         //std::__invoke(&ZkProcess::Ptrace::ReadRegisters, ptrace, regs);
-        ptrace.ReadRegisters(regs);
+        try {
+            if (!ptrace.ReadRegisters(regs)) {
+                return false;
+            }
+        }
+        catch (ZkExcept::ptrace_error& e) {
+            std::cerr << e.what() << std::endl;
+        }
+        print_registers(regs);
 
         stack = calloc(sizeof(u8_t), DEFAULT_SNAPSHOT_STACK_SZ);
         if (stack ==  nullptr) {
             throw std::runtime_error("failed to allocate memory\n");
         }
-        try { ptrace.ReadProcess(stack, regs->rsp, 
-                DEFAULT_SNAPSHOT_STACK_SZ); }
+        try {
+            ptrace.ReadProcess(stack, regs->rsp, DEFAULT_SNAPSHOT_STACK_SZ);
+        }
         catch (ZkExcept::ptrace_error& e) {
             std::cerr << e.what();
             std::exit(1);
@@ -90,8 +117,9 @@ bool ZkProcess::Snapshot::SaveSnapshot(ZkProcess::Ptrace &ptrace, u8_t flags)
         if (instr ==  nullptr) {
             throw std::runtime_error("failed to allocate memory\n");
         }
-        try { ptrace.ReadProcess(instr, regs->rip, 
-                DEFAULT_SNAPSHOT_INSTR); }
+        try {
+            ptrace.ReadProcess(instr, regs->rip, DEFAULT_SNAPSHOT_INSTR);
+        }
         catch (ZkExcept::ptrace_error& e) {
             std::cerr << e.what();
             std::exit(1);
@@ -145,6 +173,7 @@ bool ZkProcess::Snapshot::RestoreSnapshot(ZkProcess::Ptrace &ptrace)
     }
 
     registers_t *regs = s_snapshots.front()->GetRegisters();
+    print_registers(regs);
     ptrace.WriteRegisters(s_snapshots.front()->GetRegisters());
     if (ZK_CHECK_FLAGS(PROCESS_SNAP_ALL, s_snapshots.front()->GetFlags()))
     {
@@ -163,4 +192,12 @@ bool ZkProcess::Snapshot::RestoreSnapshot(ZkProcess::Ptrace &ptrace)
     s_snapshots.pop();
 
     return true;
+}
+
+void ZkProcess::Snapshot::ClearSnapshots(void)
+{
+    for (std::size_t i = 0; i < s_snapshots.size(); ++i) {
+        s_snapshots.front().reset();
+        s_snapshots.pop();
+    }
 }
