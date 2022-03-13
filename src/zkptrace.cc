@@ -8,9 +8,12 @@
 #include <cstdint>
 #include <cstdlib>
 #include <stdexcept>
-#include <sys/ptrace.h>
+#include <random>
 #include <cstring>
+#include <iostream>
+#include <sys/ptrace.h>
 #include <sys/wait.h>
+#include <sys/personality.h>
 
 bool ZkProcess::Ptrace::isPtraceStopped(void) const
 {
@@ -542,7 +545,7 @@ void *ZkProcess::Ptrace::MemAlloc(void *mmap_shellcode, int protection,
     RETURN_IF_NOT_STOPPED(nullptr)
 
     if (p_snapshot != nullptr) {
-        // TODO
+
     }
     Snapshot snapshot = Snapshot();
     snapshot.SaveSnapshot(*this, PROCESS_SNAP_FUNC);
