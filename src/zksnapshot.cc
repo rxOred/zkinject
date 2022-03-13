@@ -1,12 +1,15 @@
 #include "zkexcept.hh"
-#include "zkprocess.hh"
+#include "zksnapshot.hh"
 #include "zkutils.hh"
 #include "zktypes.hh"
+#include "zkprocess.hh"
 #include <memory>
 #include <stdexcept>
 #include <sys/ptrace.h>
 #include <cstring>
 #include <functional>
+
+#include <iostream>
 
 // BUG - this may not work
 ZkProcess::snapshot_t::snapshot_t(u8_t flags, registers_t *regs, 
@@ -22,24 +25,21 @@ ZkProcess::snapshot_t::~snapshot_t()
     if (ps_stack) { free(ps_stack); }
 }
 
-ZkProcess::Snapshot::Snapshot()
-    :s_log(nullptr)
-{}
-
-ZkProcess::Snapshot::Snapshot(int count)
-    :s_log(nullptr)
+ZkProcess::Snapshot::Snapshot(ZkProcess::Ptrace& ptrace, int count)
+    :s_ptrace(ptrace), s_log(nullptr)
 {
     if (count > 0 || count <= 10) {
         s_count = count;
     }
 }
 
-ZkProcess::Snapshot::Snapshot(ZkLog::Log *log)
-    :s_log(log)
+ZkProcess::Snapshot::Snapshot(ZkProcess::Ptrace& ptrace, ZkLog::Log *log)
+    :s_ptrace(ptrace), s_log(log)
 {}
 
-ZkProcess::Snapshot::Snapshot(int count, ZkLog::Log *log)
-    :s_log(log)
+ZkProcess::Snapshot::Snapshot(ZkProcess::Ptrace& ptrace, int count,
+        ZkLog::Log *log)
+    :s_ptrace(ptrace), s_log(log)
 {
     if (count > 0 || count <= 10) {
         if (s_log != nullptr) {
@@ -73,7 +73,7 @@ void print_registers(registers_t *regs)
     std::cout << "---------------------------------------" << std::endl;
 }
 
-bool ZkProcess::Snapshot::SaveSnapshot(ZkProcess::Ptrace &ptrace, u8_t flags)
+bool ZkProcess::Snapshot::SaveSnapshot(u8_t flags)
 {
     registers_t *regs = nullptr;
     void *stack = nullptr;
@@ -92,7 +92,7 @@ bool ZkProcess::Snapshot::SaveSnapshot(ZkProcess::Ptrace &ptrace, u8_t flags)
         }
         //std::__invoke(&ZkProcess::Ptrace::ReadRegisters, ptrace, regs);
         try {
-            if (!ptrace.ReadRegisters(regs)) {
+            if (!s_ptrace.ReadRegisters(regs)) {
                 return false;
             }
         }
@@ -106,7 +106,7 @@ bool ZkProcess::Snapshot::SaveSnapshot(ZkProcess::Ptrace &ptrace, u8_t flags)
             throw std::runtime_error("failed to allocate memory\n");
         }
         try {
-            ptrace.ReadProcess(stack, regs->rsp, DEFAULT_SNAPSHOT_STACK_SZ);
+            s_ptrace.ReadProcess(stack, regs->rsp, DEFAULT_SNAPSHOT_STACK_SZ);
         }
         catch (ZkExcept::ptrace_error& e) {
             std::cerr << e.what();
@@ -118,7 +118,7 @@ bool ZkProcess::Snapshot::SaveSnapshot(ZkProcess::Ptrace &ptrace, u8_t flags)
             throw std::runtime_error("failed to allocate memory\n");
         }
         try {
-            ptrace.ReadProcess(instr, regs->rip, DEFAULT_SNAPSHOT_INSTR);
+            s_ptrace.ReadProcess(instr, regs->rip, DEFAULT_SNAPSHOT_INSTR);
         }
         catch (ZkExcept::ptrace_error& e) {
             std::cerr << e.what();
@@ -131,14 +131,14 @@ bool ZkProcess::Snapshot::SaveSnapshot(ZkProcess::Ptrace &ptrace, u8_t flags)
         if (regs ==  nullptr) {
             throw std::runtime_error("failed to allocate memory\n");
         }
-        ptrace.ReadRegisters(regs);
+        s_ptrace.ReadRegisters(regs);
 
         int stack_frame_sz = regs->rbp - regs->rsp;
         stack = calloc(sizeof(u8_t), stack_frame_sz);
         if (stack ==  nullptr) {
             throw std::runtime_error("failed to allocate memory\n");
         }
-        try { ptrace.ReadProcess(stack, regs->rsp, stack_frame_sz); }
+        try { s_ptrace.ReadProcess(stack, regs->rsp, stack_frame_sz); }
         catch (ZkExcept::ptrace_error& e) {
             std::cerr << e.what();
             std::exit(1);
@@ -148,7 +148,7 @@ bool ZkProcess::Snapshot::SaveSnapshot(ZkProcess::Ptrace &ptrace, u8_t flags)
         if (instr ==  nullptr) {
             throw std::runtime_error("failed to allocate memory\n");
         }
-        try { ptrace.ReadProcess(instr, regs->rip, 
+        try { s_ptrace.ReadProcess(instr, regs->rip,
                 DEFAULT_SNAPSHOT_INSTR); }
         catch (ZkExcept::ptrace_error& e) {
             std::cerr << e.what();
@@ -163,7 +163,7 @@ bool ZkProcess::Snapshot::SaveSnapshot(ZkProcess::Ptrace &ptrace, u8_t flags)
     return true;
 }
 
-bool ZkProcess::Snapshot::RestoreSnapshot(ZkProcess::Ptrace &ptrace)
+bool ZkProcess::Snapshot::RestoreSnapshot(void)
 {
     if (s_snapshots.empty()) {
         if (s_log != nullptr)
@@ -174,18 +174,18 @@ bool ZkProcess::Snapshot::RestoreSnapshot(ZkProcess::Ptrace &ptrace)
 
     registers_t *regs = s_snapshots.front()->GetRegisters();
     print_registers(regs);
-    ptrace.WriteRegisters(s_snapshots.front()->GetRegisters());
+    s_ptrace.WriteRegisters(s_snapshots.front()->GetRegisters());
     if (ZK_CHECK_FLAGS(PROCESS_SNAP_ALL, s_snapshots.front()->GetFlags()))
     {
-        ptrace.WriteProcess(s_snapshots.front()->GetStack(), regs->rsp, 
+        s_ptrace.WriteProcess(s_snapshots.front()->GetStack(), regs->rsp,
                 DEFAULT_SNAPSHOT_STACK_SZ);
     }
     else {
         int stack_frame_sz = regs->rbp - regs->rsp;
-        ptrace.WriteProcess(s_snapshots.front()->GetStack(), regs->rsp, 
+        s_ptrace.WriteProcess(s_snapshots.front()->GetStack(), regs->rsp,
                 stack_frame_sz);
     }
-    ptrace.WriteProcess(s_snapshots.front()->GetInstructions(), regs->rip,
+    s_ptrace.WriteProcess(s_snapshots.front()->GetInstructions(), regs->rip,
             DEFAULT_SNAPSHOT_INSTR);
 
     s_snapshots.front().reset();

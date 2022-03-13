@@ -1,5 +1,5 @@
 #include "zkexcept.hh"
-#include "zkprocess.hh"
+#include "zkptrace.hh"
 #include "zktypes.hh"
 #include "zkutils.hh"
 #include <asm-generic/errno-base.h>
@@ -72,98 +72,6 @@ ZkProcess::Ptrace::Ptrace(const char **pathname , pid_t pid, u8_t flags)
 ZkProcess::Ptrace::Ptrace(const char **pathname , pid_t pid, u8_t flags,
     ZkLog::Log *log)
     : p_pid(pid), p_flags(flags), p_log(log)
-{
-    if (ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
-            ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)){
-        throw std::invalid_argument("flags ATTACH_NOW and START_NOW     \
-                cannot be used at the same time");
-    }
-    /* if a pid and PTRACE_ATTACH_NOW is specified, attach to the pid */
-    else if(ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) && p_pid != 0){
-        try{
-            AttachToPorcess();
-            if (p_state == PROCESS_STATE_FAILED)
-                throw ZkExcept::ptrace_error("ptrace attach failed\n");
-            else if (p_state == PROCESS_STATE_EXITED)
-                throw ZkExcept::ptrace_error("child process exited\n");
-        } catch(ZkExcept::ptrace_error& e){
-            std::cerr << e.what() << std::endl;
-            std::exit(1);
-        }
-        p_memmap = std::make_shared<MemoryMap>(p_pid, 0);
-    }
-    /* if pathname is specified and pid is not,a process will be spawed */
-    else if(ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags) && pathname != nullptr
-            && p_pid == 0){
-        try{
-            StartProcess((char **)pathname);
-            if(p_state == PROCESS_STATE_FAILED)
-                throw ZkExcept::ptrace_error("start process failed\n");
-            else if (p_state == PROCESS_STATE_EXITED)
-                throw ZkExcept::ptrace_error("child process exited\n");
-        } catch (ZkExcept::ptrace_error& e){
-            std::cerr << e.what() << std::endl;
-            std::exit(1);
-        }
-        /*
-         * StartProcess set p_pid so we can get the memory map of the
-         * process
-         */
-        p_memmap = std::make_shared<MemoryMap>(p_pid, 0);
-    }else {
-        throw std::invalid_argument("invalid flag\n");
-    }
-}
-
-ZkProcess::Ptrace::Ptrace(const char **pathname, pid_t pid, u8_t flags,
-                          ZkProcess::Snapshot *snapshot)
-    :p_pid(pid), p_flags(flags), p_snapshot(snapshot)
-{
-    if (ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
-            ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)){
-        throw std::invalid_argument("flags ATTACH_NOW and START_NOW     \
-                cannot be used at the same time");
-    }
-    /* if a pid and PTRACE_ATTACH_NOW is specified, attach to the pid */
-    else if(ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) && p_pid != 0){
-        try{
-            AttachToPorcess();
-            if (p_state == PROCESS_STATE_FAILED)
-                throw ZkExcept::ptrace_error("ptrace attach failed\n");
-            else if (p_state == PROCESS_STATE_EXITED)
-                throw ZkExcept::ptrace_error("child process exited\n");
-        } catch(ZkExcept::ptrace_error& e){
-            std::cerr << e.what() << std::endl;
-            std::exit(1);
-        }
-        p_memmap = std::make_shared<MemoryMap>(p_pid, 0);
-    }
-    /* if pathname is specified and pid is not,a process will be spawed */
-    else if(ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags) && pathname != nullptr
-            && p_pid == 0){
-        try{
-            StartProcess((char **)pathname);
-            if(p_state == PROCESS_STATE_FAILED)
-                throw ZkExcept::ptrace_error("start process failed\n");
-            else if (p_state == PROCESS_STATE_EXITED)
-                throw ZkExcept::ptrace_error("child process exited\n");
-        } catch (ZkExcept::ptrace_error& e){
-            std::cerr << e.what() << std::endl;
-            std::exit(1);
-        }
-        /*
-         * StartProcess set p_pid so we can get the memory map of the
-         * process
-         */
-        p_memmap = std::make_shared<MemoryMap>(p_pid, 0);
-    }else {
-        throw std::invalid_argument("invalid flag\n");
-    }
-}
-
-ZkProcess::Ptrace::Ptrace(const char **pathname, pid_t pid, u8_t flags,
-                          ZkLog::Log *log, ZkProcess::Snapshot *snapshot)
-    :p_pid(pid), p_flags(flags), p_log(log), p_snapshot(snapshot)
 {
     if (ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
             ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)){
@@ -624,6 +532,7 @@ void *ZkProcess::Ptrace::ReplacePage(addr_t addr, void *buffer, int
  * if protection is not null or something, inject another shellcode that 
  * calls mprotect
  */
+/* TODO move this to zkprocess.hh / zkprocess.cc
 void *ZkProcess::Ptrace::MemAlloc(void *mmap_shellcode, int protection, 
         int size)
 {
@@ -638,7 +547,7 @@ void *ZkProcess::Ptrace::MemAlloc(void *mmap_shellcode, int protection,
     Snapshot snapshot = Snapshot();
     snapshot.SaveSnapshot(*this, PROCESS_SNAP_FUNC);
     if (mmap_shellcode != nullptr){
-        /* Write given shellcode to a random address */
+        // Write given shellcode to a random address
         addr_t shellcode_addr = WriteProcess(mmap_shellcode, 0, size);
         registers_t regs;
         ReadRegisters(&regs);
@@ -655,3 +564,4 @@ void *ZkProcess::Ptrace::MemAlloc(void *mmap_shellcode, int protection,
 
     return nullptr;
 }
+*/

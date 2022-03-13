@@ -12,11 +12,7 @@ namespace ZkProcess {
                 :s_pid(pid)
             {// TODO initialize s_siginfo to 0x0
             }
-            bool SignalProcess(int signal) const
-            {
-                if (kill(s_pid, signal) < 0) return false;
-                else return true;
-            }
+            bool SignalProcess(int signal) const;
             inline bool SignalStopProcess(void) const
             {
                 return SignalProcess(SIGSTOP);

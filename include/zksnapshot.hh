@@ -10,6 +10,12 @@
 #define DEFAULT_SNAPSHOT_INSTR      64
 
 namespace ZkProcess {
+
+    enum PROCESS_SNAPSHOT : u8_t {
+        PROCESS_SNAP_ALL     = 1,
+        PROCESS_SNAP_FUNC
+    };
+
     // queue to store process state
     struct snapshot_t {
         public:
@@ -46,18 +52,18 @@ namespace ZkProcess {
 
     class Snapshot {
         public:
-            Snapshot();
-            Snapshot(int count);
-            Snapshot(ZkLog::Log *log);
-            Snapshot(int count, ZkLog::Log *log);
+            Snapshot(ZkProcess::Ptrace& ptrace, int count);
+            Snapshot(ZkProcess::Ptrace& ptrace, ZkLog::Log *log);
+            Snapshot(ZkProcess::Ptrace& ptrace, int count, ZkLog::Log *log);
             ~Snapshot();
 
-            bool SaveSnapshot(ZkProcess::Ptrace &ptrace, u8_t flags);
-            bool RestoreSnapshot(ZkProcess::Ptrace &ptrace);
+            bool SaveSnapshot(u8_t flags);
+            bool RestoreSnapshot(void);
             void ClearSnapshots(void);
         private:
             int s_count = DEFAULT_SNAPSHOT_COUNT;
             std::queue<std::shared_ptr<snapshot_t>> s_snapshots;
+            ZkProcess::Ptrace& s_ptrace;
             ZkLog::Log *s_log;
     };
 

@@ -89,7 +89,6 @@ namespace ZkProcess {
 
            // TODO virtualAlloc /protect
          private:
-            u8_t mm_flags = 0;
             std::vector<std::shared_ptr<page_t>> mm_pageinfo;
     };
 };

@@ -1,9 +1,10 @@
-#include "zkprocess.hh"
+#include "zkmap.hh"
 #include "zkexcept.hh"
 #include "zkutils.hh"
 #include <cstdint>
 #include <cstdio>
 #include <regex>
+#include <fstream>
 
 ZkProcess::page_t::page_t(addr_t saddr, addr_t eaddr, std::string 
         permissions, std::string name)
@@ -12,7 +13,6 @@ ZkProcess::page_t::page_t(addr_t saddr, addr_t eaddr, std::string
 {}
 
 ZkProcess::MemoryMap::MemoryMap(pid_t pid, u8_t flag)
-    :mm_flags(flag)
 {
     char buffer[24];
     if (pid != 0) {
@@ -42,8 +42,6 @@ ZkProcess::MemoryMap::MemoryMap(pid_t pid, u8_t flag)
         auto page = std::make_shared<page_t>(s_addr, e_addr, permissions,
                 name);
         mm_pageinfo.push_back(page);
-
-        if(ZK_CHECK_FLAGS(MEMMAP_ONLY_BASE_ADDR, mm_flags)) break;
     }
 }
 

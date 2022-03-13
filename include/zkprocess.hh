@@ -4,24 +4,7 @@
 #include "zktypes.hh"
 #include "zkexcept.hh"
 #include "zklog.hh"
-#include <cstdint>
-#include <iostream>
-#include <cstddef>
-#include <memory>
-#include <sys/types.h>
-#include <vector>
-#include <queue>
-#include <fcntl.h>
-#include <fstream>
-#include <string>
-#include <sstream>
-#include <assert.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <sys/personality.h>
-#include <sys/ptrace.h>
-#include <random>
+#include "zkmap.hh"
 
 // TODO check if p_log is null. if so dont queue the log
 
@@ -70,7 +53,6 @@ namespace ZkProcess {
         PTRACE_ATTACH_NOW       = 1 << 0,
         PTRACE_START_NOW        = 1 << 1,
         PTRACE_DISABLE_ASLR     = 1 << 2,
-        MEMMAP_ONLY_BASE_ADDR   = 1 << 3
     };
 
 
@@ -123,20 +105,13 @@ namespace ZkProcess {
          //
     };
 
-    enum PROCESS_SNAPSHOT : u8_t {
-        PROCESS_SNAP_ALL     = 1,
-        PROCESS_SNAP_FUNC
-    };
+
 
     class Ptrace {
         public:
             Ptrace(const char **pathname, pid_t pid, u8_t flags);
             Ptrace(const char **pathname, pid_t pid, u8_t flags,
                    ZkLog::Log *log);
-            Ptrace(const char **pathname, pid_t pid, u8_t flags,
-                   ZkProcess::Snapshot *snapshot);
-            Ptrace(const char **pathname, pid_t pid, u8_t flags,
-                   ZkLog::Log *log, ZkProcess::Snapshot *snapshot);
             ~Ptrace();
 
             inline std::shared_ptr<MemoryMap> GetMemoryMap(void) const 
