@@ -20,6 +20,10 @@ std::optional<std::string> ZkProcess::page_t::GetPageName(void) const
 
 ZkProcess::MemoryMap::MemoryMap(pid_t pid)
 {
+    // FIXME make this a seperate method because this wont parse the 
+    // whole memory map since program is not loaded yet, its ust the 
+    // binary and the dynamic linker 
+
     // FIXME make this more c++ like
     char buffer[24];
     if (pid != 0) {
@@ -35,6 +39,12 @@ ZkProcess::MemoryMap::MemoryMap(pid_t pid)
     std::regex regex(R"(([a-f0-9]+)-([a-f0-9]+) ([rxwp-]{4}) (.*))",
         std::regex::optimize);
     // FIXME parses all the shit after permissions to same string
+
+    // A small optimization - reserving vector space for segments
+    // 4 for the PT_LOAD segments of the binary 
+    // 5 for the PT_LOAD segments of the dynamic linker 
+    // rest for the stack, heap, vdso and vvar
+    mm_pageinfo.reserve(13);
     while(std::getline(fh, line)) {
         std::regex_match(line, match, regex);
         start_addr = match.str(0);
@@ -47,8 +57,7 @@ ZkProcess::MemoryMap::MemoryMap(pid_t pid)
         std::sscanf(start_addr.c_str(), "%lx", &s_addr);
         std::sscanf(end_addr.c_str(), "%lx", &e_addr);
 
-        page_t page(s_addr, e_addr, permissions, name);
-        mm_pageinfo.push_back(page);
+        mm_pageinfo.emplace_back(s_addr, e_addr, permissions, name);
     }
 }
 
