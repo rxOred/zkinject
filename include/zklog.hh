@@ -33,17 +33,23 @@ namespace ZkLog {
     };
 
     class Log {
-        private:
-            int log_count = DEFAULT_LOG_COUNT;
-            std::queue<std::shared_ptr<logmessage_t>> log;
         public:
-            ~Log();
+            Log(const Log&) =delete;
+            static Log& Get(void) { return l_instance; }
+
+            inline void SetLogCount(std::size_t count) 
+            {
+                l_count = count;
+            }
+            void ClearLog(void);
             void PushLog(std::string log_string, ZK_LOG_LEVEL level);
             std::pair<std::string, ZK_LOG_LEVEL> PopLog(void);
-            void ClearLog(void);
+        private:
+            Log() {}
+            static Log l_instance; 
+            std::size_t l_count = DEFAULT_LOG_COUNT;
+            std::queue<logmessage_t> l_log;
     };
-
-    //void IniteZkLog(void);
 };
 
 #endif // !ZKLOG_HH

@@ -1,31 +1,24 @@
 #include "zklog.hh"
 
-ZkLog::Log::~Log()
+ZkLog::Log ZkLog::Log::l_instance;
+
+void ZkLog::Log::ClearLog(void) 
 {
-    for (int i = 0; i < log.size(); i++) {
-        log.front().reset();
-        log.pop();
-    }
+    std::queue<logmessage_t> empty;
+    std::swap(l_log, empty);
 }
 
 void ZkLog::Log::PushLog(std::string log_string, ZkLog::ZK_LOG_LEVEL level)
 {
-    auto msg = std::make_shared<logmessage_t>(log_string, level);
-    log.push(msg);
+    logmessage_t msg(log_string, level);
+    l_log.push(msg);
 }
 
 std::pair<std::string, ZkLog::ZK_LOG_LEVEL> ZkLog::Log::PopLog(void)
 {
-    auto pair = std::make_pair(log.front()->getLogMessage(),
-                               log.front()->getLoglevel());
-    log.pop();
+    auto pair = std::make_pair(l_log.front().getLogMessage(),
+                               l_log.front().getLoglevel());
+    l_log.pop();
     return pair;
 }
 
-void ZkLog::Log::ClearLog(void)
-{
-    for (int i = 0; i < log.size(); i++) {
-        log.front().reset();
-        log.pop();
-    }
-}
