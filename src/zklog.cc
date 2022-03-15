@@ -10,8 +10,7 @@ void ZkLog::Log::ClearLog(void)
 
 void ZkLog::Log::PushLog(std::string log_string, ZkLog::ZK_LOG_LEVEL level)
 {
-    logmessage_t msg(log_string, level);
-    l_log.push(msg);
+    l_log.emplace(log_string, level);
 }
 
 std::pair<std::string, ZkLog::ZK_LOG_LEVEL> ZkLog::Log::PopLog(void)
