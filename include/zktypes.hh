@@ -1,70 +1,100 @@
 #ifndef ZKTYPES_HH
 #define ZKTYPES_HH
 
-#include <string>
 #include <cstdint>
-#include <elf.h>
-#include <sys/user.h>
+#include <string>
+//#include <elf.h>
 #include <sys/ptrace.h>
 #include <sys/types.h>
+#include <sys/user.h>
 
-typedef uint64_t    u64_t;
-typedef uint32_t    u32_t;
-typedef uint16_t    u16_t;
-typedef uint8_t     u8_t;
+#include <zkinject/zktypes.hh>
 
-// architecture specific types
-#if defined(__x86_64__) || defined (__aarch64__)
+/*
+** TODO
+** move all the template implementations to header files
+** make all single lined functions non-inline
+** make all functions less than 10 lines inline
+*/
 
-    #define __BITS_64__
-    typedef Elf64_Ehdr  ehdr_t;
-    typedef Elf64_Phdr  phdr_t;
-    typedef Elf64_Shdr  shdr_t;
-    typedef Elf64_Dyn   dynamic_t;
-    typedef Elf64_Sym   symtab_t;
-    typedef Elf64_Nhdr  note_t;
-    typedef Elf64_Rela  relocation_t;
-    typedef Elf64_Addr  addr_t;
+struct zktypes {
+    using u8_t = std::uint8_t;
+    using i8_t = std::int8_t;
+    using u16_t = std::uint16_t;
+    using u32_t = std::uint32_t;
+    using i32_t = std::int32_t;
+    using u64_t = std::uint64_t;
+    using i64_t = std::int64_t;
+};
 
-    #define RELOC_TYPE  SHT_RELA
-    #define RELOC_PLT   ".rela.plt"
-    #define RELOC_DYN   ".rela.dyn"
-    #define ADDR_LEN    16
+struct x86 : public zktypes {
+    using addr_t = std::uint32_t;
+    using saddr_t = std::int64_t;
+    using off_t = std::uint32_t;
+};
 
-    #ifndef ELF_R_SYM
-    #define ELF_R_SYM     ELF64_R_SYM
-    #endif // ELF_R_SYM
+struct x64 : public zktypes {
+    using addr_t = std::uint64_t;
+    using saddr_t = std::int64_t;
+    using off_t = std::uint64_t;
+};
 
-#elif(__i386__)
+using eventcodes_t      = __ptrace_eventcodes;
+// TODO make this independant
+using registers_t       = struct user_regs_struct;
 
-    #define __BITS_32__
-    typedef Elf32_Ehdr  ehdr_t;
-    typedef Elf32_Phdr  phdr_t;
-    typedef Elf32_Shdr  shdr_t;
-    typedef Elf32_Dyn   dynamic_t;
-    typedef Elf32_Sym   symtab_t;
-    typedef Elf32_Nhdr  note_t;
-    typedef Elf32_Rel   relocation_t;
-    typedef Elf32_Addr  addr_t;
 
-    #define RELOC_TYPE  SHT_REL
-    #define RELOC_PLT   ".rel.plt"
-    #define RELOC_DYN   ".rel.dyn"
-    #define ADDR_LEN    8
 
-    #ifndef ELF_R_SYM
-    #define ELF_R_SYM   ELF32_R_SYM
-    #endif // ELF_R_SYM
+/*
+        using ehdr64_t          = Elf64_Ehdr;
+        using phdr64_t          = Elf64_Phdr;
+        using shdr64_t          = Elf64_Shdr;
+        using dynamic64_t       = Elf64_Dyn;
+        using symtab64_t        = Elf64_Sym;
+        using note64_t          = Elf64_Nhdr;
+        using relocation64_t    = Elf64_Rela;
+        using addr64_t          = Elf64_Addr;
 
-#endif // (__x86_64__)
+        using  ehdr32_t         = Elf32_Ehdr;
+        using  phdr32_t         = Elf32_Phdr;
+        using  shdr32_t         = Elf32_Shdr;
+        using  dynamic32_t      = Elf32_Dyn;
+        using  symtab32_t       = Elf32_Sym;
+        using  note32_t         = Elf32_Nhdr;
+        using  relocation32_t   = Elf32_Rel;
+        using  addr32_t         = Elf32_Addr;
 
-// TODO that since we are using char *, someone can make a special elf
-// binary with
-// 1 less null terminator at the end and fuck us up. so validate it
+        // NOTE that since we are using char *, someone can make a special elf
+        // binary with 1 less null terminator at the end and fuck us up.
+        // so validate it
+        using strtab_t          = char *;
+        using eventcodes_t      = __ptrace_eventcodes;
+        using registers_t       = struct user_regs_struct;
 
-typedef char * strtab_t;
+        // typedefs for processes. zkinject
+        #if defined(__x86_64__)
+            using ehdr_t          = Elf64_Ehdr;
+            using phdr_t          = Elf64_Phdr;
+            using shdr_t          = Elf64_Shdr;
+            using dynamic_t       = Elf64_Dyn;
+            using symtab_t        = Elf64_Sym;
+            using note_t          = Elf64_Nhdr;
+            using relocation_t    = Elf64_Rela;
+            using addr_t          = Elf64_Addr;
 
-typedef __ptrace_eventcodes eventcodes_t;
-typedef struct user_regs_struct registers_t;
+            #define ADDR_LEN    8
+        #elif defined(__i386__)
+            using  ehdr_t         = Elf32_Ehdr;
+            using  phdr_t         = Elf32_Phdr;
+            using  shdr_t         = Elf32_Shdr;
+            using  dynamic_t      = Elf32_Dyn;
+            using  symtab_t       = Elf32_Sym;
+            using  note_t         = Elf32_Nhdr;
+            using  relocation_t   = Elf32_Rel;
+            using  addr_t         = Elf32_Addr;
 
-#endif // ZKTYPES_HH
+            #define ADDR_LEN    4
+        #endif
+
+        */
+#endif  // ZKTYPES_HH

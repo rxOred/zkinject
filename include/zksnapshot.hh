@@ -3,8 +3,10 @@
 
 #include "zktypes.hh"
 #include "zklog.hh"
-#include <queue>
+#include <stack>
+#include <optional>
 
+#define MAXIMUM_SNAPSHOT_COUNT      10
 #define DEFAULT_SNAPSHOT_COUNT      5
 #define DEFAULT_SNAPSHOT_STACK_SZ   1024
 #define DEFAULT_SNAPSHOT_INSTR      64
@@ -16,12 +18,11 @@ namespace ZkProcess {
         PROCESS_SNAP_FUNC
     };
 
-    // queue to store process state
     struct snapshot_t {
         public:
             snapshot_t(u8_t flags, registers_t *regs, void *stack,
                     void *instr);
-
+    
             ~snapshot_t();
 
             inline u8_t GetFlags(void) const
@@ -52,22 +53,21 @@ namespace ZkProcess {
 
     class Snapshot {
         public:
-            Snapshot(ZkProcess::Ptrace& ptrace, int count);
-            Snapshot(ZkProcess::Ptrace& ptrace, ZkLog::Log *log);
-            Snapshot(ZkProcess::Ptrace& ptrace, int count, ZkLog::Log *log);
-            ~Snapshot();
+            Snapshot(ZkProcess::Ptrace& ptrace, 
+                    std::optional<u8_t> count = DEFAULT_SNAPSHOT_COUNT,
+                    std::optional<ZkLog::Log *> log = std::nullopt);
 
+            ~Snapshot();
             bool SaveSnapshot(u8_t flags);
             bool RestoreSnapshot(void);
             void ClearSnapshots(void);
         private:
-            int s_count = DEFAULT_SNAPSHOT_COUNT;
-            std::queue<std::shared_ptr<snapshot_t>> s_snapshots;
+            std::stack<std::unique_ptr<snapshot_t>> s_snapshots;
             ZkProcess::Ptrace& s_ptrace;
-            ZkLog::Log *s_log;
+
+            std::optional<u8_t> s_count;
+            std::optional<ZkLog::Log *> s_log;
     };
-
-
 };
 
 #endif // ZKSNAPSHOT_HH

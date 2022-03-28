@@ -4,55 +4,61 @@
 #include "zktypes.hh"
 #include "zkexcept.hh"
 #include "zklog.hh"
-#include "zkmap.hh"
+#include <optional>
 
-// TODO check if p_log is null. if so dont queue the log
+// TODO set up handlers to handle various stops, signals.
 
-#define CHECKFLAGS_AND_ATTACH                                        \
-    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&                \
-       !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) {                 \
-        p_log->PushLog("attaching to process",                       \
-            ZkLog::LOG_LEVEL_DEBUG);                                 \
-        DetachFromProcess();                                         \
+// TODO -done 
+// !check if p_log is null. if so dont push the log
+
+#define CHECKFLAGS_AND_ATTACH                                           \
+    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&                   \
+       !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) {                    \
+        if (p_log.has_value()) {                                        \
+            p_log.value()->PushLog("attaching to process",              \
+                ZkLog::LOG_LEVEL_DEBUG);                                \
+        }                                                               \
+        DetachFromProcess();                                            \
     }
 
-#define CHECKFLAGS_AND_DETACH                                        \
-    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&                \
-       !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) {                 \
-        p_log->PushLog("detaching from process",                     \
-            ZkLog::LOG_LEVEL_DEBUG);                                 \
-        DetachFromProcess();                                         \
+#define CHECKFLAGS_AND_DETACH                                           \
+    if(!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&                   \
+       !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) {                    \
+        if (p_log.has_value()) {                                        \
+            p_log.value()->PushLog("detaching from process",            \
+                ZkLog::LOG_LEVEL_DEBUG);                                \
+        }                                                               \
+        DetachFromProcess();                                            \
     }
 
-#define RETURN_IF_EXITED(x)                                          \
-    if(GetProcessState() == PROCESS_STATE_EXITED) {                  \
-        p_log->PushLog("process has exited", ZkLog::LOG_LEVEL_ERROR);\
-        return (x);                                                  \
+#define RETURN_IF_EXITED(x)                                             \
+    if(GetProcessState() == PROCESS_STATE_EXITED) {                     \
+        if (p_log.has_value()) {                                        \
+            p_log.value()->PushLog("process has exited",                \
+                    ZkLog::LOG_LEVEL_ERROR);                            \
+        }                                                               \
+        return (x);                                                     \
     }
 
-#define RETURN_IF_NOT_STOPPED(x)                                     \
-    if(!isPtraceStopped()) {                                         \
-        p_log->PushLog                                               \
-        ("process needs to be in PROCESS_STATE_STOPPED to call the method", \
-         ZkLog::LOG_LEVEL_ERROR);                                    \
-        return (x);                                                  \
+#define RETURN_IF_NOT_STOPPED(x)                                        \
+    if(!isPtraceStopped()) {                                            \
+        if (p_log.has_value()) {                                        \
+        p_log.value()->PushLog(                                         \
+            "process needs to be in STATE_STOPPED to call the method",  \
+             ZkLog::LOG_LEVEL_ERROR);                                   \
+        }                                                               \
+        return (x);                                                     \
     }
 
 #define GET_PTRACE_EVENT_VALUE(x) (((x) << (8)) | SIGTRAP )
 
-
-// following class stores information about a process.
-// such information include, memory map, command line args
-// and more
-
-
 namespace ZkProcess {
 
-    enum PROCESS_INFO : u8_t {
+    enum PTRACE_FLAGS : u8_t {
         PTRACE_SEIZE            = 0,    // TODO ptrace seize
-        PTRACE_ATTACH_NOW       = 1 << 0,
-        PTRACE_START_NOW        = 1 << 1,
-        PTRACE_DISABLE_ASLR     = 1 << 2,
+        PTRACE_ATTACH_NOW,
+        PTRACE_START_NOW,
+        PTRACE_DISABLE_ASLR
     };
 
 
@@ -61,7 +67,7 @@ namespace ZkProcess {
     //      1. running      2. stopped
     // zkinject treats process state in more detailed manner.
     enum PROCESS_STATE : u8_t {
-        PROCESS_NOT_STARTED     = 1,
+        PROCESS_NOT_STARTED     = 0,
         PROCESS_STATE_DETACHED,
         PROCESS_STATE_EXITED,
         PROCESS_STATE_SIGNALED,
@@ -70,11 +76,10 @@ namespace ZkProcess {
         PROCESS_STATE_FAILED
     };
 
-
     // This enum describes ptrace stopped process state
     enum PTRACE_STOP_STATE : u8_t {
         // ptrace-stop state - tracee is ready accept ptrace commands
-        // such as PTRACE_PEEKDATA / PTRACE_POKEDATA / PTRACE_GETREGS
+        // such as PTRACE_PEEKDATA, PTRACE_POKEDATA, PTRACE_GETREGS
         // and so on
         PTRACE_STOP_NOT_STOPPED = 0,
         PTRACE_STOP_SIGNAL_DELIVERY,
@@ -99,30 +104,33 @@ namespace ZkProcess {
         } signal_stopped;
     };
 
-    enum TRACE_OPTIONS: u16_t {
+    enum PTRACE_OPTIONS: u16_t {
          // TODO trace options
          // options for ptrace
          //
     };
 
-
-
     class Ptrace {
         public:
+            Ptrace(const char **pathname, std::optional<u8_t> flags
+                    = std::nullopt);
+            Ptrace(pid_t pid, std::optional<u8_t> flags = std::nullopt);
             Ptrace(const char **pathname, pid_t pid, u8_t flags);
             Ptrace(const char **pathname, pid_t pid, u8_t flags,
-                   ZkLog::Log *log);
+                   std::optional<ZkLog::Log *>log = std::nullopt);
             ~Ptrace();
 
-            inline std::shared_ptr<MemoryMap> GetMemoryMap(void) const
+            inline pid_t GetProcessId(void) const 
             {
-                return p_memmap;
+                return p_pid;
             }
-            inline PROCESS_STATE GetProcessState(void) const
+
+            inline PROCESS_STATE GetProcessState(void) const noexcept
             {
                 return p_state;
             }
             inline PROCESS_STATE_INFO GetProcessStateInfo(void) const
+                noexcept
             {
                 return p_state_info;
             }
@@ -136,27 +144,17 @@ namespace ZkProcess {
 
             PROCESS_STATE WaitForProcess(int options);
 
-            PROCESS_STATE SignalProcess(int signal);
-            PROCESS_STATE SignalStopProcess(void);
-            PROCESS_STATE SignalKillProcess(void);
-            PROCESS_STATE SignalContinueProcess(void);
-
-
             addr_t GenerateAddress(int seed) const;
 
             bool ReadProcess(void *buffer, addr_t address, size_t
                     buffer_sz);
             addr_t WriteProcess(void *buffer, addr_t address, size_t
                     buffer_sz);
-            bool ReadRegisters(registers_t* registers);
-            bool WriteRegisters(registers_t* registers);
+            bool ReadRegisters(const registers_t& registers);
+            bool WriteRegisters(const registers_t& registers);
             void *ReplacePage(addr_t addr, void *buffer, int buffer_size);
 
-            void *MemAlloc(void *mmap_shellcode, int protection, int size);
-            inline std::string GetProcessPathname(void) const
-            {
-                return p_memmap->GetBasePage()->GetPageName();
-            }
+            //void *MemAlloc(void *mmap_shellcode, int protection, int size);
 
             //TODO methods to read thread state using registers
             // CreateThread
@@ -167,9 +165,8 @@ namespace ZkProcess {
             PROCESS_STATE p_state = PROCESS_NOT_STARTED;
             PROCESS_STATE_INFO p_state_info;
             pid_t p_pid;
-            std::shared_ptr<ZkProcess::MemoryMap> p_memmap;
 
-            ZkLog::Log *p_log;
+            std::optional<ZkLog::Log *> p_log;
 
             bool isPtraceStopped(void) const;
     };

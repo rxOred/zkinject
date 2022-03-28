@@ -8,10 +8,10 @@
 namespace ZkProcess {
     class Signal {
         public:
-            Signal(pid_t pid)
-                :s_pid(pid)
-            {// TODO initialize s_siginfo to 0x0
-            }
+            Signal(pid_t pid);
+            Signal(const Signal&) =default;
+            Signal(Signal&&) =default;
+
             bool SignalProcess(int signal) const;
             inline bool SignalStopProcess(void) const
             {
@@ -29,8 +29,7 @@ namespace ZkProcess {
             {
                 return SignalProcess(SIGTRAP);
             }
-        private:
-            siginfo_t s_siginfo;
+        private: 
             pid_t s_pid;
     };
 };
