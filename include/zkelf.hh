@@ -97,25 +97,24 @@ enum class e_type : zktypes::u16_t {
 
 // architecture of the elf in detail
 enum class e_machine : zktypes::u16_t {
-    EM_NONE = 0,
-    EM_M32,
-    EM_SPARC,
-    EM_386,
-    EM_68K,
-    EM_88K,
-    EM_860 = 7,
-    EM_MIPS,
-    EM_PARISC = 15,
-    EM_SPARC32PLUS = 18,
-    EM_PPC = 20,
-    EM_PPC64,
-    EM_S390,
-    EM_ARM = 40,
-    EM_SH = 42,
-    EM_SPARCV9,
-    EM_IA_64 = 50,
-    EM_X86_64 = 62,
-    EM_VAX = 75,
+    EM_NONE = 0,               /* No machine */
+    EM_M32,					   /* AT&T WE 32100 */
+    EM_SPARC,				   /* SUN SPARC */
+    EM_386,					   /* Intel 80386 */
+    EM_68K,					   /* Motorola m68k family */
+    EM_88K,					   /* Motorola m88k family */
+    EM_860 = 7,                /* Intel 80860 */
+    EM_MIPS,				   /* MIPS R3000 big-endian */
+    EM_PARISC = 15,            /* HPPA */
+    EM_SPARC32PLUS = 18,       /* Sun's "v8plus" */
+    EM_PPC = 20,               // PowerPC */
+    EM_PPC64,				   // PowerPC 64-bit */
+    EM_S390,                   // IBM s390
+    EM_ARM = 40,               // ARM
+    EM_SPARCV9 = 43,           // SPARC v9 64 bit 
+    EM_IA_64 = 50,             // Intel Merced */
+    EM_X86_64 = 62,            // AMD x86-64 architecture 
+	EM_AVR = 83,               // Atmel AVR 8-bit microcontroller
     EM_BPF = 247
 };
 
@@ -125,19 +124,19 @@ enum class e_version : zktypes::u32_t { EV_NONE = 0, EV_CURRENT, EV_NUM };
 template <typename T = x64>
 struct ehdr_t {
     typename T::u8_t e_ident[16];
-    e_type e_type;
-    e_machine e_machine;
-    e_version e_version;
-    typename T::addr_t e_entry;
-    typename T::off_t e_phoff;
-    typename T::off_t e_shoff;
-    typename T::u32_t e_flags;
-    typename T::u16_t e_ehsize;
-    typename T::u16_t e_phentsize;
-    typename T::u16_t e_phnum;
-    typename T::u16_t e_shentsize;
-    typename T::u16_t e_shnum;
-    typename T::u16_t e_shstrndx;
+    e_type elf_type;
+    e_machine elf_machine;
+    e_version elf_version;
+    typename T::addr_t elf_entry;
+    typename T::off_t elf_phoff;
+    typename T::off_t elf_shoff;
+    typename T::u32_t elf_flags;
+    typename T::u16_t elf_ehsize;
+    typename T::u16_t elf_phentsize;
+    typename T::u16_t elf_phnum;
+    typename T::u16_t elf_shentsize;
+    typename T::u16_t elf_shnum;
+    typename T::u16_t elf_shstrndx;
 };
 
 // type of the segment
@@ -164,27 +163,27 @@ struct phdr_t;
 // program header x64
 template <>
 struct phdr_t<x64> {
-    p_type p_type;
-    x64::u32_t p_flags;
-    x64::off_t p_offset;
-    x64::addr_t p_vaddr;
-    x64::addr_t p_paddr;
-    x64::u64_t p_filesz;
-    x64::u64_t p_memsz;
-    x64::u64_t p_align;
+    p_type ph_type;
+    x64::u32_t ph_flags;
+    x64::off_t ph_offset;
+    x64::addr_t ph_vaddr;
+    x64::addr_t ph_paddr;
+    x64::u64_t ph_filesz;
+    x64::u64_t ph_memsz;
+    x64::u64_t ph_align;
 };
 
 // program header x86
 template <>
 struct phdr_t<x86> {
-    p_type p_type;
-    x86::off_t p_offset;
-    x86::addr_t p_vaddr;
-    x86::addr_t p_paddr;
-    x86::u32_t p_filesz;
-    x86::u32_t p_memsz;
-    x86::u32_t p_flags;
-    x86::u32_t p_align;
+    p_type ph_type;
+    x86::off_t ph_offset;
+    x86::addr_t ph_vaddr;
+    x86::addr_t ph_paddr;
+    x86::u32_t ph_filesz;
+    x86::u32_t ph_memsz;
+    x86::u32_t ph_flags;
+    x86::u32_t ph_align;
 };
 
 enum class sh_n : zktypes::u16_t {
@@ -204,7 +203,7 @@ enum class sh_n : zktypes::u16_t {
 
 };
 
-enum class sh_type : zktypes::u32_t {
+enum class s_type : zktypes::u32_t {
     SHT_NULL = 0,
     SHT_PROGBITS,
     SHT_SYMTAB,
@@ -261,7 +260,7 @@ enum class sh_flags : zktypes::u16_t {
 template <typename T = x64>
 struct shdr_t {
     typename T::u32_t sh_name;
-    sh_type sh_type;
+    s_type sh_type;
     typename T::addr_t sh_flags;
     typename T::addr_t sh_addr;
     typename T::off_t sh_offset;
@@ -436,29 +435,15 @@ class ElfObj {
 public:
     ElfObj() = default;
     ElfObj(void *map, std::size_t size,
-           std::variant<const char *, pid_t> s)
-        : e_memory_map(map), e_map_size(size), e_source(s) {
-        e_ehdr = (ehdr_t<T> *)map;
-        e_phdrtab = (phdr_t<T> *)&map[e_ehdr->e_phoff];
-        e_shdrtab = (shdr_t<T> *)&map[e_ehdr->e_shoff];
-        if (e_ehdr->e_shstrndx == sh_n::SHN_UNDEF ||
-            e_ehdr->e_shstrndx > e_ehdr->e_shnum ||
-            e_shdrtab[e_ehdr->e_shstrndx].sh_offset > size) {
-            e_is_stripped = true;
-        } else {
-            e_shstrtab =
-                (e_shstrtab)&map[e_shdrtab[e_ehdr->e_shstrndx].sh_offset];
-        }
-    }
-
+           std::variant<const char *, pid_t> s);
     ~ElfObj();
 
     bool is_stripped(void) const;
 	
     void *get_memory_map(void) const;
     std::size_t get_map_size(void) const;
-    decltype(auto) get_elf_source(void) const;
-
+	std::variant<const char *, pid_t> get_elf_source(void) const;
+	   
     ehdr_t<T> *get_elf_header(void) const;
     phdr_t<T> *get_program_header_table(void) const;
     shdr_t<T> *get_section_header_table(void) const;
@@ -469,7 +454,7 @@ public:
     symtab_t<T> *get_symbol_table(void) const;
     symtab_t<T> *get_dynamic_symbol_table(void) const;
     dynamic_t<T> *get_dynamic_section(void) const;
-    nhdr_t<T> get_note_section(void) const;
+    nhdr_t<T> *get_note_section(void) const;
     decltype(auto) get_section_index_array();
 
 	void set_stripped(bool b);
@@ -527,12 +512,14 @@ public:
     bool load_dynamic_data(void);
     bool load_symbol_data(void);
 
-    // getters, some of these may return uint64_t if type cant be
-    // determined
+    // getters, some of these may return uint64_t (or try decltype(auto)
     // TODO we can return void *
     void *get_memory_map(void) const;
     std::size_t get_map_size(void) const;
 
+	ei_class get_elf_class(void) const;
+	ei_data get_elf_encoding(void) const;
+	ei_osabi get_elf_osabi(void) const;
     e_type get_elf_type(void) const;
     e_machine get_elf_machine(void) const;
     e_version get_elf_version(void) const;
@@ -548,7 +535,7 @@ public:
     zktypes::u16_t get_elf_shdr_string_table_index(void) const;
 
     zktypes::u32_t get_section_name_index(int shdr_index) const;
-    sh_type get_section_type(int shdr_index) const;
+    s_type get_section_type(int shdr_index) const;
     zktypes::u64_t get_section_flags(int shdr_index) const;
     zktypes::u64_t get_section_address(int shdr_index) const;
     zktypes::u64_t get_section_offset(int shdr_index) const;
@@ -568,7 +555,7 @@ public:
     zktypes::u64_t get_segment_address_alignment(int phdr_index) const;
 
     int get_section_index_by_name(const char *section_name);
-    int get_section_index_by_attr(sh_type type, zktypes::u16_t flags);
+    int get_section_index_by_attr(s_type type, zktypes::u16_t flags);
     int get_segment_index_by_attr(p_type type, zktypes::u32_t flags);
     int get_symbol_index_by_name(const char *symbol_name);
     int get_dynamic_symbol_index_by_name(const char *symbol_name);
@@ -587,10 +574,10 @@ public:
         static_assert(std::is_integral_v<T>,
                       "new entry point should be an integral");
         if constexpr (std::is_same_v<T, x64::addr_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)->get_elf_header()->e_entry =
+            std::get_if<ElfObj<x64>>(&elf_obj)->get_elf_header()->elf_entry =
                 new_entry;
         } else if constexpr (std::is_same_v<T, x86::addr_t>) {
-            std::get_if<ElfObj<x86>>(&elf_obj)->get_elf_header()->e_entry =
+            std::get_if<ElfObj<x86>>(&elf_obj)->get_elf_header()->elf_entry =
                 new_entry;
         }
     }
@@ -599,10 +586,10 @@ public:
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
         if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)->get_elf_header()->e_phoff =
+            std::get_if<ElfObj<x64>>(&elf_obj)->get_elf_header()->elf_phoff =
                 new_offset;
         } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_obj)->get_elf_header()->e_phoff =
+            std::get_if<ElfObj<x86>>(&elf_obj)->get_elf_header()->elf_phoff =
                 new_offset;
         }
     }
@@ -611,10 +598,10 @@ public:
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
         if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)->get_elf_header()->e_shoff =
+            std::get_if<ElfObj<x64>>(&elf_obj)->get_elf_header()->elf_shoff =
                 new_offset;
         } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_obj)->get_elf_header()->e_shoff =
+            std::get_if<ElfObj<x86>>(&elf_obj)->get_elf_header()->elf_shoff =
                 new_offset;
         }
     }
@@ -632,7 +619,7 @@ public:
     }
 
     void set_section_name_index(int shdr_index, zktypes::u32_t new_index);
-    void set_section_type(int shdr_index, sh_type new_type);
+    void set_section_type(int shdr_index, s_type new_type);
 
     template <typename T = x64::addr_t>
     void set_section_address(int shdr_index, T new_addr) {
@@ -720,11 +707,11 @@ public:
         if constexpr (std::is_same_v<T, x64::off_t>) {
             std::get_if<ElfObj<x64>>(&elf_obj)
                 ->get_program_header_table()[phdr_index]
-                .p_offset = new_offset;
+                .ph_offset = new_offset;
         } else if constexpr (std::is_same_v<T, x86::off_t>) {
             std::get_if<ElfObj<x86>>(&elf_obj)
                 ->get_program_header_table()[phdr_index]
-                .p_offset = new_offset;
+                .ph_offset = new_offset;
         }
     }
 
@@ -735,11 +722,11 @@ public:
         if constexpr (std::is_same_v<T, x64::off_t>) {
             std::get_if<ElfObj<x64>>(&elf_obj)
                 ->get_program_header_table()[phdr_index]
-                .p_vaddr = new_address;
+                .ph_vaddr = new_address;
         } else if constexpr (std::is_same_v<T, x86::off_t>) {
             std::get_if<ElfObj<x86>>(&elf_obj)
                 ->get_program_header_table()[phdr_index]
-                .p_vaddr = new_address;
+                .ph_vaddr = new_address;
         }
     }
 
@@ -750,11 +737,11 @@ public:
         if constexpr (std::is_same_v<T, x64::off_t>) {
             std::get_if<ElfObj<x64>>(&elf_obj)
                 ->get_program_header_table()[phdr_index]
-                .p_paddr = new_address;
+                .ph_paddr = new_address;
         } else if constexpr (std::is_same_v<T, x86::off_t>) {
             std::get_if<ElfObj<x86>>(&elf_obj)
                 ->get_program_header_table()[phdr_index]
-                .p_paddr = new_address;
+                .ph_paddr = new_address;
         }
     }
 
@@ -767,11 +754,11 @@ public:
         if constexpr (std::is_same_v<T, x64::u64_t>) {
             std::get_if<ElfObj<x64>>(&elf_obj)
                 ->get_program_header_table()[phdr_index]
-                .p_filesz = new_filesz;
+                .ph_filesz = new_filesz;
         } else if constexpr (std::is_same_v<T, x86::u32_t>) {
             std::get_if<ElfObj<x64>>(&elf_obj)
                 ->get_program_header_table()[phdr_index]
-                .p_filesz = new_filesz;
+                .ph_filesz = new_filesz;
         }
     }
     template <typename T>
@@ -781,11 +768,11 @@ public:
         if constexpr (std::is_same_v<T, x64::u64_t>) {
             std::get_if<ElfObj<x64>>(&elf_obj)
                 ->get_program_header_table()[phdr_index]
-                .p_memsz = new_memsz;
+                .ph_memsz = new_memsz;
         } else if constexpr (std::is_same_v<T, x86::u32_t>) {
             std::get_if<ElfObj<x86>>(&elf_obj)
                 ->get_program_header_table()[phdr_index]
-                .p_memsz = new_memsz;
+                .ph_memsz = new_memsz;
         }
     }
 
@@ -796,11 +783,11 @@ public:
         if constexpr (std::is_same_v<T, x64::u64_t>) {
             std::get_if<ElfObj<x64>>(&elf_obj)
                 ->get_program_header_table()[phdr_index]
-                .p_align = new_alignment;
+                .ph_align = new_alignment;
         } else if constexpr (std::is_same_v<T, x86::u32_t>) {
             std::get_if<ElfObj<x86>>(&elf_obj)
                 ->get_program_header_table()[phdr_index]
-                .p_align = new_alignment;
+                .ph_align = new_alignment;
         }
     }
 
@@ -829,7 +816,7 @@ public:
     friend void load_elf_from_memory(void);
 
 private:
-    elf_flags elf_flags;
+    elf_flags elf_flag;
     std::optional<zklog::Log *> elf_log;
     std::variant<ElfObj<x64>, ElfObj<x86>> elf_obj;
 };

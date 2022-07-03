@@ -1,4 +1,8 @@
-#include "zksig.hh"
+#include "zksignal.hh"
+
+ZkProcess::Signal::Signal(pid_t pid)
+    :s_pid(pid)
+{}
 
 bool ZkProcess::Signal::SignalProcess(int signal) const
 {

@@ -1,31 +1,31 @@
 #include "zklog.hh"
 
-ZkLog::logmessage_t::logmessage_t(std::string string, ZK_LOG_LEVEL level)
-    :log_string(string), log_level(level)
-{}
+zklog::logmessage_t::logmessage_t(std::string string,
+                                  zklog::log_level level,
+                                  zklog::log_error_code error_code)
+    : l_string(string), l_level(level), l_error_code(error_code) {}
 
-ZkLog::Log ZkLog::Log::l_instance;
+zklog::Log zklog::Log::l_instance;
 
-void ZkLog::Log::ClearLog(void) 
-{
+void zklog::Log::clear_log(void) {
     std::stack<logmessage_t> empty;
     std::swap(l_log, empty);
 }
 
-void ZkLog::Log::PushLog(std::string log_string, ZK_LOG_LEVEL level)
-{
-    l_log.emplace(log_string, level);
+void zklog::Log::push_log(std::string log_string, log_level level,
+                          std::optional<log_error_code> error_code) {
+    l_log.emplace(log_string, level, error_code.value_or(log_error_code::LOG_ERROR_NONE));
 }
 
-std::pair<std::string, ZkLog::ZK_LOG_LEVEL> ZkLog::Log::PopLog(void)
-{
-    auto pair = std::make_pair(l_log.top().getLogMessage(),
-                               l_log.top().getLoglevel());
+std::tuple<std::string, zklog::log_level, zklog::log_error_code>
+zklog::Log::pop_log(void) {
+    auto t = std::make_tuple(l_log.top().get_log_message(),
+                             l_log.top().get_log_level(),
+                             l_log.top().get_log_error_code());
     l_log.pop();
-    return pair;
+    return t;
 }
 
-ZkLog::ZK_LOG_LEVEL ZkLog::Log::PeekLogLevel(void)
-{
-    return l_log.top().getLoglevel();
+zklog::log_level zklog::Log::peek_log_level() {
+    return l_log.top().get_log_level();
 }

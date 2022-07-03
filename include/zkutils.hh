@@ -33,11 +33,33 @@ bool validate_magic_number(T a[size], T b[size])
 	}
 	return true;
 }
+inline void save_memory_map(const char *path, void *memory_map,
+                              int map_size) noexcept {
+    int fd = open(path, O_CREAT | O_TRUNC | O_WRONLY, 0666);
+    if (fd < 0) {
+        throw std::runtime_error("open failed");
+    }
+    if (write(fd, memory_map, map_size) < map_size) {
+        throw std::runtime_error("write failed");
+    }
+    if (close(fd) < 0) {
+        throw std::runtime_error("close failed");
+    }
+}
 
-void save_memory_map(const char *path, void *memory_map, int map_size);
-
-void save_buffer_to_file(const char *pathname, off_t offset, void *buffer,
-                         int buffer_size);
+inline void save_buffer_to_file(const char *path, off_t offset, void *buffer,
+                               int buffer_size) noexcept {
+    int fd = open(path, O_CREAT | O_WRONLY, 0666);
+    if (fd < 0) {
+        throw zkexcept::file_not_found_error();
+    }
+    if (pwrite(fd, buffer, buffer_size, offset) < buffer_size) {
+        throw std::runtime_error("write failed\n");
+    }
+    if (close(fd) < 0) {
+        throw std::runtime_error("close failed\n");
+    }
+}
 
 template <typename T = x64>
 int patch_address(typename T::u8_t *buffer, size_t len, typename T::addr_t addr,

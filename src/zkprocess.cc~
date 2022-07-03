@@ -1,0 +1,60 @@
+#include "zkprocess.hh"
+
+#include <sched.h>
+
+#include <memory>
+#include <variant>
+
+#include "zkelf.hh"
+#include "zklog.hh"
+#include "zkmemorymap.hh"
+#include "zkptrace.hh"
+#include "zksnapshot.hh"
+#include "zktypes.hh"
+
+std::shared_ptr<zkprocess::ZkProcess> zkprocess::load_process_from_file(
+    const char **path, std::optional<zklog::Log *> log) {
+    auto pid = [](const auto &ptrace) -> pid_t {
+        return ptrace.get_pid();
+    };
+
+    // parse the elf binary and get the required architecture
+    auto ptr = std::make_shared<ZkProcess>(path);
+    ptr->p_elf = zkelf::load_elf_from_file(
+        path[0], zkelf::elf_flags::ELF_NO_SAVE, log);
+    zkelf::ei_class arch = ptr->p_elf->get_elf_class();
+    if (arch == zkelf::ei_class::ELFCLASS64) {
+        ptr->p_ptrace = Ptrace<x86>(path, PTRACE_DISABLE_ASLR, log);
+        ptr->p_memory_map =
+            MemoryMap<x86>(std::get<Ptrace<x86>>(ptr->p_ptrace).get_pid());
+    } else if (arch == zkelf::ei_class::ELFCLASS32) {
+        ptr->p_ptrace = Ptrace<x64>(path, PTRACE_DISABLE_ASLR, log);
+        ptr->p_memory_map =
+            MemoryMap<x64>(std::get<Ptrace<x64>>(ptr->p_ptrace).get_pid());
+		ptr->p_snapshot = Snapshot(std::get<Ptrace<x64>>(ptr->p_ptrace), 5, log);
+    }
+}
+
+zkprocess::load_process_from_pid(pid_t pid) {}
+
+ZkProcess::Process::Process(
+    std::variant<const char **, pid_t> process_info,
+    std::optional<ZkLog::Log *> log)
+    : p_log(log) {
+    if (auto pathname_ptr = std::get_if<const char **>(&process_info)) {
+        const char **pathname = *pathname_ptr;
+        p_ptrace = std::make_unique<ZkProcess::Ptrace>(
+            pathname, PTRACE_START_NOW | PTRACE_DISABLE_ASLR);
+        auto pid = p_ptrace->GetProcessId();
+        p_memory_map = std::make_unique<ZkProcess::MemoryMap>(pid);
+        p_signal = std::make_unique<ZkProcess::Signal>(pid);
+    } else if (auto pid_ptr = std::get_if<pid_t>(&process_info)) {
+        pid_t pid = *pid_ptr;
+        p_ptrace =
+            std::make_unique<ZkProcess::Ptrace>(pid, PTRACE_ATTACH_NOW);
+        p_memory_map = std::make_unique<ZkProcess::MemoryMap>(pid);
+        p_signal = std::make_unique<ZkProcess::Signal>(pid);
+    }
+    p_snapshots = std::make_unique<ZkProcess::Snapshot>(
+        *p_ptrace, std::nullopt, p_log);
+}
