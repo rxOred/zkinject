@@ -13,12 +13,13 @@
 #include "zktypes.hh"
 
 std::shared_ptr<zkprocess::ZkProcess> zkprocess::load_process_from_file(
-    const char **path, std::optional<zklog::Log *> log) {
+    char* const* path, std::optional<zklog::ZkLog *> log) {
     // parse the elf binary and get the required architecture
     auto ptr = std::make_shared<ZkProcess>();
     ptr->p_elf = zkelf::load_elf_from_file(
         path[0], zkelf::elf_flags::ELF_NO_SAVE, log);
     zkelf::ei_class arch = ptr->p_elf->get_elf_class();
+    // if ELFCLASS is (64, 32), create process components for (x64, x86)
     if (arch == zkelf::ei_class::ELFCLASS64) {
         ptr->p_ptrace = Ptrace<x86>(path, PTRACE_DISABLE_ASLR, log);
         ptr->p_memory_map =

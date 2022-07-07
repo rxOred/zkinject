@@ -504,7 +504,7 @@ enum class elf_flags : zktypes::u8_t {
 // ElfObj by default
 class ZkElf {
 public:
-    ZkElf(elf_flags flags, std::optional<zklog::Log *> log = std::nullopt);
+    ZkElf(elf_flags flags, std::optional<zklog::ZkLog *> log = std::nullopt);
     ZkElf(const ZkElf &) = delete;
     ZkElf(ZkElf &&) = delete;
 
@@ -516,6 +516,7 @@ public:
     // TODO we can return void *
     void *get_memory_map(void) const;
     std::size_t get_map_size(void) const;
+    bool is_stripped(void) const;
 
 	ei_class get_elf_class(void) const;
 	ei_data get_elf_encoding(void) const;
@@ -559,6 +560,9 @@ public:
     int get_segment_index_by_attr(p_type type, zktypes::u32_t flags);
     int get_symbol_index_by_name(const char *symbol_name);
     int get_dynamic_symbol_index_by_name(const char *symbol_name);
+
+    // TODO get symbol and note table stubb
+    // TODO get headers
 
     // setters
 
@@ -693,6 +697,7 @@ public:
         }
     }
 
+    // TODO
     template <typename T = shdr_t<x64> *>
     void set_section_header(int shdr_index, T new_shdr) {}
 
@@ -812,18 +817,18 @@ public:
 
     friend std::shared_ptr<ZkElf> load_elf_from_file(
         const char *path, elf_flags flags,
-        std::optional<zklog::Log *> log);
+        std::optional<zklog::ZkLog *> log);
     friend void load_elf_from_memory(void);
 
 private:
     elf_flags elf_flag;
-    std::optional<zklog::Log *> elf_log;
+    std::optional<zklog::ZkLog *> elf_log;
     std::variant<ElfObj<x64>, ElfObj<x86>> elf_obj;
 };
 
 std::shared_ptr<ZkElf> load_elf_from_file(
     const char *path, elf_flags flags,
-    std::optional<zklog::Log *> log = std::nullopt);
+    std::optional<zklog::ZkLog *> log = std::nullopt);
 
 void load_elf_from_memory(void);
 };  // namespace zkelf

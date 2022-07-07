@@ -26,6 +26,8 @@ struct snapshot_t {
 public:
     snapshot_t(zktypes::u8_t flags, registers_t *regs, void *stack,
                void *instr);
+    snapshot_t(const snapshot_t &) = default;
+    snapshot_t(snapshot_t &&) = default; 
 
     ~snapshot_t();
 
@@ -44,21 +46,23 @@ private:
 
 template <typename T>
 class Snapshot {
-private:
-    std::stack<std::unique_ptr<snapshot_t>> s_snapshots;
-    Ptrace<T> &s_ptrace;
-    std::optional<zktypes::u8_t> s_count;
-    std::optional<zklog::Log *> s_log;
-
 public:
     Snapshot(Ptrace<T> &ptrace,
              std::optional<zktypes::u8_t> count = DEFAULT_SNAPSHOT_COUNT,
-             std::optional<zklog::Log *> log = std::nullopt);
+             std::optional<zklog::ZkLog *> log = std::nullopt);
+    Snapshot(const Snapshot &) = default;
+    Snapshot(Snapshot &&) = default; 
 	
     ~Snapshot();
     bool save_snapshot(zktypes::u8_t flags);
     bool restore_snapshot(void);
     void clear_snapshots(void);
+
+private:
+    std::stack<std::unique_ptr<snapshot_t>> s_snapshots;
+    Ptrace<T> &s_ptrace;
+    std::optional<zktypes::u8_t> s_count;
+    std::optional<zklog::ZkLog *> s_log;
 };
 };  // namespace zkprocess
 

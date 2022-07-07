@@ -8,8 +8,6 @@
 #include <sys/types.h>
 #include <sys/user.h>
 
-#include <zkinject/zktypes.hh>
-
 /*
 ** TODO
 ** move all the template implementations to header files
@@ -43,58 +41,4 @@ using eventcodes_t      = __ptrace_eventcodes;
 // TODO make this independant
 using registers_t       = struct user_regs_struct;
 
-
-
-/*
-        using ehdr64_t          = Elf64_Ehdr;
-        using phdr64_t          = Elf64_Phdr;
-        using shdr64_t          = Elf64_Shdr;
-        using dynamic64_t       = Elf64_Dyn;
-        using symtab64_t        = Elf64_Sym;
-        using note64_t          = Elf64_Nhdr;
-        using relocation64_t    = Elf64_Rela;
-        using addr64_t          = Elf64_Addr;
-
-        using  ehdr32_t         = Elf32_Ehdr;
-        using  phdr32_t         = Elf32_Phdr;
-        using  shdr32_t         = Elf32_Shdr;
-        using  dynamic32_t      = Elf32_Dyn;
-        using  symtab32_t       = Elf32_Sym;
-        using  note32_t         = Elf32_Nhdr;
-        using  relocation32_t   = Elf32_Rel;
-        using  addr32_t         = Elf32_Addr;
-
-        // NOTE that since we are using char *, someone can make a special elf
-        // binary with 1 less null terminator at the end and fuck us up.
-        // so validate it
-        using strtab_t          = char *;
-        using eventcodes_t      = __ptrace_eventcodes;
-        using registers_t       = struct user_regs_struct;
-
-        // typedefs for processes. zkinject
-        #if defined(__x86_64__)
-            using ehdr_t          = Elf64_Ehdr;
-            using phdr_t          = Elf64_Phdr;
-            using shdr_t          = Elf64_Shdr;
-            using dynamic_t       = Elf64_Dyn;
-            using symtab_t        = Elf64_Sym;
-            using note_t          = Elf64_Nhdr;
-            using relocation_t    = Elf64_Rela;
-            using addr_t          = Elf64_Addr;
-
-            #define ADDR_LEN    8
-        #elif defined(__i386__)
-            using  ehdr_t         = Elf32_Ehdr;
-            using  phdr_t         = Elf32_Phdr;
-            using  shdr_t         = Elf32_Shdr;
-            using  dynamic_t      = Elf32_Dyn;
-            using  symtab_t       = Elf32_Sym;
-            using  note_t         = Elf32_Nhdr;
-            using  relocation_t   = Elf32_Rel;
-            using  addr_t         = Elf32_Addr;
-
-            #define ADDR_LEN    4
-        #endif
-
-        */
 #endif  // ZKTYPES_HH

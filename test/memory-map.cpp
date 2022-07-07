@@ -1,4 +1,5 @@
 #include <zkinject/zkprocess.hh>
+#include <zkinject/zklog.hh>
 
 int main(int argc, char *argv[])
 {
@@ -10,7 +11,10 @@ int main(int argc, char *argv[])
     s[0] = argv[1];
     s[1] = nullptr;
 
-    ZkLog::Log log;
+    using namespace zkprocess;
+    auto& logger = zklog::ZkLog::get_logger();
+    auto process = zkprocess::load_process_from_file(s, &logger);    
+
     ZkProcess::Ptrace ptrace((const char **)s, 0, ZkProcess::PTRACE_START_NOW, &log);
     auto memmap = ptrace.GetMemoryMap();
     for (auto it = memmap->GetIteratorBegin(); it != memmap->GetIteratorLast(); ++it) {

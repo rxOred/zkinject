@@ -21,7 +21,7 @@
 #include "zkutils.hh"
 
 std::shared_ptr<zkelf::ZkElf> zkelf::load_elf_from_file(
-    const char *path, elf_flags flags, std::optional<zklog::Log *> log) {
+    const char *path, elf_flags flags, std::optional<zklog::ZkLog *> log) {
     auto pair = zkutils::open_file(path);
     elf_core *core = (elf_core *)pair.first;
     // check the magic number to validate the file
@@ -32,7 +32,7 @@ std::shared_ptr<zkelf::ZkElf> zkelf::load_elf_from_file(
     }
 
     std::shared_ptr<ZkElf> ptr =
-        std::make_shared<ZkElf>(elf_flags::ELF_AUTO_SAVE, log);
+        std::make_shared<ZkElf>(flags, log);
 
     if (core->ei_class == (zktypes::u8_t)ei_class::ELFCLASS32) {
         ptr->elf_obj = ElfObj<x86>(pair.first, pair.second, path);
@@ -219,7 +219,7 @@ void zkelf::ElfObj<T>::set_note_section(void *new_note) {
 }
 
 zkelf::ZkElf::ZkElf(zkelf::elf_flags flags,
-                    std::optional<zklog::Log *> log)
+                    std::optional<zklog::ZkLog *> log)
     : elf_flag(flags), elf_log(log) {}
 
 bool zkelf::ZkElf::load_symbol_data(void) {
@@ -392,6 +392,13 @@ std::size_t zkelf::ZkElf::get_map_size(void) const {
         return elf->get_map_size();
     }
     return std::get_if<ElfObj<x86>>(&elf_obj)->get_map_size();
+}
+
+bool zkelf::ZkElf::is_stripped(void) const {
+    if (auto elf = std::get_if<ElfObj<x64>>(&elf_obj)) {
+        return elf->is_stripped();
+    }
+    return std::get_if<ElfObj<x86>>(&elf_obj)->is_stripped();
 }
 
 void zkelf::ZkElf::set_stripped(void) {

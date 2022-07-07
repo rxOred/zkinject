@@ -117,15 +117,15 @@ public:
     Ptrace(pid_t pid, std::optional<zktypes::u8_t> flags = std::nullopt);
     ~Ptrace();
 
-    Ptrace(char* const* path,
+    Ptrace(const char **path,
            std::optional<zktypes::u8_t> flags = PTRACE_START_NOW |
                                                 PTRACE_DISABLE_ASLR,
-           std::optional<zklog::ZkLog *> log = std::nullopt);
+           std::optional<zklog::Log *> log = std::nullopt);
     Ptrace(pid_t pid,
            std::optional<zktypes::u8_t> flags = PTRACE_ATTACH_NOW,
-           std::optional<zklog::ZkLog *> log = std::nullopt);
+           std::optional<zklog::Log *> log = std::nullopt);
 
-    void ptrace_init_from_file(char* const* path,
+    void ptrace_init_from_file(const char **path,
                                zktypes::u8_t flags) noexcept;
     void ptrace_init_from_pid(pid_t pid) noexcept;
 
@@ -178,7 +178,7 @@ private:
     PROCESS_STATE p_state = PROCESS_NOT_STARTED;
     PROCESS_STATE_INFO p_state_info;
     pid_t p_pid;
-    std::optional<zklog::ZkLog *> p_log;
+    std::optional<zklog::Log *> p_log;
 };
 };  // namespace zkprocess
 

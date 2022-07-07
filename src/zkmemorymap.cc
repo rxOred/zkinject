@@ -28,7 +28,7 @@ void zkprocess::MemoryMap<T>::get_memory_map(void) {
     std::smatch match;
     std::regex regex(R"(([a-f0-9]+)-([a-f0-9]+) ([rxwp-]{4}) (.*))",
                      std::regex::optimize);
-    // FIXME parses all the shit after permissions to same string
+    // FIXME parses all the shit after permissions to the same string
 
     // A small optimization - reserving vector space for segments
     // 4 for the PT_LOAD segments of the binary
@@ -51,8 +51,8 @@ void zkprocess::MemoryMap<T>::get_memory_map(void) {
     }	
 }
 
-	template <typename T>
-	zkprocess::MemoryMap<T>::MemoryMap(pid_t pid)
+template <typename T>
+zkprocess::MemoryMap<T>::MemoryMap(pid_t pid)
 	:mm_pid(pid)
 {}
     // FIXME make this a seperate method because this wont parse the

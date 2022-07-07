@@ -53,7 +53,7 @@ void print_registers(registers_t *regs) {
 template <typename T>
 zkprocess::Snapshot<T>::Snapshot(zkprocess::Ptrace<T> &ptrace,
                                  std::optional<zktypes::u8_t> count,
-                                 std::optional<zklog::Log *> log)
+                                 std::optional<zklog::ZkLog *> log)
     : s_ptrace(ptrace), s_count(count), s_log(log) {
     if (count.has_value()) {
         if (count.value() > MAXIMUM_SNAPSHOT_COUNT) {
@@ -90,7 +90,7 @@ bool zkprocess::Snapshot<T>::save_snapshot(zktypes::u8_t flags) {
         // std::__invoke(&zkprocess::Ptrace::ReadRegisters, ptrace,
         // regs);
         try {
-            if (!s_ptrace.ReadRegisters(*regs)) {
+            if (!s_ptrace.read_process_registers(*regs)) {
                 return false;
             }
         } catch (zkexcept::ptrace_error &e) {
@@ -103,7 +103,7 @@ bool zkprocess::Snapshot<T>::save_snapshot(zktypes::u8_t flags) {
             throw std::runtime_error("failed to allocate memory\n");
         }
         try {
-            s_ptrace.ReadProcess(stack, regs->rsp,
+            s_ptrace.read_process_memory(stack, regs->rsp,
                                  DEFAULT_SNAPSHOT_STACK_SZ);
         } catch (zkexcept::ptrace_error &e) {
             std::cerr << e.what();
@@ -115,7 +115,7 @@ bool zkprocess::Snapshot<T>::save_snapshot(zktypes::u8_t flags) {
             throw std::runtime_error("failed to allocate memory\n");
         }
         try {
-            s_ptrace.ReadProcess(instr, regs->rip, DEFAULT_SNAPSHOT_INSTR);
+            s_ptrace.read_process_memory(instr, regs->rip, DEFAULT_SNAPSHOT_INSTR);
         } catch (zkexcept::ptrace_error &e) {
             std::cerr << e.what();
             std::exit(1);
@@ -129,7 +129,7 @@ bool zkprocess::Snapshot<T>::save_snapshot(zktypes::u8_t flags) {
         if (regs == nullptr) {
             throw std::runtime_error("failed to allocate memory\n");
         }
-        s_ptrace.ReadRegisters(*regs);
+        s_ptrace.read_process_registers(*regs);
 
         int stack_frame_sz = regs->rbp - regs->rsp;
         stack = calloc(sizeof(zktypes::u8_t), stack_frame_sz);
@@ -137,7 +137,7 @@ bool zkprocess::Snapshot<T>::save_snapshot(zktypes::u8_t flags) {
             throw std::runtime_error("failed to allocate memory\n");
         }
         try {
-            s_ptrace.ReadProcess(stack, regs->rsp, stack_frame_sz);
+            s_ptrace.read_process_memory(stack, regs->rsp, stack_frame_sz);
         } catch (zkexcept::ptrace_error &e) {
             std::cerr << e.what();
             std::exit(1);
@@ -148,16 +148,13 @@ bool zkprocess::Snapshot<T>::save_snapshot(zktypes::u8_t flags) {
             throw std::runtime_error("failed to allocate memory\n");
         }
         try {
-            s_ptrace.ReadProcess(instr, regs->rip, DEFAULT_SNAPSHOT_INSTR);
+            s_ptrace.read_process_memory(instr, regs->rip, DEFAULT_SNAPSHOT_INSTR);
         } catch (zkexcept::ptrace_error &e) {
             std::cerr << e.what();
             std::exit(1);
         }
     }
-
-    auto snapshot =
-        std::make_unique<snapshot_t>(flags, regs, stack, instr);
-    s_snapshots.push(snapshot);
+    s_snapshots.push(std::make_unique<snapshot_t>(flags, regs, stack, instr));
 
     return true;
 }
@@ -173,18 +170,18 @@ bool zkprocess::Snapshot<T>::restore_snapshot(void) {
 
     registers_t *regs = s_snapshots.top()->get_registers();
     print_registers(regs);
-    s_ptrace.WriteRegisters(*s_snapshots.top()->get_registers());
+    s_ptrace.write_process_registers(*s_snapshots.top()->get_registers());
     if (ZK_CHECK_FLAGS(
             static_cast<zktypes::u8_t>(snapshot_flags::PROCESS_SNAP_ALL),
             s_snapshots.top()->get_flags())) {
-        s_ptrace.WriteProcess(s_snapshots.top()->get_stack(), regs->rsp,
+        s_ptrace.write_process_memory(s_snapshots.top()->get_stack(), regs->rsp,
                               DEFAULT_SNAPSHOT_STACK_SZ);
     } else {
         int stack_frame_sz = regs->rbp - regs->rsp;
-        s_ptrace.WriteProcess(s_snapshots.top()->get_stack(), regs->rsp,
+        s_ptrace.write_process_memory(s_snapshots.top()->get_stack(), regs->rsp,
                               stack_frame_sz);
     }
-    s_ptrace.WriteProcess(s_snapshots.top()->get_instructions(), regs->rip,
+    s_ptrace.write_process_memory(s_snapshots.top()->get_instructions(), regs->rip,
                           DEFAULT_SNAPSHOT_INSTR);
 
     s_snapshots.top().reset();

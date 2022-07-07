@@ -15,8 +15,6 @@
 #include "zksignal.hh"
 
 namespace zkprocess {
-
-// defines everything that a process owns
 class ZkProcess {
 public:
 private:
@@ -27,19 +25,12 @@ public:
     std::variant<MemoryMap<x64>, MemoryMap<x86>> p_memory_map;
 	std::variant<Snapshot<x64>, Snapshot<x86>> p_snapshot;
 
-    decltype(auto) memory_map(void) {
-        if (auto mm = std::get_if<MemoryMap<x64>>(&p_memory_map)) {
-            return mm;
-        }
-        return std::get_if<MemoryMap<x86>>(&p_memory_map));
-    }
-
     friend std::shared_ptr<ZkProcess> load_process_from_file(
         char* const* path);
 };
 
 std::shared_ptr<ZkProcess> load_process_from_file(
-    char* const* path, std::optional<zklog::ZkLog *> log);
+    char* const* path, std::optional<zklog::Log *> log);
 }  // namespace zkprocess
 
 #endif  // ZKPROCESS_HH

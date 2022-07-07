@@ -44,11 +44,11 @@ private:
     log_error_code l_error_code = log_error_code::LOG_ERROR_NONE;
 };
 
-class Log {
+class ZkLog {
 public:
-    Log(const Log&) = delete;
+    ZkLog(const ZkLog&) = delete;
 
-    static Log& get_logger(void) { return l_instance; }
+    static ZkLog& get_logger(void) { return l_instance; }
     inline void set_log_buffer_count(std::size_t count) {
         l_count = count;
     }
@@ -60,12 +60,13 @@ public:
     log_level peek_log_level(void);
 
 private:
-    Log() {}
+    ZkLog() {}
 
-    static Log l_instance;
+    static ZkLog l_instance;
     std::size_t l_count = DEFAULT_LOG_COUNT;
     std::stack<logmessage_t> l_log;
 };
+
 };  // namespace zklog
 
 #endif  // !ZKLOG_HH

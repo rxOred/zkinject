@@ -27,7 +27,7 @@
 template <typename T>
 zkprocess::Ptrace<T>::Ptrace(char* const* path,
                              std::optional<zktypes::u8_t> flags,
-                             std::optional<zklog::ZkLog *> log)
+                             std::optional<zklog::Log *> log)
     : p_flags(flags.value()), p_log(log) {
     if (path == nullptr) {
         throw std::invalid_argument("path is invalid");
@@ -41,7 +41,7 @@ void zkprocess::Ptrace<T>::ptrace_init_from_file(
     p_pid = fork();
     if (p_pid == 0) {
         if (ZK_CHECK_FLAGS(PTRACE_DISABLE_ASLR, flags)) {
-            personality(ADDR_NO_RANDOMIZE);  // permission required
+            personality(ADDR_NO_RANDOMIZE);  // sudo required
         }
         if (ptrace(PTRACE_TRACEME, 0, nullptr, nullptr) < 0) {
             throw zkexcept::ptrace_error("ptrace traceme failed");
@@ -56,19 +56,10 @@ void zkprocess::Ptrace<T>::ptrace_init_from_file(
     }
 }
 
-/* TODO
 template <typename T>
 zkprocess::Ptrace<T>::Ptrace(pid_t pid, std::optional<zktypes::u8_t> flags,
-                             std::optional<zklog::Log *> log) {
-    : p_flags(flags.value()), p_log(log) {
-        if (pid == 0) {
-            throw std::invalid_argument("path is wrong")
-        }
-    }
-}
-*/
+                             std::optional<zklog::Log *> log) {}
 
-// TODO
 template <typename T>
 void zkprocess::Ptrace<T>::ptrace_init_from_pid(pid_t pid) noexcept {}
 
@@ -99,7 +90,7 @@ void zkprocess::Ptrace<T>::attach_to_process(void) {
     wait_for_process(0);
 }
 
-//TODO
+// TODO
 template <typename T>
 void zkprocess::Ptrace<T>::seize_process(void) {
     //    if (ptrace(PTRACE_SEIZE, p_pid, nullptr, nullptr) < 0)
