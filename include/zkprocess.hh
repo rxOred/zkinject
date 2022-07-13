@@ -16,7 +16,7 @@
 
 namespace zkprocess {
 
-// defines everything that a process owns
+// this class defines everything that a process owns
 class ZkProcess {
 public:
 private:
