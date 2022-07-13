@@ -13,7 +13,8 @@ int main(int argc, char *argv[])
 
     using namespace zkprocess;
     auto& logger = zklog::ZkLog::get_logger();
-    auto process = zkprocess::load_process_from_file(s, &logger);    
+    auto process = zkprocess::load_process_from_file(s, &logger);
+    process->p_memory_map.
 
     ZkProcess::Ptrace ptrace((const char **)s, 0, ZkProcess::PTRACE_START_NOW, &log);
     auto memmap = ptrace.GetMemoryMap();
