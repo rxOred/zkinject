@@ -1,5 +1,6 @@
 #include <zkinject/zkprocess.hh>
 #include <zkinject/zklog.hh>
+#include <wait.h>
 
 int main(int argc, char *argv[])
 {
@@ -11,17 +12,10 @@ int main(int argc, char *argv[])
     s[0] = argv[1];
     s[1] = nullptr;
 
-    using namespace zkprocess;
-    auto& logger = zklog::ZkLog::get_logger();
-    auto process = zkprocess::load_process_from_file(s, &logger);
-    process->p_memory_map.
-
-    ZkProcess::Ptrace ptrace((const char **)s, 0, ZkProcess::PTRACE_START_NOW, &log);
-    auto memmap = ptrace.GetMemoryMap();
-    for (auto it = memmap->GetIteratorBegin(); it != memmap->GetIteratorLast(); ++it) {
-        std::cout << std::hex << it->get()->GetPageStartAddress() << "\t"
-                  << std::hex << it->get()->GetPageEndAddress() << "\t"
-                  << it->get()->GetPagePermissions() << "\t"
-                  << it->get()->GetPageName() << std::endl;
+    pid_t pid = fork();
+    if (pid == 0) {
+        
+    } else if (pid > 0) {
+        
     }
 }

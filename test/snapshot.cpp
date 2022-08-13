@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
     ptrace.ReadRegisters(&regs);
     print_registers(regs);
 
-    // FIXME wont restore
+    // FIXME wont restore captured snapshot
     std::cout << "[+] restoring snapshot" << std::endl;
     snapshot.RestoreSnapshot(ptrace);
     ptrace.ReadRegisters(&regs);

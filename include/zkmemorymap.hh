@@ -37,7 +37,7 @@ public:
     inline std::string get_page_permissions(void) const {
         return page_permissions;
     }
-    inline std::optional<std::string> get_page_name(void) const {
+    inline std::string get_page_name(void) const {
 		return page_name.value_or("");
 	}
 
@@ -52,7 +52,8 @@ template <typename T>
 class MemoryMap {
 public:
     MemoryMap(pid_t pid);
-	void get_memory_map(void);
+    void parse_memory_map(void);
+	std::vector<page_t<T>> get_memory_map(void) const;
     std::optional<typename T::addr_t> get_module_start_address(
         const char* module_name) const;
     std::optional<typename T::addr_t> get_module_end_address(
@@ -60,7 +61,7 @@ public:
 
     std::optional<std::tuple<typename T::addr_t, typename T::addr_t,
                              std::string, std::optional<std::string>>>
-    GetModulePage(const char* module_name) const;
+    get_module_page(const char* module_name) const;
 
     inline const page_t<T>& get_base_page(void) const {
         return mm_pageinfo[0];

@@ -12,8 +12,7 @@
 #include "zkutils.hh"
 
 template <typename T>
-void zkprocess::MemoryMap<T>::get_memory_map(void) {
-
+void zkprocess::MemoryMap<T>::parse_memory_map(void) {
     // FIXME make this more c++ like
     char buffer[24];
     if (mm_pid != 0) {
@@ -48,23 +47,28 @@ void zkprocess::MemoryMap<T>::get_memory_map(void) {
         std::sscanf(end_addr.c_str(), "%lx", &e_addr);
 
         mm_pageinfo.emplace_back(s_addr, e_addr, permissions, name);
-    }	
+    }
+}
+
+template <typename T>
+std::vector<zkprocess::page_t<T>> zkprocess::MemoryMap<T>::get_memory_map(void) const {
+    return mm_pageinfo;
 }
 
 template <typename T>
 zkprocess::MemoryMap<T>::MemoryMap(pid_t pid)
 	:mm_pid(pid)
 {}
-    // FIXME make this a seperate method because this wont parse the
+    // FIXME -FIXED  make this a seperate method because this wont parse the
     // whole memory map since program is not loaded yet, its ust the
     // binary and the dynamic linker
 
 template <typename T>    
 std::optional<
     std::tuple<typename T::addr_t, typename T::addr_t, std::string, std::optional<std::string>>>
-zkprocess::MemoryMap<T>::GetModulePage(const char* module_name) const {
+zkprocess::MemoryMap<T>::get_module_page(const char* module_name) const {
     for (auto const& x : mm_pageinfo) {
-        if (x.get_page_name().value_or("").compare(module_name)) {
+        if (x.get_page_name().compare(module_name)) {
             return std::make_tuple(
                 x.get_page_start_address(), x.get_page_end_address(),
                 x.get_page_permissions(), x.get_page_name());
@@ -77,7 +81,7 @@ template <typename T>
 std::optional<typename T::addr_t> zkprocess::MemoryMap<T>::get_module_start_address(
     const char* module_name) const {
     for (auto const& x : mm_pageinfo) {
-        if (x.get_page_name().value_or("").compare(module_name)) {
+        if (x.get_page_name().compare(module_name)) {
             return x.get_page_start_address();
         }
     }
@@ -88,7 +92,7 @@ template <typename T>
 std::optional<typename T::addr_t> zkprocess::MemoryMap<T>::get_module_end_address(
     const char* module_name) const {
     for (auto const& x : mm_pageinfo) {
-        if (x.get_page_name().value_or("").compare(module_name)) {
+        if (x.get_page_name().compare(module_name)) {
             return x.get_page_end_address();
         }
     }

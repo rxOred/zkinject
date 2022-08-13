@@ -471,7 +471,7 @@ public:
     void set_note_section(void *new_note);
 
 private:
-    // essential sections of the elf binary
+    // essential sections of an elf binary
     ehdr_t<T> *e_ehdr = nullptr;
     phdr_t<T> *e_phdrtab = nullptr;
     shdr_t<T> *e_shdrtab = nullptr;
@@ -487,7 +487,7 @@ private:
     nhdr_t<T> *e_nhdr = nullptr;
 
 	bool e_is_stripped = false;
-    void *e_memory_map;
+    void *e_memory_map; // NOTE not the process memory map, just the buffer that holds the elf file
     std::size_t e_map_size;
     std::variant<const char *, pid_t> e_source;
     std::array<zktypes::u8_t, ELF_INDEX_ARRAY_SIZE> e_section_indexes;
