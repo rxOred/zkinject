@@ -9,3 +9,4 @@ Debug/
 *.in
 .cache/
 .vscode
+.gdb_history
