@@ -2,7 +2,7 @@
 
 #include "zkexcept.hh"
 
-std::pair<void *, std::size_t> open_file(const char *path) {
+std::pair<void *, std::size_t> zkutils::open_file(const char *path) {
     int fd = open(path, O_RDWR);
     if (fd < 0) {
         throw zkexcept::file_not_found_error();

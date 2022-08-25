@@ -25,23 +25,29 @@ std::shared_ptr<zkelf::ZkElf> zkelf::load_elf_from_file(
     auto pair = zkutils::open_file(path);
     elf_core *core = (elf_core *)pair.first;
     // check the magic number to validate the file
-    zktypes::u8_t magic[4] = {0x7f, 0x44, 0x4c, 0x46};
+    zktypes::u8_t magic[4] = {0x7f, 0x45, 0x4c, 0x46};
     if (!zkutils::validate_magic_number<zktypes::u8_t, 4>(core->ei_magic,
                                                           magic)) {
         throw zkexcept::invalid_file_format_error();
     }
 
-    std::shared_ptr<ZkElf> ptr =
-        std::make_shared<ZkElf>(flags, log);
-
     if (core->ei_class == (zktypes::u8_t)ei_class::ELFCLASS32) {
-        ptr->elf_obj = ElfObj<x86>(pair.first, pair.second, path);
+        std::shared_ptr<ZkElf> ptr = std::make_shared<ZkElf>(
+            flags, 
+            ElfObj<x86>((void *)pair.first, pair.second, path), 
+            log
+        );
+        return ptr;
     } else if (core->ei_class == (zktypes::u8_t)ei_class::ELFCLASS64) {
-        ptr->elf_obj = ElfObj<x64>(pair.first, pair.second, path);
+        std::shared_ptr<ZkElf> ptr = std::make_shared<ZkElf>(
+            flags, 
+            ElfObj<x64>((void *)pair.first, pair.second, path), 
+            log
+        );
+        return ptr;
     } else {
         throw zkexcept::invalid_file_type_error();
     }
-    return ptr;
 }
 
 void zkelf::load_elf_from_memory(void) {
@@ -52,9 +58,9 @@ template <typename T>
 zkelf::ElfObj<T>::ElfObj(void *map, std::size_t size,
                          std::variant<const char *, pid_t> s)
     : e_memory_map(map), e_map_size(size), e_source(s) {
-    e_ehdr = (ehdr_t<T> *)map;
-    e_phdrtab = (phdr_t<T> *)map + e_ehdr->elf_phoff;
-    e_shdrtab = (shdr_t<T> *)map + e_ehdr->elf_shoff;
+    e_ehdr = (ehdr_t<T> *)e_memory_map;
+    e_phdrtab = (phdr_t<T> *)(e_memory_map + e_ehdr->elf_phoff);
+    e_shdrtab = (shdr_t<T> *)(e_memory_map + e_ehdr->elf_shoff);
     if (e_ehdr->elf_shstrndx ==
             static_cast<zktypes::u16_t>(sh_n::SHN_UNDEF) ||
         e_ehdr->elf_shstrndx > e_ehdr->elf_shnum ||
@@ -62,7 +68,7 @@ zkelf::ElfObj<T>::ElfObj(void *map, std::size_t size,
         e_is_stripped = true;
     } else {
         e_shstrtab =
-            (strtab_t)map + e_shdrtab[e_ehdr->elf_shstrndx].sh_offset;
+            (strtab_t)e_memory_map + e_shdrtab[e_ehdr->elf_shstrndx].sh_offset;
     }
 }
 
@@ -219,8 +225,9 @@ void zkelf::ElfObj<T>::set_note_section(void *new_note) {
 }
 
 zkelf::ZkElf::ZkElf(zkelf::elf_flags flags,
+                    std::variant<ElfObj<x64>, ElfObj<x86>> obj,
                     std::optional<zklog::ZkLog *> log)
-    : elf_flag(flags), elf_log(log) {}
+    : elf_flag(flags), elf_obj(obj), elf_log(log) {}
 
 bool zkelf::ZkElf::load_symbol_data(void) {
     std::array<zktypes::u8_t, ELF_INDEX_ARRAY_SIZE> indexes;
