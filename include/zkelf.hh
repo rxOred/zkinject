@@ -433,7 +433,7 @@ enum elf_shdr_indexes : short {
 template <typename T = x64>
 class ElfObj {
 public:
-    ElfObj() = default;
+    ElfObj() = delete;
     ElfObj(void *map, std::size_t size,
            std::variant<const char *, pid_t> s);
     ~ElfObj() = default;
@@ -504,7 +504,11 @@ enum class elf_flags : zktypes::u8_t {
 // ElfObj by default
 class ZkElf {
 public:
-    ZkElf(elf_flags flags, std::optional<zklog::ZkLog *> log = std::nullopt);
+    ZkElf(
+        elf_flags flags, 
+        std::variant<ElfObj<x64>, ElfObj<x86>> obj,
+        std::optional<zklog::ZkLog *> log = std::nullopt
+    );
     ZkElf(const ZkElf &) = delete;
     ZkElf(ZkElf &&) = delete;
 

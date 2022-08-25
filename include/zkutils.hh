@@ -27,7 +27,7 @@ template <typename T, int size>
 bool validate_magic_number(T a[size], T b[size])
 {
 	for (int i = 0; i < size; ++i) {
-		if (a[i] != b[i]) {
+ 		if (a[i] != b[i]) {
 			return false;
 		}
 	}
