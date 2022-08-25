@@ -11,6 +11,7 @@ int main(int argc, char *argv[])
 
     using namespace zkelf;
     auto elf = load_elf_from_file(const_cast<char *>(argv[1]), zkelf::elf_flags::ELF_AUTO_SAVE);
+    printf("parsing elf binary");
 
     printf("is stripped: %lx\n", elf->is_stripped());
     printf("elf size:  %lx\n",  elf->get_map_size());
