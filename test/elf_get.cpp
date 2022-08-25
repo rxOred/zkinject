@@ -12,51 +12,51 @@ int main(int argc, char *argv[])
     using namespace zkelf;
     auto elf = load_elf_from_file(const_cast<char *>(argv[1]), zkelf::elf_flags::ELF_AUTO_SAVE);
 
-    std::cout << "is stripped: " << elf->is_stripped() << std::endl;
-    std::cout << "elf size: " << elf->get_map_size() << std::endl;
-    std::cout << "elf class: " << elf->get_elf_class() << std::endl;
-    std::cout << "elf encoding: " << elf->get_elf_encoding() << std::endl;
-    std::cout << "elf osabi: " << elf->get_elf_osabi() << std::endl;
-    std::cout << "elf types: " << elf->get_elf_type() << std::endl;
-    std::cout << "elf machine: " << elf->get_elf_machine() << std::endl;
-    std::cout << "elf version: " << elf->get_elf_version() << std::endl;
-    std::cout << "elf entry: " << elf->get_elf_entry_point() << std::endl;
-    std::cout << "elf phdr offset: " << elf->get_elf_phdr_offset() << std::endl;
-    std::cout << "elf shdr offset: " << elf->get_elf_shdr_offset() << std::endl;
-    std::cout << "elf flags: " << elf->get_elf_flags() <<  std::endl;
-    std::cout << "elf header size: " << elf->get_elf_header_size() << std::endl;
-    std::cout << "elf phdr entry count: "<< elf->get_elf_phdr_entry_count() << std::endl;
-    std::cout << "elf phdr entry size: " << elf->get_elf_phdr_entry_size() << std::endl;
-    std::cout << "elf shdr entry count: "<< elf->get_elf_shdr_entry_count() << std::endl;
-    std::cout << "elf shdr entry size: " << elf->get_elf_shdr_entry_size() << std::endl;
-    std::cout << "elf string table index: " << elf->get_elf_shdr_string_table_index() << std::endl << std::endl;
+    printf("is stripped: %lx\n", elf->is_stripped());
+    printf("elf size:  %lx\n",  elf->get_map_size());
+    printf("elf class: %lx\n", elf->get_elf_class());
+    printf("elf encoding: %lx\n",  elf->get_elf_encoding());
+    printf("elf osabi: %lx\n",  elf->get_elf_osabi());
+    printf("elf types: %lx\n",  elf->get_elf_type());
+    printf("elf machine: %lx\n",  elf->get_elf_machine());
+    printf("elf version: %lx\n",  elf->get_elf_version());
+    printf("elf entry: %lx\n",  elf->get_elf_entry_point());
+    printf("elf phdr offset: %lx\n",  elf->get_elf_phdr_offset());
+    printf("elf shdr offset: %lx\n",  elf->get_elf_shdr_offset());
+    printf("elf flags: %lx\n",  elf->get_elf_flags());
+    printf("elf header size: %lx\n",  elf->get_elf_header_size());
+    printf("elf phdr entry count: %lx\n", elf->get_elf_phdr_entry_count());
+    printf("elf phdr entry size: %lx\n",  elf->get_elf_phdr_entry_size());
+    printf("elf shdr entry count: %lx\n", elf->get_elf_shdr_entry_count());
+    printf("elf shdr entry size: %lx\n",  elf->get_elf_shdr_entry_size());
+    printf("elf string table index: %lx\n",  elf->get_elf_shdr_string_table_index());
 
-    std::cout << "program header table" << std::endl;
-    std::cout << "type\toffset\tvaddress\tpaddress\tflags\tfilesize\tmemorysize\talignment\t" << std::endl;
+    printf("program header table");
+    printf("type\toffset\tvaddress\tpaddress\tflags\tfilesize\tmemorysize\talignment\t");
     for (std::size_t i = 0; i < elf->get_elf_phdr_entry_count(); i++) {
-        std::cout << elf->get_segment_type(i) << "\t";
-        std::cout << elf->get_segment_offset(i) << "\t";
-        std::cout << elf->get_segment_vaddress(i) << "\t";
-        std::cout << elf->get_segment_paddress(i) << "\t";
-        std::cout << elf->get_segment_flags(i) << "\t";
-        std::cout << elf->get_segment_file_size(i) << "\t";
-        std::cout << elf->get_segment_memory_size(i) << "\t";
-        std::cout << elf->get_segment_address_alignment(i) << std::endl;
+        printf("%lx\t", elf->get_segment_type(i));
+        printf("%lx\t", elf->get_segment_offset(i));
+        printf("%lx\t", elf->get_segment_vaddress(i));
+        printf("%lx\t", elf->get_segment_paddress(i));
+        printf("%lx\t", elf->get_segment_flags(i));
+        printf("%lx\t", elf->get_segment_file_size(i));
+        printf("%lx\t", elf->get_segment_memory_size(i));
+        printf("%lx\t", elf->get_segment_address_alignment(i));
     }
     puts("");
 
-    std::cout << "section header table " << std::endl;
-    std::cout << "nameindex\t type \t flags \t address \t offset \t size \t addralign \t entrysz \t link \t info" << std::endl;
+    printf("section header table ");
+    printf("nameindex\t type \t flags \t address \t offset \t size \t addralign \t entrysz \t link \t info");
     for (std::size_t i = 0; i < elf->get_elf_shdr_entry_count(); i++) {
-        std::cout << elf->get_section_name_index(i) << "\t";
-        std::cout << elf->get_section_type(i) << "\t";
-        std::cout << elf->get_section_flags(i) << "\t";
-        std::cout << elf->get_section_address(i) << "\t";
-        std::cout << elf->get_section_offset(i) << "\t";
-        std::cout << elf->get_section_size(i) << "\t";
-        std::cout << elf->get_section_address_alignment(i) << "\t";
-        std::cout << elf->get_section_entry_size(i) << "\t";
-        std::cout << elf->get_section_link(i) << "\t";
-        std::cout << elf->get_section_info(i) << "\t";
+        printf("%lx\t", elf->get_section_name_index(i));
+        printf("%lx\t", elf->get_section_type(i));
+        printf("%lx\t", elf->get_section_flags(i));
+        printf("%lx\t", elf->get_section_address(i));
+        printf("%lx\t", elf->get_section_offset(i));
+        printf("%lx\t", elf->get_section_size(i));
+        printf("%lx\t", elf->get_section_address_alignment(i));
+        printf("%lx\t", elf->get_section_entry_size(i));
+        printf("%lx\t", elf->get_section_link(i));
+        printf("%lx\t", elf->get_section_info(i));
     }
 }

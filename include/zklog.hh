@@ -60,7 +60,7 @@ public:
     log_level peek_log_level(void);
 
 private:
-    ZkLog() {}
+    ZkLog() = default;
 
     static ZkLog l_instance;
     std::size_t l_count = DEFAULT_LOG_COUNT;

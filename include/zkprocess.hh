@@ -21,11 +21,15 @@ class ZkProcess {
 public:
 private:
 public:	
-    ZkProcess();
+    ZkProcess(
+        std::shared_ptr<zkelf::ZkElf> elf,
+        std::variant<Ptrace<x64>, Ptrace<x86>> p,
+        std::variant<MemoryMap<x64>, MemoryMap<x86>> mm
+    );
     std::shared_ptr<zkelf::ZkElf> p_elf;
     std::variant<Ptrace<x64>, Ptrace<x86>> p_ptrace;
     std::variant<MemoryMap<x64>, MemoryMap<x86>> p_memory_map;
-	std::variant<Snapshot<x64>, Snapshot<x86>> p_snapshot;
+	//std::variant<Snapshot<x64>, Snapshot<x86>> p_snapshot;
     
     void parse_memory_map(void) {
         if (auto mm = std::get_if<MemoryMap<x64>>(&p_memory_map)) {
@@ -59,7 +63,7 @@ public:
     const MemoryMap<x86>* get_memory_map_if_x86(void) const {
         auto mm = std::get_if<MemoryMap<x86>>(&p_memory_map);
     }
-
+/*
     const Snapshot<x64>* get_snapshot_if_x64(void) const {
         return std::get_if<Snapshot<x64>>(&p_snapshot);
     }

@@ -436,7 +436,7 @@ public:
     ElfObj() = default;
     ElfObj(void *map, std::size_t size,
            std::variant<const char *, pid_t> s);
-    ~ElfObj();
+    ~ElfObj() = default;
 
     bool is_stripped(void) const;
 	

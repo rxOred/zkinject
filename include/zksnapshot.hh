@@ -53,7 +53,7 @@ public:
     Snapshot(const Snapshot &) = default;
     Snapshot(Snapshot &&) = default; 
 	
-    ~Snapshot();
+    ~Snapshot() = default;
     bool save_snapshot(zktypes::u8_t flags);
     bool restore_snapshot(void);
     void clear_snapshots(void);
