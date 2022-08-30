@@ -34,7 +34,8 @@ void zkprocess::MemoryMap<T>::parse_memory_map(void) {
     // 5 for the PT_LOAD segments of the dynamic linker
     // rest for the stack, heap, vdso and vvar
     mm_pageinfo.reserve(13);
-    while (std::getline(fh, line)) {
+
+	while (std::getline(fh, line)) {
         std::regex_match(line, match, regex);
         start_addr = match.str(0);
         end_addr = match.str(1);
