@@ -1,5 +1,6 @@
 #include <cstddef>
 #include <optional>
+#include <iostream>
 #include <zkinject/zkelf.hh>
 #include <zkinject/zkmemorymap.hh>
 #include <zkinject/zkprocess.hh>

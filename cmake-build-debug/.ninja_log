@@ -1,0 +1,13 @@
+# ninja log v5
+1	279	1662423722449936353	CMakeFiles/zkinject.dir/src/zksignal.cc.o	48e60081ed269a6d
+0	374	1662423722549936351	CMakeFiles/zkinject.dir/src/zkhooks.cc.o	28eb333e5f9397c
+1	402	1662423722576603017	CMakeFiles/zkinject.dir/src/zkutils.cc.o	2188071643c50fd1
+0	531	1662423722706603014	CMakeFiles/zkinject.dir/src/zklog.cc.o	99d57fbfcd51da45
+1	776	1662423722953269675	CMakeFiles/zkinject.dir/src/zksnapshot.cc.o	84aa5b28b9536558
+0	813	1662423722989936340	CMakeFiles/zkinject.dir/src/zkptrace.cc.o	752d8256389d99e5
+0	946	1662423723119936338	CMakeFiles/zkinject.dir/src/zkelf.cc.o	426b38916c02b0df
+0	956	1662423723133269670	CMakeFiles/zkinject.dir/src/zkprocess.cc.o	f37ead248c138094
+0	2136	1662423724309936309	CMakeFiles/zkinject.dir/src/zkmemorymap.cc.o	2d68830b4ceec14a
+2136	2256	1662423724429936306	libzkinject.so.0.1	e5aa7f48aa76ca00
+2256	2261	1662423724429936306	libzkinject.so.1	a6d9c068718a46a4
+2256	2261	1662423724429936306	libzkinject.so	a6d9c068718a46a4

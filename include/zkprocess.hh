@@ -39,11 +39,11 @@ public:
         }
     }
 
-    zkelf::ZkElf* get_elf(void) const {
+    [[nodiscard]] zkelf::ZkElf* get_elf(void) const {
         return p_elf.get();
     }
 
-    zkelf::ei_class get_process_arch(void) const {
+    [[nodiscard]] zkelf::ei_class get_process_arch(void) const {
         return p_elf->get_elf_class();
     }
 
@@ -82,7 +82,7 @@ TODO
 */
 
     friend std::shared_ptr<ZkProcess> load_process_from_file(
-        char* const* path);
+        char* const* path, std::optional<zklog::ZkLog *> log);
 };
 
 std::shared_ptr<ZkProcess> load_process_from_file(
