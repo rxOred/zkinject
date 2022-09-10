@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <memory>
 #include <optional>
 #include <random>
 #include <stdexcept>
@@ -24,36 +25,40 @@
 // FIXME remove all the XXX_NOW bullshit. those are useless specifially,
 // attach_NOW. instead just attach and start processes.
 
+std::shared_ptr<zkprocess::Ptrace<x64>> zkprocess::init_from_file_if_x64(
+    char *const *path, zktypes::u8_t flags,
+    std::optional<zklog::ZkLog *> log) noexcept {
+
+    return std::make_shared<Ptrace<x64>>(path, flags);
+}
+
+std::shared_ptr<zkprocess::Ptrace<x86>> zkprocess::init_from_file_if_x86(
+    char *const *path, zktypes::u8_t flags,
+    std::optional<zklog::ZkLog *> log) noexcept {
+
+    return std::make_shared<Ptrace<x86>>(path, flags);
+}
+
+std::shared_ptr<zkprocess::Ptrace<x64>> zkprocess::init_from_pid_if_x64(
+    pid_t pid, std::optional<zklog::ZkLog *> log) noexcept {
+
+}
+
+std::shared_ptr<zkprocess::Ptrace<x86>> zkprocess::init_from_pid_if_x86(
+    pid_t pid, std::optional<zklog::ZkLog *> log) noexcept {
+
+}
+
 template <typename T>
-zkprocess::Ptrace<T>::Ptrace(char* const* path,
+zkprocess::Ptrace<T>::Ptrace(char *const *path,
                              std::optional<zktypes::u8_t> flags,
                              std::optional<zklog::ZkLog *> log)
     : p_flags(flags.value()), p_log(log) {
     if (path == nullptr) {
         throw std::invalid_argument("path is invalid");
     }
+    // TODO call internal functions like start_process , atttach_process
     ptrace_init_from_file(path, flags.value_or(PTRACE_DISABLE_ASLR));
-}
-
-template <typename T>
-void zkprocess::Ptrace<T>::ptrace_init_from_file(
-    char* const* path, zktypes::u8_t flags) noexcept {
-    p_pid = fork();
-    if (p_pid == 0) {
-        if (ZK_CHECK_FLAGS(PTRACE_DISABLE_ASLR, flags)) {
-            personality(ADDR_NO_RANDOMIZE);  // permission required
-        }
-        if (ptrace(PTRACE_TRACEME, 0, nullptr, nullptr) < 0) {
-            throw zkexcept::ptrace_error("ptrace traceme failed");
-        }
-        if (execvp(path[0], path) < 0) {
-            throw zkexcept::process_error("failed to exec given file");
-        }
-    } else if (p_pid > 0) {
-        wait_for_process(0);
-    } else {
-        throw zkexcept::process_error("failed to fork process");
-    }
 }
 
 /* TODO
@@ -99,7 +104,7 @@ void zkprocess::Ptrace<T>::attach_to_process(void) {
     wait_for_process(0);
 }
 
-//TODO
+// TODO
 template <typename T>
 void zkprocess::Ptrace<T>::seize_process(void) {
     //    if (ptrace(PTRACE_SEIZE, p_pid, nullptr, nullptr) < 0)
@@ -118,7 +123,7 @@ void zkprocess::Ptrace<T>::start_process(char **pathname) {
             throw zkexcept::ptrace_error("ptrace traceme failed\n");
         }
         if (execvp(pathname[0], pathname) == -1) {
-            std::exit(EXIT_FAILURE);
+            throw zkexcept::process_error("failed to exec given file");
         }
     } else if (p_pid > 0) {
         wait_for_process(0);
@@ -392,7 +397,8 @@ typename T::addr_t zkprocess::Ptrace<T>::write_process_memory(
         // read what is at that address, and replace original data
         try {
             zktypes::u64_t o_buffer = 0x0;
-            read_process_memory(&o_buffer, addr, sizeof(typename T::addr_t));
+            read_process_memory(&o_buffer, addr,
+                                sizeof(typename T::addr_t));
             o_buffer =
                 (((o_buffer) & (0xffffffffffffffff << (buffer_sz * 8))) |
                  o_buffer);
@@ -418,7 +424,8 @@ typename T::addr_t zkprocess::Ptrace<T>::write_process_memory(
         // write remaining bytes
         try {
             zktypes::u64_t o_buffer = 0x0;
-            read_process_memory(&o_buffer, addr, sizeof(typename T::addr_t));
+            read_process_memory(&o_buffer, addr,
+                                sizeof(typename T::addr_t));
             o_buffer =
                 (((o_buffer) & (0xffffffffffffffff << (remainder * 8))) |
                  o_buffer);
@@ -437,7 +444,8 @@ typename T::addr_t zkprocess::Ptrace<T>::write_process_memory(
 }
 
 template <typename T>
-bool zkprocess::Ptrace<T>::read_process_registers(const registers_t &registers) {
+bool zkprocess::Ptrace<T>::read_process_registers(
+    const registers_t &registers) {
     CHECKFLAGS_AND_ATTACH
 
     RETURN_IF_EXITED(false)
@@ -453,7 +461,8 @@ bool zkprocess::Ptrace<T>::read_process_registers(const registers_t &registers) 
 }
 
 template <typename T>
-bool zkprocess::Ptrace<T>::write_process_registers(const registers_t &registers) {
+bool zkprocess::Ptrace<T>::write_process_registers(
+    const registers_t &registers) {
     CHECKFLAGS_AND_ATTACH
 
     RETURN_IF_EXITED(false)
@@ -470,7 +479,8 @@ bool zkprocess::Ptrace<T>::write_process_registers(const registers_t &registers)
 
 template <typename T>
 void *zkprocess::Ptrace<T>::replace_memory_page(typename T::addr_t addr,
-                                         void *buffer, int buffer_size) {
+                                                void *buffer,
+                                                int buffer_size) {
     CHECKFLAGS_AND_ATTACH
 
     RETURN_IF_EXITED(nullptr)
@@ -499,7 +509,8 @@ void *zkprocess::Ptrace<T>::replace_memory_page(typename T::addr_t addr,
     zktypes::u8_t nop_array[ZK_PAGE_ALIGN_UP(buffer_size) - buffer_size];
     memset(nop_array, 0x90, sizeof(nop_array));
     try {
-        write_process_memory(nop_array, addr + buffer_size, sizeof(nop_array));
+        write_process_memory(nop_array, addr + buffer_size,
+                             sizeof(nop_array));
     } catch (zkexcept::ptrace_error &e) {
         std::cerr << e.what();
         std::exit(1);

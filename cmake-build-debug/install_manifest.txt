@@ -1,0 +1,14 @@
+/usr/lib/libzkinject.so.0.1
+/usr/lib/libzkinject.so.1
+/usr/lib/libzkinject.so
+/usr/include/zkinject/zkelf.hh
+/usr/include/zkinject/zkexcept.hh
+/usr/include/zkinject/zkhooks.hh
+/usr/include/zkinject/zklog.hh
+/usr/include/zkinject/zkmemorymap.hh
+/usr/include/zkinject/zkprocess.hh
+/usr/include/zkinject/zkptrace.hh
+/usr/include/zkinject/zksignal.hh
+/usr/include/zkinject/zksnapshot.hh
+/usr/include/zkinject/zktypes.hh
+/usr/include/zkinject/zkutils.hh

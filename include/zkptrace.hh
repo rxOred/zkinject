@@ -1,6 +1,9 @@
 #ifndef ZKPTRACE_HH
 #define ZKPTRACE_HH
 
+#include <sched.h>
+
+#include <memory>
 #include <optional>
 
 #include "zkexcept.hh"
@@ -117,7 +120,7 @@ public:
     Ptrace(pid_t pid, std::optional<zktypes::u8_t> flags = std::nullopt);
     ~Ptrace();
 
-    Ptrace(char* const* path,
+    Ptrace(char *const *path,
            std::optional<zktypes::u8_t> flags = PTRACE_START_NOW |
                                                 PTRACE_DISABLE_ASLR,
            std::optional<zklog::ZkLog *> log = std::nullopt);
@@ -125,7 +128,7 @@ public:
            std::optional<zktypes::u8_t> flags = PTRACE_ATTACH_NOW,
            std::optional<zklog::ZkLog *> log = std::nullopt);
 
-    void ptrace_init_from_file(char* const* path,
+    void ptrace_init_from_file(char *const *path,
                                zktypes::u8_t flags) noexcept;
     void ptrace_init_from_pid(pid_t pid) noexcept;
 
@@ -135,6 +138,8 @@ public:
         return p_state_info;
     }
 
+    // dont want these to terminate after exception
+    // because user should be able to handle those
     void attach_to_process(void);
     void seize_process(void);
     void start_process(char **pathname);
@@ -172,6 +177,20 @@ public:
     // TODO methods to read thread state using registers
     //  CreateThread
 
+    friend std::shared_ptr<Ptrace<x64>> init_from_file_if_x64(
+        char *const *path, zktypes::u8_t flags,
+        std::optional<zklog::ZkLog *> log) noexcept;
+
+    friend std::shared_ptr<Ptrace<x86>> init_from_file_if_x86(
+        char *const *path, zktypes::u8_t flags,
+        std::optional<zklog::ZkLog *> log) noexcept;
+
+    friend std::shared_ptr<Ptrace<x64>> init_from_pid_if_x64(
+        pid_t pid, std::optional<zklog::ZkLog *> log) noexcept;
+
+    friend std::shared_ptr<Ptrace<x86>> init_from_pid_if_x86(
+        pid_t pid, std::optional<zklog::ZkLog *> log) noexcept;
+
 private:
     zktypes::u8_t p_flags = 0;
 
@@ -180,6 +199,21 @@ private:
     pid_t p_pid;
     std::optional<zklog::ZkLog *> p_log;
 };
+
+std::shared_ptr<Ptrace<x64>> init_from_file_if_x64(
+    char *const *path, zktypes::u8_t flags,
+    std::optional<zklog::ZkLog *> log) noexcept;
+
+std::shared_ptr<Ptrace<x86>> init_from_file_if_x86(
+    char *const *path, zktypes::u8_t flags,
+    std::optional<zklog::ZkLog *> log) noexcept;
+
+std::shared_ptr<Ptrace<x64>> init_from_pid_if_x64(
+    pid_t pid, std::optional<zklog::ZkLog *> log) noexcept;
+
+std::shared_ptr<Ptrace<x86>> init_from_pid_if_x86(
+    pid_t pid, std::optional<zklog::ZkLog *> log) noexcept;
+
 };  // namespace zkprocess
 
 #endif  // ZKPTRACE_HH

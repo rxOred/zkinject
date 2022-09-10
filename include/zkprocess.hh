@@ -61,7 +61,7 @@ public:
     }
 
     const MemoryMap<x86>* get_memory_map_if_x86(void) const {
-        auto mm = std::get_if<MemoryMap<x86>>(&p_memory_map);
+        return std::get_if<MemoryMap<x86>>(&p_memory_map);
     }
 /*
     const Snapshot<x64>* get_snapshot_if_x64(void) const {
