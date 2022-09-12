@@ -2,6 +2,7 @@
 
 #include <asm-generic/errno-base.h>
 #include <bits/types/siginfo_t.h>
+#include <sched.h>
 #include <sys/personality.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
@@ -28,25 +29,23 @@
 std::shared_ptr<zkprocess::Ptrace<x64>> zkprocess::init_from_file_if_x64(
     char *const *path, zktypes::u8_t flags,
     std::optional<zklog::ZkLog *> log) noexcept {
-
-    return std::make_shared<Ptrace<x64>>(path, flags);
+    return std::make_shared<Ptrace<x64>>(path, flags, log);
 }
 
 std::shared_ptr<zkprocess::Ptrace<x86>> zkprocess::init_from_file_if_x86(
     char *const *path, zktypes::u8_t flags,
     std::optional<zklog::ZkLog *> log) noexcept {
-
-    return std::make_shared<Ptrace<x86>>(path, flags);
+    return std::make_shared<Ptrace<x86>>(path, flags, log);
 }
 
 std::shared_ptr<zkprocess::Ptrace<x64>> zkprocess::init_from_pid_if_x64(
     pid_t pid, std::optional<zklog::ZkLog *> log) noexcept {
-
+    return std::make_shared<Ptrace<x64>>(pid, std::nullopt, log);
 }
 
 std::shared_ptr<zkprocess::Ptrace<x86>> zkprocess::init_from_pid_if_x86(
     pid_t pid, std::optional<zklog::ZkLog *> log) noexcept {
-
+    return std::make_shared<Ptrace<x86>>(pid, std::nullopt, log);
 }
 
 template <typename T>
@@ -58,8 +57,13 @@ zkprocess::Ptrace<T>::Ptrace(char *const *path,
         throw std::invalid_argument("path is invalid");
     }
     // TODO call internal functions like start_process , atttach_process
-    ptrace_init_from_file(path, flags.value_or(PTRACE_DISABLE_ASLR));
+    //ptrace_init_from_file(path, flags.value_or(PTRACE_DISABLE_ASLR));
+	start_process(path);
 }
+
+template <typename T>
+zkprocess::Ptrace<T>::Ptrace(pid_t pid, std::optional<zktypes::u8_t> flags,
+                             std::optional<zklog::ZkLog *> log) {}
 
 /* TODO
 template <typename T>
@@ -72,10 +76,6 @@ zkprocess::Ptrace<T>::Ptrace(pid_t pid, std::optional<zktypes::u8_t> flags,
     }
 }
 */
-
-// TODO
-template <typename T>
-void zkprocess::Ptrace<T>::ptrace_init_from_pid(pid_t pid) noexcept {}
 
 template <typename T>
 bool zkprocess::Ptrace<T>::is_ptrace_stop(void) const {
@@ -113,14 +113,15 @@ void zkprocess::Ptrace<T>::seize_process(void) {
 }
 
 template <typename T>
-void zkprocess::Ptrace<T>::start_process(char **pathname) {
+void zkprocess::Ptrace<T>::start_process(char *const *pathname) {
     p_pid = fork();
     if (p_pid == 0) {
         if (ZK_CHECK_FLAGS(p_flags, PTRACE_DISABLE_ASLR)) {
             personality(ADDR_NO_RANDOMIZE);
         }
-        if (ptrace(PTRACE_TRACEME, 0, nullptr, nullptr) < 0) {
-            throw zkexcept::ptrace_error("ptrace traceme failed\n");
+        if (ptrace(PTRACE_TRACEME, 0, nullptr, nullptr) == -1) {
+			auto err = get_ptrace_error();
+            throw zkexcept::ptrace_error("ptrace traceme failed");
         }
         if (execvp(pathname[0], pathname) == -1) {
             throw zkexcept::process_error("failed to exec given file");
@@ -134,6 +135,10 @@ void zkprocess::Ptrace<T>::start_process(char **pathname) {
 
 template <typename T>
 void zkprocess::Ptrace<T>::detach_from_process(void) {
+    if (!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
+        !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) {
+        return;
+    }
     if (ptrace(PTRACE_DETACH, p_pid, nullptr, nullptr) < 0) {
         throw zkexcept::ptrace_error("ptrace detach failed\n");
     }

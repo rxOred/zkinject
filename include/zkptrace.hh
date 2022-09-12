@@ -12,9 +12,6 @@
 
 // TODO set up handlers to handle various stops, signals.
 
-// TODO -done
-// !check if p_log is null. if so dont push the log
-
 #define CHECKFLAGS_AND_ATTACH                                           \
     if (!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&                  \
         !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) {                   \
@@ -61,6 +58,7 @@ namespace zkprocess {
 
 enum PTRACE_FLAGS : zktypes::u8_t {
     PTRACE_SEIZE = 0,  // TODO ptrace seize
+    //	PTRACE_ATTACH_NEEDED, NOTE this feature seems to be useless
     PTRACE_ATTACH_NOW,
     PTRACE_START_NOW,
     PTRACE_DISABLE_ASLR
@@ -117,7 +115,6 @@ enum PTRACE_OPTIONS : zktypes::u16_t {
 template <typename T = x64>
 class Ptrace {
 public:
-    Ptrace(pid_t pid, std::optional<zktypes::u8_t> flags = std::nullopt);
     ~Ptrace();
 
     Ptrace(char *const *path,
@@ -128,22 +125,19 @@ public:
            std::optional<zktypes::u8_t> flags = PTRACE_ATTACH_NOW,
            std::optional<zklog::ZkLog *> log = std::nullopt);
 
-    void ptrace_init_from_file(char *const *path,
-                               zktypes::u8_t flags) noexcept;
-    void ptrace_init_from_pid(pid_t pid) noexcept;
-
     inline pid_t get_pid(void) const { return p_pid; }
     inline PROCESS_STATE get_process_state(void) const { return p_state; }
     inline PROCESS_STATE_INFO get_process_state_info(void) const {
         return p_state_info;
     }
 
+    void attach_to_process(void);
+    void start_process(char *const *pathname);
+    void detach_from_process(void);
+    void seize_process(void);
     // dont want these to terminate after exception
     // because user should be able to handle those
-    void attach_to_process(void);
-    void seize_process(void);
-    void start_process(char **pathname);
-    void detach_from_process(void);
+
     void kill_process(void);
     bool continue_process(bool pass_signal);
     bool is_ptrace_stop(void) const;
@@ -199,6 +193,12 @@ private:
     pid_t p_pid;
     std::optional<zklog::ZkLog *> p_log;
 };
+
+// TODO move this somewhere else and finish this
+const char *get_ptrace_error(int error) {
+    const char *e_str = "nothing";
+    return e_str;
+}
 
 std::shared_ptr<Ptrace<x64>> init_from_file_if_x64(
     char *const *path, zktypes::u8_t flags,
