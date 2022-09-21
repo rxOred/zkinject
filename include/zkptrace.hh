@@ -194,12 +194,6 @@ private:
     std::optional<zklog::ZkLog *> p_log;
 };
 
-// TODO move this somewhere else and finish this
-const char *get_ptrace_error(int error) {
-    const char *e_str = "nothing";
-    return e_str;
-}
-
 std::shared_ptr<Ptrace<x64>> init_from_file_if_x64(
     char *const *path, zktypes::u8_t flags,
     std::optional<zklog::ZkLog *> log) noexcept;

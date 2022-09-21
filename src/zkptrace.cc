@@ -120,7 +120,7 @@ void zkprocess::Ptrace<T>::start_process(char *const *pathname) {
             personality(ADDR_NO_RANDOMIZE);
         }
         if (ptrace(PTRACE_TRACEME, 0, nullptr, nullptr) == -1) {
-			auto err = get_ptrace_error();
+			auto err = "ptrace traceme failed ", std::strerror(errno) 
             throw zkexcept::ptrace_error("ptrace traceme failed");
         }
         if (execvp(pathname[0], pathname) == -1) {
