@@ -21,7 +21,7 @@
 
 namespace zkutils {
 
-std::pair<void *, std::size_t> open_file(const char *path);
+std::pair<void *, std::size_t> open_file(const char *path, bool should_writable = false);
 
 template <typename T, int size>
 bool validate_magic_number(T a[size], T b[size])
@@ -33,8 +33,9 @@ bool validate_magic_number(T a[size], T b[size])
 	}
 	return true;
 }
+
 inline void save_memory_map(const char *path, void *memory_map,
-                              int map_size) noexcept {
+                            int map_size) noexcept {
     int fd = open(path, O_CREAT | O_TRUNC | O_WRONLY, 0666);
     if (fd < 0) {
         throw std::runtime_error("open failed");

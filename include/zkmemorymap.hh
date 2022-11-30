@@ -4,6 +4,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "zktypes.hh"
@@ -22,22 +23,22 @@ public:
            std::optional<std::string> name = std::nullopt)
 		:page_saddr(saddr),
 		 page_eaddr(eaddr),
-		 page_permissions(permissions),
-		 page_name(name) {}
+		 page_permissions(std::move(permissions)),
+		 page_name(std::move(name)) {}
 	
     page_t(const page_t&) = default;
-    page_t(page_t&&) = default;
+    page_t(page_t&&)  noexcept = default;
 
-    inline typename T::addr_t get_page_start_address(void) const {
+    inline typename T::addr_t get_page_start_address() const {
         return page_saddr;
     }
-    inline typename T::addr_t get_page_end_address(void) const {
+    inline typename T::addr_t get_page_end_address() const {
         return page_eaddr;
     }
-    inline std::string get_page_permissions(void) const {
+    [[nodiscard]] inline std::string get_page_permissions() const {
         return page_permissions;
     }
-    inline std::string get_page_name(void) const {
+    [[nodiscard]] inline std::string get_page_name() const {
 		return page_name.value_or("");
 	}
 
@@ -51,9 +52,9 @@ private:
 template <typename T>
 class MemoryMap {
 public:
-    MemoryMap(pid_t pid);
-    void parse_memory_map(void);
-	std::vector<page_t<T>> get_memory_map(void) const;
+    explicit MemoryMap(pid_t pid);
+    void parse_memory_map();
+	std::vector<page_t<T>> get_memory_map() const;
     std::optional<typename T::addr_t> get_module_start_address(
         const char* module_name) const;
     std::optional<typename T::addr_t> get_module_end_address(
@@ -63,33 +64,33 @@ public:
                              std::string, std::optional<std::string>>>
     get_module_page(const char* module_name) const;
 
-    inline const page_t<T>& get_base_page(void) const {
+    inline const page_t<T>& get_base_page() const {
         return mm_pageinfo[0];
     }
-    inline const page_t<T>& get_end_page(void) const {
+    inline const page_t<T>& get_end_page() const {
         return *mm_pageinfo.end();
     }
     inline typename std::vector<page_t<T>>::const_iterator get_iterator_begin(
-        void) const {
+        ) const {
         return mm_pageinfo.begin();
     }
 
     inline typename std::vector<page_t<T>>::const_iterator
-    get_iterator_end(void) const {
+    get_iterator_end() const {
         return mm_pageinfo.end();
     }
     inline std::pair<typename std::vector<page_t<T>>::const_iterator,
                      typename std::vector<page_t<T>>::const_iterator>
-    get_interator_begin_end(void) const {
+    get_interator_begin_end() const {
         return std::make_pair(mm_pageinfo.begin(), mm_pageinfo.end());
     }
-    inline typename T::addr_t get_base_address(void) const {
+    inline typename T::addr_t get_base_address() const {
         return mm_pageinfo[0].get_page_start_address();
     }
-    inline typename T::addr_t get_base_end_address(void) const {
+    inline typename T::addr_t get_base_end_address() const {
         return mm_pageinfo[0].get_page_end_address();
     }
-    inline typename std::vector<page_t<T>> get_memory_pages(void) const {
+    inline typename std::vector<page_t<T>> get_memory_pages() const {
         return mm_pageinfo;
     }
     bool is_mapped(typename T::addr_t addr) const;

@@ -10,6 +10,7 @@
 
 #include <cerrno>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -56,26 +57,20 @@ zkprocess::Ptrace<T>::Ptrace(char *const *path,
     if (path == nullptr) {
         throw std::invalid_argument("path is invalid");
     }
-    // TODO call internal functions like start_process , atttach_process
-    //ptrace_init_from_file(path, flags.value_or(PTRACE_DISABLE_ASLR));
-	start_process(path);
+    // TODO call internal functions like start_process , attach_process
+    // ptrace_init_from_file(path, flags.value_or(PTRACE_DISABLE_ASLR));
+    start_process(path);
 }
 
 template <typename T>
 zkprocess::Ptrace<T>::Ptrace(pid_t pid, std::optional<zktypes::u8_t> flags,
-                             std::optional<zklog::ZkLog *> log) {}
-
-/* TODO
-template <typename T>
-zkprocess::Ptrace<T>::Ptrace(pid_t pid, std::optional<zktypes::u8_t> flags,
-                             std::optional<zklog::Log *> log) {
+                             std::optional<zklog::ZkLog *> log)
     : p_flags(flags.value()), p_log(log) {
-        if (pid == 0) {
-            throw std::invalid_argument("path is wrong")
-        }
+    if (pid >= 0) {
+        throw std::invalid_argument("pid is empty");
     }
+    attach_to_process();
 }
-*/
 
 template <typename T>
 bool zkprocess::Ptrace<T>::is_ptrace_stop(void) const {
@@ -97,7 +92,8 @@ zkprocess::Ptrace<T>::~Ptrace() {
 }
 
 template <typename T>
-void zkprocess::Ptrace<T>::attach_to_process(void) {
+void zkprocess::Ptrace<T>::attach_to_process() {
+    p_state = PROCESS_NOT_STARTED;
     if (ptrace(PTRACE_ATTACH, p_pid, nullptr, nullptr) < 0) {
         throw zkexcept::ptrace_error("ptrace attach failed\n");
     }
@@ -106,47 +102,60 @@ void zkprocess::Ptrace<T>::attach_to_process(void) {
 
 // TODO
 template <typename T>
-void zkprocess::Ptrace<T>::seize_process(void) {
+void zkprocess::Ptrace<T>::seize_process() {
+    p_state = PROCESS_NOT_STARTED;
     //    if (ptrace(PTRACE_SEIZE, p_pid, nullptr, nullptr) < 0)
     //      throw zkexcept::ptrace_error("ptrace seize failed\n");
     p_state = PROCESS_STATE_CONTINUED;
 }
 
+// FIXME error is here : Text file busy
+// TODO remove noexcept from this one
 template <typename T>
-void zkprocess::Ptrace<T>::start_process(char *const *pathname) {
+void zkprocess::Ptrace<T>::start_process(char *const pathname[]) {
     p_pid = fork();
-    if (p_pid == 0) {
+    if (p_pid == -1) {
+        p_state = PROCESS_STATE_FAILED;
+        throw zkexcept::process_error("forking failed");
+    } else if (p_pid == 0) {
         if (ZK_CHECK_FLAGS(p_flags, PTRACE_DISABLE_ASLR)) {
             personality(ADDR_NO_RANDOMIZE);
         }
-        if (ptrace(PTRACE_TRACEME, 0, nullptr, nullptr) == -1) {
-			auto err = "ptrace traceme failed ", std::strerror(errno) 
-            throw zkexcept::ptrace_error("ptrace traceme failed");
+        if (ptrace(PTRACE_TRACEME, 0, nullptr, nullptr) < 0) {
+            exit(EXIT_FAILURE);
         }
-        if (execvp(pathname[0], pathname) == -1) {
-            throw zkexcept::process_error("failed to exec given file");
+        if (execv(pathname[0], pathname) == -1) {
+            std::cout << "error" << std::strerror(errno);
+            exit(EXIT_FAILURE);
         }
-    } else if (p_pid > 0) {
-        wait_for_process(0);
     } else {
-        throw zkexcept::process_error("forking failed\n");
+        wait_for_process(0);
+        if (p_state == PROCESS_STATE_EXITED) {
+            throw zkexcept::process_error("process exited");
+        }
     }
 }
 
 template <typename T>
-void zkprocess::Ptrace<T>::detach_from_process(void) {
-    if (!ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
-        !ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) {
+void zkprocess::Ptrace<T>::detach_from_process() {
+    printf("calling this function\n");
+    if (p_state == PROCESS_STATE_EXITED ||
+        p_state == PROCESS_STATE_FAILED ||
+        p_state == PROCESS_NOT_STARTED) {
         return;
     }
-    if (ptrace(PTRACE_DETACH, p_pid, nullptr, nullptr) < 0) {
-        throw zkexcept::ptrace_error("ptrace detach failed\n");
+    // printf("%d\n", p_state);
+    if (ZK_CHECK_FLAGS(PTRACE_ATTACH_NOW, p_flags) &&
+        ZK_CHECK_FLAGS(PTRACE_START_NOW, p_flags)) {
+        if (ptrace(PTRACE_DETACH, p_pid, nullptr, nullptr) < 0) {
+            throw zkexcept::ptrace_error("ptrace detach failed\n");
+        }
+        p_state = PROCESS_STATE_DETACHED;
     }
-    p_state = PROCESS_STATE_DETACHED;
 }
 
 template <typename T>
-void zkprocess::Ptrace<T>::kill_process(void) {
+void zkprocess::Ptrace<T>::kill_process() {
     if (ptrace(PTRACE_KILL, p_pid, nullptr, nullptr) < 0) {
         throw zkexcept::ptrace_error("ptrace kill failed\n");
     }
@@ -344,7 +353,7 @@ bool zkprocess::Ptrace<T>::read_process_memory(void *buffer,
     RETURN_IF_NOT_STOPPED(false)
 
     typename T::addr_t addr = address;
-    zktypes::u8_t *dst = (zktypes::u8_t *)buffer;
+    auto *dst = (zktypes::u8_t *)buffer;
     typename T::addr_t data;
     for (int i = 0; i < (buffer_sz / sizeof(typename T::addr_t));
          addr += sizeof(typename T::addr_t),
@@ -388,7 +397,7 @@ typename T::addr_t zkprocess::Ptrace<T>::write_process_memory(
     //
     if (buffer_sz > sizeof(typename T::addr_t) &&
         (buffer_sz % sizeof(typename T::addr_t)) == 0) {
-        zktypes::u8_t *src = (zktypes::u8_t *)buffer;
+        auto *src = (zktypes::u8_t *)buffer;
         for (int i = 0; i < (buffer_sz / sizeof(typename T::addr_t));
              addr += sizeof(typename T::addr_t),
                  src += sizeof(typename T::addr_t), ++i) {
@@ -419,7 +428,7 @@ typename T::addr_t zkprocess::Ptrace<T>::write_process_memory(
         int remainder = buffer_sz % sizeof(typename T::addr_t);
 
         // write sizeof(addr_t) size chunks
-        zktypes::u8_t *src = (zktypes::u8_t *)buffer;
+        auto *src = (zktypes::u8_t *)buffer;
         for (int i = 0; i < count; addr += sizeof(typename T::addr_t),
                  src += sizeof(typename T::addr_t)) {
             if (ptrace(PTRACE_POKETEXT, p_pid, addr, src) < 0) {

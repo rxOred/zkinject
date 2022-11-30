@@ -97,24 +97,24 @@ enum class e_type : zktypes::u16_t {
 
 // architecture of the elf in detail
 enum class e_machine : zktypes::u16_t {
-    EM_NONE = 0,               /* No machine */
-    EM_M32,					   /* AT&T WE 32100 */
-    EM_SPARC,				   /* SUN SPARC */
-    EM_386,					   /* Intel 80386 */
-    EM_68K,					   /* Motorola m68k family */
-    EM_88K,					   /* Motorola m88k family */
-    EM_860 = 7,                /* Intel 80860 */
-    EM_MIPS,				   /* MIPS R3000 big-endian */
-    EM_PARISC = 15,            /* HPPA */
-    EM_SPARC32PLUS = 18,       /* Sun's "v8plus" */
-    EM_PPC = 20,               // PowerPC */
-    EM_PPC64,				   // PowerPC 64-bit */
-    EM_S390,                   // IBM s390
-    EM_ARM = 40,               // ARM
-    EM_SPARCV9 = 43,           // SPARC v9 64 bit 
-    EM_IA_64 = 50,             // Intel Merced */
-    EM_X86_64 = 62,            // AMD x86-64 architecture 
-	EM_AVR = 83,               // Atmel AVR 8-bit microcontroller
+    EM_NONE = 0,         /* No machine */
+    EM_M32,              /* AT&T WE 32100 */
+    EM_SPARC,            /* SUN SPARC */
+    EM_386,              /* Intel 80386 */
+    EM_68K,              /* Motorola m68k family */
+    EM_88K,              /* Motorola m88k family */
+    EM_860 = 7,          /* Intel 80860 */
+    EM_MIPS,             /* MIPS R3000 big-endian */
+    EM_PARISC = 15,      /* HPPA */
+    EM_SPARC32PLUS = 18, /* Sun's "v8plus" */
+    EM_PPC = 20,         // PowerPC */
+    EM_PPC64,            // PowerPC 64-bit */
+    EM_S390,             // IBM s390
+    EM_ARM = 40,         // ARM
+    EM_SPARCV9 = 43,     // SPARC v9 64 bit
+    EM_IA_64 = 50,       // Intel Merced */
+    EM_X86_64 = 62,      // AMD x86-64 architecture
+    EM_AVR = 83,         // Atmel AVR 8-bit microcontroller
     EM_BPF = 247
 };
 
@@ -425,11 +425,13 @@ enum elf_shdr_indexes : short {
     ELF_INDEX_ARRAY_SIZE
 };
 
-// internal base class that represent a single elf binary extracted from a file or memory map of another process.
-// contains all the internal data structures of the elf binary such as header tabls, string tables and symbols
-// contains external information such as path/pid, memory map and the size
-// only parses basic data structures such as elf header and two header tables.
-// derived class should implement code required to parse other data if required.
+// internal base class that represent a single elf binary extracted from a
+// file or memory map of another process. contains all the internal data
+// structures of the elf binary such as header tabls, string tables and
+// symbols contains external information such as path/pid, memory map and
+// the size only parses basic data structures such as elf header and two
+// header tables. derived class should implement code required to parse
+// other data if required.
 template <typename T = x64>
 class ElfObj {
 public:
@@ -438,30 +440,31 @@ public:
            std::variant<const char *, pid_t> s);
     ~ElfObj() = default;
 
-    bool is_stripped(void) const;
-	
-    void *get_memory_map(void) const;
-    std::size_t get_map_size(void) const;
-	std::variant<const char *, pid_t> get_elf_source(void) const;
-	   
-    ehdr_t<T> *get_elf_header(void) const;
-    phdr_t<T> *get_program_header_table(void) const;
-    shdr_t<T> *get_section_header_table(void) const;
+    [[nodiscard]] bool is_stripped() const;
 
-    strtab_t get_section_header_string_table(void) const;
-    strtab_t get_string_table(void) const;
-    strtab_t get_dynamic_string_table(void) const;
-    symtab_t<T> *get_symbol_table(void) const;
-    symtab_t<T> *get_dynamic_symbol_table(void) const;
-    dynamic_t<T> *get_dynamic_section(void) const;
-    nhdr_t<T> *get_note_section(void) const;
+    [[nodiscard]] void *get_memory_map() const;
+    [[nodiscard]] std::size_t get_map_size() const;
+    [[nodiscard]] std::variant<const char *, pid_t> get_elf_source(
+        void) const;
+
+    [[nodiscard]] ehdr_t<T> *get_elf_header() const;
+    [[nodiscard]] phdr_t<T> *get_program_header_table() const;
+    [[nodiscard]] shdr_t<T> *get_section_header_table() const;
+
+    [[nodiscard]] strtab_t get_section_header_string_table() const;
+    [[nodiscard]] strtab_t get_string_table() const;
+    [[nodiscard]] strtab_t get_dynamic_string_table() const;
+    [[nodiscard]] symtab_t<T> *get_symbol_table() const;
+    [[nodiscard]] symtab_t<T> *get_dynamic_symbol_table() const;
+    [[nodiscard]] dynamic_t<T> *get_dynamic_section() const;
+    [[nodiscard]] nhdr_t<T> *get_note_section() const;
     decltype(auto) get_section_index_array();
 
-	void set_stripped(bool b);
-	void set_elf_header(void *new_ehdr);
-	void set_section_header_table(void *new_shdr);
-	void set_program_header_table(void *new_phdr);
-	
+    void set_stripped(bool b);
+    void set_elf_header(void *new_ehdr);
+    void set_section_header_table(void *new_shdr);
+    void set_program_header_table(void *new_phdr);
+
     void set_section_header_string_table(void *new_tab);
     void set_string_table(void *new_tab);
     void set_dynamic_string_table(void *new_tab);
@@ -486,8 +489,9 @@ private:
     dynamic_t<T> *e_dynamic = nullptr;
     nhdr_t<T> *e_nhdr = nullptr;
 
-	bool e_is_stripped = false;
-    void *e_memory_map; // NOTE not the process memory map, just the buffer that holds the elf file
+    bool e_is_stripped = false;
+    void *e_memory_map;  // NOTE not the process memory map, just the
+                         // buffer that holds the elf file
     std::size_t e_map_size;
     std::variant<const char *, pid_t> e_source;
     std::array<zktypes::u8_t, ELF_INDEX_ARRAY_SIZE> e_section_indexes;
@@ -504,60 +508,65 @@ enum class elf_flags : zktypes::u8_t {
 // ElfObj by default
 class ZkElf {
 public:
-    ZkElf(
-        elf_flags flags, 
-        std::variant<ElfObj<x64>, ElfObj<x86>> obj,
-        std::optional<zklog::ZkLog *> log = std::nullopt
-    );
+    ZkElf(elf_flags flags, std::variant<ElfObj<x64>, ElfObj<x86>> obj,
+          std::optional<zklog::ZkLog *> log = std::nullopt);
     ZkElf(const ZkElf &) = delete;
     ZkElf(ZkElf &&) = delete;
 
     // internals
-    bool load_dynamic_data(void);
-    bool load_symbol_data(void);
+    bool load_dynamic_data();
+    bool load_symbol_data();
 
     // getters, some of these may return uint64_t (or try decltype(auto)
     // TODO we can return void *
-    void *get_memory_map(void) const;
-    std::size_t get_map_size(void) const;
-    bool is_stripped(void) const;
+    [[nodiscard]] void *get_memory_map() const;
+    [[nodiscard]] std::size_t get_map_size() const;
+    [[nodiscard]] bool is_stripped() const;
 
-	ei_class get_elf_class(void) const;
-	ei_data get_elf_encoding(void) const;
-	ei_osabi get_elf_osabi(void) const;
-    e_type get_elf_type(void) const;
-    e_machine get_elf_machine(void) const;
-    e_version get_elf_version(void) const;
-    zktypes::u64_t get_elf_entry_point(void) const;
-    zktypes::u64_t get_elf_phdr_offset(void) const;
-    zktypes::u64_t get_elf_shdr_offset(void) const;
-    zktypes::u32_t get_elf_flags(void) const;
-    zktypes::u16_t get_elf_header_size(void) const;
-    zktypes::u16_t get_elf_phdr_entry_size(void) const;
-    zktypes::u16_t get_elf_phdr_entry_count(void) const;
-    zktypes::u16_t get_elf_shdr_entry_size(void) const;
-    zktypes::u16_t get_elf_shdr_entry_count(void) const;
-    zktypes::u16_t get_elf_shdr_string_table_index(void) const;
+    [[nodiscard]] ei_class get_elf_class() const;
+    [[nodiscard]] ei_data get_elf_encoding() const;
+    [[nodiscard]] ei_osabi get_elf_osabi() const;
+    [[nodiscard]] e_type get_elf_type() const;
+    [[nodiscard]] e_machine get_elf_machine() const;
+    [[nodiscard]] e_version get_elf_version() const;
+    [[nodiscard]] zktypes::u64_t get_elf_entry_point() const;
+    [[nodiscard]] zktypes::u64_t get_elf_phdr_offset() const;
+    [[nodiscard]] zktypes::u64_t get_elf_shdr_offset() const;
+    [[nodiscard]] zktypes::u32_t get_elf_flags() const;
+    [[nodiscard]] zktypes::u16_t get_elf_header_size() const;
+    [[nodiscard]] zktypes::u16_t get_elf_phdr_entry_size() const;
+    [[nodiscard]] zktypes::u16_t get_elf_phdr_entry_count() const;
+    [[nodiscard]] zktypes::u16_t get_elf_shdr_entry_size() const;
+    [[nodiscard]] zktypes::u16_t get_elf_shdr_entry_count() const;
+    [[nodiscard]] zktypes::u16_t get_elf_shdr_string_table_index() const;
 
-    zktypes::u32_t get_section_name_index(int shdr_index) const;
-    s_type get_section_type(int shdr_index) const;
-    zktypes::u64_t get_section_flags(int shdr_index) const;
-    zktypes::u64_t get_section_address(int shdr_index) const;
-    zktypes::u64_t get_section_offset(int shdr_index) const;
-    zktypes::u64_t get_section_size(int shdr_index) const;
-    zktypes::u64_t get_section_address_alignment(int shdr_index) const;
-    zktypes::u64_t get_section_entry_size(int shdr_index) const;
-    zktypes::u32_t get_section_link(int shdr_index) const;
-    zktypes::u32_t get_section_info(int shdr_index) const;
+    [[nodiscard]] zktypes::u32_t get_section_name_index(
+        int shdr_index) const;
+    [[nodiscard]] s_type get_section_type(int shdr_index) const;
+    [[nodiscard]] zktypes::u64_t get_section_flags(int shdr_index) const;
+    [[nodiscard]] zktypes::u64_t get_section_address(int shdr_index) const;
+    [[nodiscard]] zktypes::u64_t get_section_offset(int shdr_index) const;
+    [[nodiscard]] zktypes::u64_t get_section_size(int shdr_index) const;
+    [[nodiscard]] zktypes::u64_t get_section_address_alignment(
+        int shdr_index) const;
+    [[nodiscard]] zktypes::u64_t get_section_entry_size(
+        int shdr_index) const;
+    [[nodiscard]] zktypes::u32_t get_section_link(int shdr_index) const;
+    [[nodiscard]] zktypes::u32_t get_section_info(int shdr_index) const;
 
-    p_type get_segment_type(int phdr_index) const;
-    zktypes::u64_t get_segment_offset(int phdr_index) const;
-    zktypes::u64_t get_segment_vaddress(int phdr_index) const;
-    zktypes::u64_t get_segment_paddress(int phdr_index) const;
-    zktypes::u32_t get_segment_flags(int phdr_index) const;
-    zktypes::u64_t get_segment_file_size(int phdr_index) const;
-    zktypes::u64_t get_segment_memory_size(int phdr_index) const;
-    zktypes::u64_t get_segment_address_alignment(int phdr_index) const;
+    [[nodiscard]] p_type get_segment_type(int phdr_index) const;
+    [[nodiscard]] zktypes::u64_t get_segment_offset(int phdr_index) const;
+    [[nodiscard]] zktypes::u64_t get_segment_vaddress(
+        int phdr_index) const;
+    [[nodiscard]] zktypes::u64_t get_segment_paddress(
+        int phdr_index) const;
+    [[nodiscard]] zktypes::u32_t get_segment_flags(int phdr_index) const;
+    [[nodiscard]] zktypes::u64_t get_segment_file_size(
+        int phdr_index) const;
+    [[nodiscard]] zktypes::u64_t get_segment_memory_size(
+        int phdr_index) const;
+    [[nodiscard]] zktypes::u64_t get_segment_address_alignment(
+        int phdr_index) const;
 
     int get_section_index_by_name(const char *section_name);
     int get_section_index_by_attr(s_type type, zktypes::u16_t flags);
@@ -571,7 +580,7 @@ public:
     // setters
 
     // TODO void set_elf_size(std::size_t new_size);
-    void set_stripped(void);
+    void set_stripped();
     void set_elf_type(e_type new_type);
     void set_elf_machine(e_machine new_machine);
     void set_elf_version(e_version new_version);
@@ -582,11 +591,13 @@ public:
         static_assert(std::is_integral_v<T>,
                       "new entry point should be an integral");
         if constexpr (std::is_same_v<T, x64::addr_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)->get_elf_header()->elf_entry =
-                new_entry;
+            std::get_if<ElfObj<x64>>(&elf_obj)
+                ->get_elf_header()
+                ->elf_entry = new_entry;
         } else if constexpr (std::is_same_v<T, x86::addr_t>) {
-            std::get_if<ElfObj<x86>>(&elf_obj)->get_elf_header()->elf_entry =
-                new_entry;
+            std::get_if<ElfObj<x86>>(&elf_obj)
+                ->get_elf_header()
+                ->elf_entry = new_entry;
         }
     }
     template <typename T = x64::off_t>
@@ -594,11 +605,13 @@ public:
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
         if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)->get_elf_header()->elf_phoff =
-                new_offset;
+            std::get_if<ElfObj<x64>>(&elf_obj)
+                ->get_elf_header()
+                ->elf_phoff = new_offset;
         } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_obj)->get_elf_header()->elf_phoff =
-                new_offset;
+            std::get_if<ElfObj<x86>>(&elf_obj)
+                ->get_elf_header()
+                ->elf_phoff = new_offset;
         }
     }
     template <typename T = x64::off_t>
@@ -606,11 +619,13 @@ public:
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
         if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)->get_elf_header()->elf_shoff =
-                new_offset;
+            std::get_if<ElfObj<x64>>(&elf_obj)
+                ->get_elf_header()
+                ->elf_shoff = new_offset;
         } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_obj)->get_elf_header()->elf_shoff =
-                new_offset;
+            std::get_if<ElfObj<x86>>(&elf_obj)
+                ->get_elf_header()
+                ->elf_shoff = new_offset;
         }
     }
     void set_elf_phdr_entry_count(zktypes::u16_t new_count);
@@ -817,24 +832,32 @@ public:
     void elf_write(void *buffer, off_t write_offset,
                    std::size_t size) const noexcept;
 
-    void save_source(void) const noexcept;
+    void save_source() const noexcept;
 
     friend std::shared_ptr<ZkElf> load_elf_from_file(
         const char *path, elf_flags flags,
         std::optional<zklog::ZkLog *> log);
-    friend void load_elf_from_memory(void);
+    friend std::shared_ptr<ZkElf> load_elf_with_writable_from_file(
+        const char *path, elf_flags flags,
+        std::optional<zklog::ZkLog *> log);
+    friend void load_elf_from_memory();
 
 private:
     elf_flags elf_flag;
     std::optional<zklog::ZkLog *> elf_log;
     std::variant<ElfObj<x64>, ElfObj<x86>> elf_obj;
+    bool is_writable = false;
 };
 
 std::shared_ptr<ZkElf> load_elf_from_file(
     const char *path, elf_flags flags,
     std::optional<zklog::ZkLog *> log = std::nullopt);
 
-void load_elf_from_memory(void);
+std::shared_ptr<ZkElf> load_elf_with_writable_from_file(
+    const char *path, elf_flags flags,
+    std::optional<zklog::ZkLog *> log = std::nullopt);
+
+void load_elf_from_memory();
 };  // namespace zkelf
 
 /*

@@ -20,10 +20,12 @@
 #include "zktypes.hh"
 #include "zkutils.hh"
 
+// this is the default and elf binary is not writable. any set_* methods will do nothing to the actual file
+// wrong above. TODO keep a class variable
 std::shared_ptr<zkelf::ZkElf> zkelf::load_elf_from_file(
     const char *path, elf_flags flags, std::optional<zklog::ZkLog *> log) {
-    auto pair = zkutils::open_file(path);
-    elf_core *core = (elf_core *)pair.first;
+    auto pair = zkutils::open_file(path, false);
+    auto *core = (elf_core *)pair.first;
     // check the magic number to validate the file
     zktypes::u8_t magic[4] = {0x7f, 0x45, 0x4c, 0x46};
     if (!zkutils::validate_magic_number<zktypes::u8_t, 4>(core->ei_magic,
@@ -50,7 +52,40 @@ std::shared_ptr<zkelf::ZkElf> zkelf::load_elf_from_file(
     }
 }
 
-void zkelf::load_elf_from_memory(void) {
+std::shared_ptr<zkelf::ZkElf> zkelf::load_elf_with_writable_from_file(
+    const char *path, elf_flags flags, std::optional<zklog::ZkLog *> log) {
+    auto pair = zkutils::open_file(path, true);
+    auto *core = (elf_core *)pair.first;
+    // check the magic number to validate the file
+    zktypes::u8_t magic[4] = {0x7f, 0x45, 0x4c, 0x46};
+    if (!zkutils::validate_magic_number<zktypes::u8_t, 4>(core->ei_magic,
+                                                          magic)) {
+        throw zkexcept::invalid_file_format_error();
+    }
+
+    if (core->ei_class == (zktypes::u8_t)ei_class::ELFCLASS32) {
+        std::shared_ptr<ZkElf> ptr = std::make_shared<ZkElf>(
+            flags,
+            ElfObj<x86>((void *)pair.first, pair.second, path),
+            log
+        );
+        ptr->is_writable = true;
+        return ptr;
+    } else if (core->ei_class == (zktypes::u8_t)ei_class::ELFCLASS64) {
+        std::shared_ptr<ZkElf> ptr = std::make_shared<ZkElf>(
+            flags,
+            ElfObj<x64>((void *)pair.first, pair.second, path),
+            log
+        );
+        ptr->is_writable = true;
+        return ptr;
+    } else {
+        throw zkexcept::invalid_file_type_error();
+    }
+}
+
+
+void zkelf::load_elf_from_memory() {
     // load from memory using ptrace
 }
 
@@ -59,8 +94,8 @@ zkelf::ElfObj<T>::ElfObj(void *map, std::size_t size,
                          std::variant<const char *, pid_t> s)
     : e_memory_map(map), e_map_size(size), e_source(s) {
     e_ehdr = (ehdr_t<T> *)e_memory_map;
-    e_phdrtab = (phdr_t<T> *)(e_memory_map + e_ehdr->elf_phoff);
-    e_shdrtab = (shdr_t<T> *)(e_memory_map + e_ehdr->elf_shoff);
+    e_phdrtab = (phdr_t<T> *)((zktypes::u8_t *)e_memory_map + e_ehdr->elf_phoff);
+    e_shdrtab = (shdr_t<T> *)((zktypes::u8_t *)e_memory_map + e_ehdr->elf_shoff);
     if (e_ehdr->elf_shstrndx ==
             static_cast<zktypes::u16_t>(sh_n::SHN_UNDEF) ||
         e_ehdr->elf_shstrndx > e_ehdr->elf_shnum ||
@@ -73,75 +108,75 @@ zkelf::ElfObj<T>::ElfObj(void *map, std::size_t size,
 }
 
 template <typename T>
-bool zkelf::ElfObj<T>::is_stripped(void) const {
+bool zkelf::ElfObj<T>::is_stripped() const {
     return e_is_stripped;
 }
 
 template <typename T>
-void *zkelf::ElfObj<T>::get_memory_map(void) const {
+void *zkelf::ElfObj<T>::get_memory_map() const {
     return e_memory_map;
 }
 
 template <typename T>
-std::size_t zkelf::ElfObj<T>::get_map_size(void) const {
+std::size_t zkelf::ElfObj<T>::get_map_size() const {
     return e_map_size;
 }
 
 template <typename T>
 std::variant<const char *, pid_t> zkelf::ElfObj<T>::get_elf_source(
-    void) const {
+    ) const {
     return e_source;
 }
 
 template <typename T>
-zkelf::ehdr_t<T> *zkelf::ElfObj<T>::get_elf_header(void) const {
+zkelf::ehdr_t<T> *zkelf::ElfObj<T>::get_elf_header() const {
     return e_ehdr;
 }
 
 template <typename T>
-zkelf::phdr_t<T> *zkelf::ElfObj<T>::get_program_header_table(void) const {
+zkelf::phdr_t<T> *zkelf::ElfObj<T>::get_program_header_table() const {
     return e_phdrtab;
 }
 
 template <typename T>
-zkelf::shdr_t<T> *zkelf::ElfObj<T>::get_section_header_table(void) const {
+zkelf::shdr_t<T> *zkelf::ElfObj<T>::get_section_header_table() const {
     return e_shdrtab;
 }
 
 template <typename T>
 zkelf::strtab_t zkelf::ElfObj<T>::get_section_header_string_table(
-    void) const {
+    ) const {
     return e_shstrtab;
 }
 
 template <typename T>
-zkelf::strtab_t zkelf::ElfObj<T>::get_string_table(void) const {
+zkelf::strtab_t zkelf::ElfObj<T>::get_string_table() const {
     return e_strtab;
 }
 
 template <typename T>
-zkelf::strtab_t zkelf::ElfObj<T>::get_dynamic_string_table(void) const {
+zkelf::strtab_t zkelf::ElfObj<T>::get_dynamic_string_table() const {
     return e_dynstr;
 }
 
 template <typename T>
-zkelf::symtab_t<T> *zkelf::ElfObj<T>::get_symbol_table(void) const {
+zkelf::symtab_t<T> *zkelf::ElfObj<T>::get_symbol_table() const {
     return e_symtab;
 }
 
 template <typename T>
 zkelf::symtab_t<T> *zkelf::ElfObj<T>::get_dynamic_symbol_table(
-    void) const {
+    ) const {
     return e_dynsym;
 }
 
 template <typename T>
-zkelf::dynamic_t<T> *zkelf::ElfObj<T>::get_dynamic_section(void) const {
+zkelf::dynamic_t<T> *zkelf::ElfObj<T>::get_dynamic_section() const {
     return e_dynamic;
 }
 
 template <typename T>
-zkelf::nhdr_t<T> *zkelf::ElfObj<T>::get_note_section(void) const {
+zkelf::nhdr_t<T> *zkelf::ElfObj<T>::get_note_section() const {
     return e_nhdr;
 }
 
@@ -154,7 +189,7 @@ std::array<zktypes::u8_t, zkelf::ELF_INDEX_ARRAY_SIZE>&
 */
 
 template <typename T>
-decltype(auto) zkelf::ElfObj<T>::get_section_index_array(void) {
+decltype(auto) zkelf::ElfObj<T>::get_section_index_array() {
     return e_section_indexes;
 }
 
@@ -229,11 +264,12 @@ zkelf::ZkElf::ZkElf(zkelf::elf_flags flags,
                     std::optional<zklog::ZkLog *> log)
     : elf_flag(flags), elf_obj(obj), elf_log(log) {}
 
-bool zkelf::ZkElf::load_symbol_data(void) {
-    std::array<zktypes::u8_t, ELF_INDEX_ARRAY_SIZE> indexes;
-    if (auto elf = std::get_if<ElfObj<x64>>(&elf_obj)) {
+bool zkelf::ZkElf::load_symbol_data() {
+    std::array<zktypes::u8_t, ELF_INDEX_ARRAY_SIZE> indexes{};
+    // TODO indexes = std::get
+    if (auto elf = std::get_if<ElfObj<x64>>(&elf_obj))
         indexes = elf->get_section_index_array();
-    } else {
+    else {
         indexes = elf->get_section_index_array();
     }
     try {

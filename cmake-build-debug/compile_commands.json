@@ -1,47 +1,47 @@
 [
 {
   "directory": "/home/rxored/repos/zkinject/cmake-build-debug",
-  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zkelf.cc.o -c /home/rxored/repos/zkinject/src/zkelf.cc",
+  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -g -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zkelf.cc.o -c /home/rxored/repos/zkinject/src/zkelf.cc",
   "file": "/home/rxored/repos/zkinject/src/zkelf.cc"
 },
 {
   "directory": "/home/rxored/repos/zkinject/cmake-build-debug",
-  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zkhooks.cc.o -c /home/rxored/repos/zkinject/src/zkhooks.cc",
+  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -g -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zkhooks.cc.o -c /home/rxored/repos/zkinject/src/zkhooks.cc",
   "file": "/home/rxored/repos/zkinject/src/zkhooks.cc"
 },
 {
   "directory": "/home/rxored/repos/zkinject/cmake-build-debug",
-  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zklog.cc.o -c /home/rxored/repos/zkinject/src/zklog.cc",
+  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -g -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zklog.cc.o -c /home/rxored/repos/zkinject/src/zklog.cc",
   "file": "/home/rxored/repos/zkinject/src/zklog.cc"
 },
 {
   "directory": "/home/rxored/repos/zkinject/cmake-build-debug",
-  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zkmemorymap.cc.o -c /home/rxored/repos/zkinject/src/zkmemorymap.cc",
+  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -g -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zkmemorymap.cc.o -c /home/rxored/repos/zkinject/src/zkmemorymap.cc",
   "file": "/home/rxored/repos/zkinject/src/zkmemorymap.cc"
 },
 {
   "directory": "/home/rxored/repos/zkinject/cmake-build-debug",
-  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zkprocess.cc.o -c /home/rxored/repos/zkinject/src/zkprocess.cc",
+  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -g -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zkprocess.cc.o -c /home/rxored/repos/zkinject/src/zkprocess.cc",
   "file": "/home/rxored/repos/zkinject/src/zkprocess.cc"
 },
 {
   "directory": "/home/rxored/repos/zkinject/cmake-build-debug",
-  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zkptrace.cc.o -c /home/rxored/repos/zkinject/src/zkptrace.cc",
+  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -g -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zkptrace.cc.o -c /home/rxored/repos/zkinject/src/zkptrace.cc",
   "file": "/home/rxored/repos/zkinject/src/zkptrace.cc"
 },
 {
   "directory": "/home/rxored/repos/zkinject/cmake-build-debug",
-  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zksignal.cc.o -c /home/rxored/repos/zkinject/src/zksignal.cc",
+  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -g -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zksignal.cc.o -c /home/rxored/repos/zkinject/src/zksignal.cc",
   "file": "/home/rxored/repos/zkinject/src/zksignal.cc"
 },
 {
   "directory": "/home/rxored/repos/zkinject/cmake-build-debug",
-  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zksnapshot.cc.o -c /home/rxored/repos/zkinject/src/zksnapshot.cc",
+  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -g -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zksnapshot.cc.o -c /home/rxored/repos/zkinject/src/zksnapshot.cc",
   "file": "/home/rxored/repos/zkinject/src/zksnapshot.cc"
 },
 {
   "directory": "/home/rxored/repos/zkinject/cmake-build-debug",
-  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zkutils.cc.o -c /home/rxored/repos/zkinject/src/zkutils.cc",
+  "command": "/usr/bin/c++ -Dzkinject_EXPORTS -I/home/rxored/repos/zkinject/include -I/home/rxored/repos/zkinject/src -g -fPIC -std=gnu++17 -o CMakeFiles/zkinject.dir/src/zkutils.cc.o -c /home/rxored/repos/zkinject/src/zkutils.cc",
   "file": "/home/rxored/repos/zkinject/src/zkutils.cc"
 }
 ]

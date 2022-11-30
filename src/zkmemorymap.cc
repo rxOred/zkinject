@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <fstream>
+#include <iostream>
 #include <optional>
 #include <regex>
 #include <tuple>
@@ -12,8 +13,7 @@
 #include "zkutils.hh"
 
 template <typename T>
-void zkprocess::MemoryMap<T>::parse_memory_map(void) {
-    // FIXME make this more c++ like
+void zkprocess::MemoryMap<T>::parse_memory_map() {
     char buffer[24];
     if (mm_pid != 0) {
         std::sprintf(buffer, MAPPATH, mm_pid);
@@ -27,15 +27,10 @@ void zkprocess::MemoryMap<T>::parse_memory_map(void) {
     std::smatch match;
     std::regex regex(R"(([a-f0-9]+)-([a-f0-9]+) ([rxwp-]{4}) (.*))",
                      std::regex::optimize);
-    // FIXME parses all the shit after permissions to the same string
 
-    // A small optimization - reserving vector space for segments
-    // 4 for the PT_LOAD segments of the binary
-    // 5 for the PT_LOAD segments of the dynamic linker
-    // rest for the stack, heap, vdso and vvar
     mm_pageinfo.reserve(13);
 
-	while (std::getline(fh, line)) {
+    while (std::getline(fh, line)) {
         std::regex_match(line, match, regex);
         start_addr = match.str(0);
         end_addr = match.str(1);
@@ -52,21 +47,19 @@ void zkprocess::MemoryMap<T>::parse_memory_map(void) {
 }
 
 template <typename T>
-std::vector<zkprocess::page_t<T>> zkprocess::MemoryMap<T>::get_memory_map(void) const {
+std::vector<zkprocess::page_t<T>> zkprocess::MemoryMap<T>::get_memory_map()
+    const {
     return mm_pageinfo;
 }
 
 template <typename T>
-zkprocess::MemoryMap<T>::MemoryMap(pid_t pid)
-	:mm_pid(pid)
-{}
-    // FIXME -FIXED  make this a seperate method because this wont parse the
-    // whole memory map since program is not loaded yet, its ust the
-    // binary and the dynamic linker
+zkprocess::MemoryMap<T>::MemoryMap(pid_t pid) : mm_pid(pid) {
+    std::cout << "calling memory map constructor" << std::endl;
+}
 
-template <typename T>    
-std::optional<
-    std::tuple<typename T::addr_t, typename T::addr_t, std::string, std::optional<std::string>>>
+template <typename T>
+std::optional<std::tuple<typename T::addr_t, typename T::addr_t,
+                         std::string, std::optional<std::string>>>
 zkprocess::MemoryMap<T>::get_module_page(const char* module_name) const {
     for (auto const& x : mm_pageinfo) {
         if (x.get_page_name().compare(module_name)) {
@@ -79,7 +72,8 @@ zkprocess::MemoryMap<T>::get_module_page(const char* module_name) const {
 }
 
 template <typename T>
-std::optional<typename T::addr_t> zkprocess::MemoryMap<T>::get_module_start_address(
+std::optional<typename T::addr_t>
+zkprocess::MemoryMap<T>::get_module_start_address(
     const char* module_name) const {
     for (auto const& x : mm_pageinfo) {
         if (x.get_page_name().compare(module_name)) {
@@ -90,7 +84,8 @@ std::optional<typename T::addr_t> zkprocess::MemoryMap<T>::get_module_start_addr
 }
 
 template <typename T>
-std::optional<typename T::addr_t> zkprocess::MemoryMap<T>::get_module_end_address(
+std::optional<typename T::addr_t>
+zkprocess::MemoryMap<T>::get_module_end_address(
     const char* module_name) const {
     for (auto const& x : mm_pageinfo) {
         if (x.get_page_name().compare(module_name)) {
