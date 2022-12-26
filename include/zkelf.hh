@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <exception>
 #include <iostream>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <type_traits>
@@ -497,13 +498,21 @@ private:
     std::array<zktypes::u8_t, ELF_INDEX_ARRAY_SIZE> e_section_indexes;
 };
 
-// by default elf binary is not writable
-// in order to make it so, provide one of options other than
-// ELF_READONLY
-enum class elf_options : zktypes::u8_t {
-    ELF_READONLY = 0,
+struct elf_read_only {};
+
+enum class elf_save_options : zktypes::u8_t {
     ELF_AUTO_SAVE = 1,
-    ELF_SAVE_AT_EXIT = 2,
+    ELF_SAVE_AT_EXIT,
+    ELF_NO_SAVE,
+};
+
+struct elf_read_write {
+    elf_save_options save_options;
+};
+
+enum class elf_options : zktypes::u8_t {
+    ELF_AUTO_SAVE = 1,
+    ELF_SAVE_AT_EXIT,
     ELF_NO_SAVE
 };
 
@@ -512,8 +521,9 @@ enum class elf_options : zktypes::u8_t {
 // ElfObj by default
 class ZkElf {
 public:
-    ZkElf(elf_options flags, std::variant<ElfObj<x64>, ElfObj<x86>> obj,
-          std::optional<zklog::ZkLog *> log = std::nullopt);
+    ZkElf(std::variant<ElfObj<x64>, ElfObj<x86>> obj, 
+        std::variant<elf_read_only, elf_read_write> options = elf_read_only{},
+        std::optional<zklog::ZkLog *> log = std::nullopt);
     ZkElf(const ZkElf &) = delete;
     ZkElf(ZkElf &&) = delete;
 
@@ -594,11 +604,11 @@ public:
         static_assert(std::is_integral_v<T>,
                       "new entry point should be an integral");
         if constexpr (std::is_same_v<T, x64::addr_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)
+            std::get_if<ElfObj<x64>>(&elf_object)
                 ->get_elf_header()
                 ->elf_entry = new_entry;
         } else if constexpr (std::is_same_v<T, x86::addr_t>) {
-            std::get_if<ElfObj<x86>>(&elf_obj)
+            std::get_if<ElfObj<x86>>(&elf_object)
                 ->get_elf_header()
                 ->elf_entry = new_entry;
         }
@@ -608,11 +618,11 @@ public:
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
         if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)
+            std::get_if<ElfObj<x64>>(&elf_object)
                 ->get_elf_header()
                 ->elf_phoff = new_offset;
         } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_obj)
+            std::get_if<ElfObj<x86>>(&elf_object)
                 ->get_elf_header()
                 ->elf_phoff = new_offset;
         }
@@ -622,11 +632,11 @@ public:
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
         if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)
+            std::get_if<ElfObj<x64>>(&elf_object)
                 ->get_elf_header()
                 ->elf_shoff = new_offset;
         } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_obj)
+            std::get_if<ElfObj<x86>>(&elf_object)
                 ->get_elf_header()
                 ->elf_shoff = new_offset;
         }
@@ -637,7 +647,7 @@ public:
 
     // maybe pass a void parameter instead of templates
     void set_elf_header(void *new_ehdr) {
-        if (auto elf = std::get_if<ElfObj<x64>>(&elf_obj)) {
+        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
             elf->set_elf_header(new_ehdr);
         } else {
             elf->set_elf_header(new_ehdr);
@@ -652,12 +662,12 @@ public:
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
         if constexpr (std::is_same_v<T, x64::addr_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)
+            std::get_if<ElfObj<x64>>(&elf_object)
                 ->get_section_header_table()[shdr_index]
                 .sh_addr = new_addr;
             new_addr;
         } else if constexpr (std::is_same_v<T, x86::addr_t>) {
-            std::get_if<ElfObj<x86>>(&elf_obj)
+            std::get_if<ElfObj<x86>>(&elf_object)
                 ->get_section_header_table()[shdr_index]
                 .sh_addr = new_addr;
             new_addr;
@@ -668,11 +678,11 @@ public:
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
         if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)
+            std::get_if<ElfObj<x64>>(&elf_object)
                 ->get_section_header_table()[shdr_index]
                 .sh_offset = new_offset;
         } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_obj)
+            std::get_if<ElfObj<x86>>(&elf_object)
                 ->get_section_header_table()[shdr_index]
                 .sh_offset = new_offset;
         }
@@ -683,11 +693,11 @@ public:
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
         if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)
+            std::get_if<ElfObj<x64>>(&elf_object)
                 ->get_section_header_table()[shdr_index]
                 .sh_size = new_size;
         } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_obj)
+            std::get_if<ElfObj<x86>>(&elf_object)
                 ->get_section_header_table()[shdr_index]
                 .sh_size = new_size;
         }
@@ -698,11 +708,11 @@ public:
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
         if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)
+            std::get_if<ElfObj<x64>>(&elf_object)
                 ->get_section_header_table()[shdr_index]
                 .sh_addralign = new_addralign;
         } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_obj)
+            std::get_if<ElfObj<x86>>(&elf_object)
                 ->get_section_header_table()[shdr_index]
                 .sh_addralign = new_addralign;
         }
@@ -712,7 +722,7 @@ public:
     void set_section_info(int shdr_index, zktypes::u32_t new_info);
 
     void set_section_header_table(void *new_shdr) {
-        if (auto elf = std::get_if<ElfObj<x64>>(&elf_obj)) {
+        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
             elf->set_section_header_table(new_shdr);
         } else {
             elf->set_section_header_table(new_shdr);
@@ -732,11 +742,11 @@ public:
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
         if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)
+            std::get_if<ElfObj<x64>>(&elf_object)
                 ->get_program_header_table()[phdr_index]
                 .ph_offset = new_offset;
         } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_obj)
+            std::get_if<ElfObj<x86>>(&elf_object)
                 ->get_program_header_table()[phdr_index]
                 .ph_offset = new_offset;
         }
@@ -747,11 +757,11 @@ public:
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
         if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)
+            std::get_if<ElfObj<x64>>(&elf_object)
                 ->get_program_header_table()[phdr_index]
                 .ph_vaddr = new_address;
         } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_obj)
+            std::get_if<ElfObj<x86>>(&elf_object)
                 ->get_program_header_table()[phdr_index]
                 .ph_vaddr = new_address;
         }
@@ -762,11 +772,11 @@ public:
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
         if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)
+            std::get_if<ElfObj<x64>>(&elf_object)
                 ->get_program_header_table()[phdr_index]
                 .ph_paddr = new_address;
         } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_obj)
+            std::get_if<ElfObj<x86>>(&elf_object)
                 ->get_program_header_table()[phdr_index]
                 .ph_paddr = new_address;
         }
@@ -779,11 +789,11 @@ public:
         static_assert(std::is_integral_v<T>,
                       "new filesz should be an integral");
         if constexpr (std::is_same_v<T, x64::u64_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)
+            std::get_if<ElfObj<x64>>(&elf_object)
                 ->get_program_header_table()[phdr_index]
                 .ph_filesz = new_filesz;
         } else if constexpr (std::is_same_v<T, x86::u32_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)
+            std::get_if<ElfObj<x64>>(&elf_object)
                 ->get_program_header_table()[phdr_index]
                 .ph_filesz = new_filesz;
         }
@@ -793,11 +803,11 @@ public:
         static_assert(std::is_integral_v<T>,
                       "new memsz should be an integral");
         if constexpr (std::is_same_v<T, x64::u64_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)
+            std::get_if<ElfObj<x64>>(&elf_object)
                 ->get_program_header_table()[phdr_index]
                 .ph_memsz = new_memsz;
         } else if constexpr (std::is_same_v<T, x86::u32_t>) {
-            std::get_if<ElfObj<x86>>(&elf_obj)
+            std::get_if<ElfObj<x86>>(&elf_object)
                 ->get_program_header_table()[phdr_index]
                 .ph_memsz = new_memsz;
         }
@@ -808,18 +818,18 @@ public:
         static_assert(std::is_integral_v<T>,
                       "new memsz should be an integral");
         if constexpr (std::is_same_v<T, x64::u64_t>) {
-            std::get_if<ElfObj<x64>>(&elf_obj)
+            std::get_if<ElfObj<x64>>(&elf_object)
                 ->get_program_header_table()[phdr_index]
                 .ph_align = new_alignment;
         } else if constexpr (std::is_same_v<T, x86::u32_t>) {
-            std::get_if<ElfObj<x86>>(&elf_obj)
+            std::get_if<ElfObj<x86>>(&elf_object)
                 ->get_program_header_table()[phdr_index]
                 .ph_align = new_alignment;
         }
     }
 
     void set_program_header_table(void *new_phdr) {
-        if (auto elf = std::get_if<ElfObj<x64>>(&elf_obj)) {
+        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
             elf->set_program_header_table(new_phdr);
         } else {
             elf->set_program_header_table(new_phdr);
@@ -839,247 +849,29 @@ public:
     void save_source() const noexcept;
 
     friend std::shared_ptr<ZkElf> load_elf_from_file(
-        const char *path, elf_options options,
+        const char *path, std::optional<elf_options> options,
         std::optional<zklog::ZkLog *> log);
+
+    friend std::shared_ptr<ZkElf> load_elf_writable_from_file(
+        const char *path, std::optional<elf_save_options> save_options,
+        std::optional<zklog::ZkLog *> log);
+    
     friend void load_elf_from_memory();
 
 private:
-    elf_options elf_option;
+    std::variant<elf_read_only, elf_read_write> elf_file_options;
     std::optional<zklog::ZkLog *> elf_log;
-    std::variant<ElfObj<x64>, ElfObj<x86>> elf_obj;
-    bool is_writable = false;
+    std::variant<ElfObj<x64>, ElfObj<x86>> elf_object;
 };
 
 std::shared_ptr<ZkElf> load_elf_from_file(
-    const char *path, elf_options options,
-    std::optional<zklog::ZkLog *> log = std::nullopt);
+    const char *path, std::optional<zklog::ZkLog *> log = std::nullopt);
 
+std::shared_ptr<ZkElf> load_elf_writable_from_file(
+    const char *path, std::optional<elf_save_options> save_options = elf_save_options::ELF_AUTO_SAVE,
+    std::optional<zklog::ZkLog *> log = std::nullopt);
 
 void load_elf_from_memory();
 };  // namespace zkelf
-
-/*
-namespace ZkElf {
-
-enum ELF_FLAGS : u8_t { ELF_AUTO_SAVE, ELF_SAVE_AT_EXIT, ELF_NO_SAVE };
-
-class Elf {
-protected:
-    ELF_FLAGS elf_options;
-    std::optional<ZkLog::Log *> elf_log;
-
-    const char *elf_pathname;
-    size_t elf_size = 0x0;
-    void *elf_memmap = nullptr;
-
-    //  follow elf masters way
-    of doing this and
-        // use unions to get arch
-        independance ehdr_t *elf_ehdr = nullptr;
-    phdr_t *elf_phdr = nullptr;
-    shdr_t *elf_shdr = nullptr;
-    symtab_t *elf_symtab = nullptr;
-    strtab_t elf_strtab = nullptr;
-    dynamic_t *elf_dynamic = nullptr;
-    symtab_t *elf_dynsym = nullptr;
-    strtab_t elf_dynstr = nullptr;
-
-    enum ELF_SHDR_TABLE : short {
-        ELF_SYMTAB_INDEX,
-        ELF_STRTAB_INDEX,
-        ELF_SHSTRTAB_INDEX,
-        ELF_DYNAMIC_INDEX,
-        ELF_DYNSYM_INDEX,
-        ELF_DYNSTR_INDEX,
-        ELF_INDEX_TABLE_SIZE,
-    };
-
-    std::array<int, ELF_INDEX_TABLE_SIZE> elf_section_indexes;
-
-    void loadFile(int fd);
-
-public:
-    Elf(ELF_FLAGS flags);
-    Elf(const char *pathname, ELF_FLAGS flags,
-        std::optional<ZkLog::Log *> log = std::nullopt);
-    Elf(const Elf &) = delete;
-    ~Elf();
-
-    bool OpenElf(void);
-
-    inline const char *GetPathname(void) const { return elf_pathname; }
-    inline int GetElfSize(void) const { return elf_size; }
-    inline void *GetMemoryMap(void) const { return elf_memmap; }
-
-    bool LoadDynamicData(void);
-    bool VerifyElf(void) const;
-    void RemoveMap(void);
-
-    virtual bool CheckElfType() const { return true; }
-
-    inline u16_t GetElfType(void) const noexcept { return elf_ehdr->e_type;
-} inline u16_t GetElfMachine(void) const noexcept { return
-elf_ehdr->e_machine;
-    }
-    inline u32_t GetElfVersion(void) const noexcept {
-        return elf_ehdr->e_version;
-    }
-    inline addr_t GetElfEntryPoint(void) const noexcept {
-        return elf_ehdr->e_entry;
-    }
-    inline off_t GetElfPhdrOffset(void) const noexcept {
-        return elf_ehdr->e_phoff;
-    }
-    inline off_t GetElfShdrOffset(void) const noexcept {
-        return elf_ehdr->e_shoff;
-    }
-    inline u32_t GetElfFlags(void) const noexcept { return
-elf_ehdr->e_flags; } inline u16_t GetElfHeaderSize(void) const noexcept {
-        return elf_ehdr->e_ehsize;
-    }
-    inline u16_t GetElfPhdrEntrySize(void) const noexcept {
-        return elf_ehdr->e_phentsize;
-    }
-    inline u16_t GetElfPhdrEntryCount(void) const noexcept {
-        return elf_ehdr->e_phnum;
-    }
-    inline u16_t GetElfShdrEntrySize(void) const noexcept {
-        return elf_ehdr->e_shentsize;
-    }
-    inline u16_t GetElfShdrEntryCount(void) const noexcept {
-        return elf_ehdr->e_shnum;
-    }
-    inline u16_t GetElfShdrStringTableIndex(void) const noexcept {
-        return elf_ehdr->e_shstrndx;
-    }
-
-    inline ehdr_t *GetElfHeader() const noexcept { return elf_ehdr; }
-
-    inline u32_t GetSectionNameIndex(int shdr_index) const noexcept {
-        return elf_shdr[shdr_index].sh_name;
-    }
-    inline u32_t GetSectionType(int shdr_index) const noexcept {
-        return elf_shdr[shdr_index].sh_type;
-    }
-    inline addr_t GetSectionAddress(int shdr_index) const noexcept {
-        return elf_shdr[shdr_index].sh_addr;
-    }
-    inline off_t GetSectionOffset(int shdr_index) const noexcept {
-        return elf_shdr[shdr_index].sh_offset;
-    }
-    inline auto GetSectionSize(int shdr_index) const {
-        return elf_shdr[shdr_index].sh_size;
-    }
-    inline auto GetSectionAddressAlign(int shdr_index) const noexcept {
-        return elf_shdr[shdr_index].sh_addralign;
-    }
-    inline auto GetSectionEntrySize(int shdr_index) const noexcept {
-        return elf_shdr[shdr_index].sh_entsize;
-    }
-    inline u32_t GetSectionLink(int shdr_index) const noexcept {
-        return elf_shdr[shdr_index].sh_link;
-    }
-    inline u32_t GetSectionInfo(int shdr_index) const noexcept {
-        return elf_shdr[shdr_index].sh_info;
-    }
-    inline shdr_t *GetSectionHeaderTable() const noexcept { return
-elf_shdr; }
-
-    inline u32_t GetSegmentType(int phdr_index) const noexcept {
-        return elf_phdr[phdr_index].p_type;
-    }
-    inline off_t GetSegmentOffset(int phdr_index) const noexcept {
-        return elf_phdr[phdr_index].p_offset;
-    }
-    inline addr_t GetSegmentVAddress(int phdr_index) const noexcept {
-        return elf_phdr[phdr_index].p_vaddr;
-    }
-    inline addr_t GetSegmentPAddress(int phdr_index) const noexcept {
-        return elf_phdr[phdr_index].p_paddr;
-    }
-    inline u32_t GetSegmentFlags(int phdr_index) const noexcept {
-        return elf_phdr[phdr_index].p_flags;
-    }
-    inline auto GetSegmentFileSize(int phdr_index) const {
-        return elf_phdr[phdr_index].p_filesz;
-    }
-    inline auto GetSegmentMemorySize(int phdr_index) const {
-        return elf_phdr[phdr_index].p_memsz;
-    }
-    inline auto GetSegmentAlignment(int phdr_index) const {
-        return elf_phdr[phdr_index].p_memsz;
-    }
-
-    inline phdr_t *GetProgramHeaderTable() const noexcept { return
-elf_phdr; }
-
-    inline shdr_t &GetSectionbyIndex(const int &index) const noexcept {
-        return elf_shdr[index];
-    }
-    inline phdr_t &GetSegmentByIndex(const int &index) const noexcept {
-        return elf_phdr[index];
-    }
-    int GetSegmentIndexbyAttr(u32_t type, u32_t flags, u32_t prev_flags)
-const; int GetSectionIndexbyAttr(u32_t tyoe, u32_t flags) const; int
-GetSymbolIndexbyName(const char *name) const; int
-GetDynSymbolIndexbyName(const char *name) const; int
-GetSectionIndexbyName(const char *name) const;
-
-    inline void SetPathname(const char *new_pathname) noexcept {
-        elf_pathname = new_pathname;
-    }
-    inline void SetElfSize(int new_size) noexcept { elf_size = new_size; }
-    void SetElfType(u16_t new_tupe);
-    void SetElfMachine(u16_t new_machine);
-    void SetElfVersion(u32_t new_version);
-    void SetElfEntryPoint(addr_t new_entry);
-    void SetElfPhdrOffset(off_t new_offset);
-    void SetElfShdrOffset(off_t new_offset);
-    void SetElfFlags(u32_t new_flags);
-    void SetPhdrCount(u16_t new_count);
-    void SetShdrCount(u16_t new_count);
-    void SetShstrndx(u16_t new_index);
-
-    void SetElfHeader(ehdr_t *new_ehdr);
-
-    void SetSectionNameIndex(int shdr_index, int new_index);
-    void SetSectionType(int shdr_index, u32_t new_type);
-    void SetSectionAddress(int shdr_index, addr_t new_addr);
-    void SetSectionOffset(int shdr_index, off_t new_offset);
-
-    template <typename T>
-    void SetSectionSize(int shdr_index, T t);
-    template <typename T>
-    void SetSectionAddressAlign(int shdr_index, T t);
-    template <typename T>
-    void SetSectionEntrySize(int shdr_index, T t);
-
-    void SetSectionHeader(int shdr_index, shdr_t *new_shdr);
-    void SetSectionData(int shdr_index, void *data);
-
-    void SetSegmentType(int phdr_index, u32_t new_type);
-    void SetSegmentOffset(int phdr_index, off_t new_offset);
-    void SetSegmentVAddress(int phdr_index, addr_t new_address);
-    void SetSegmentPAddress(int phdr_index, addr_t new_address);
-    void SetSegmentFlags(int phdr_index, u32_t new_flags);
-
-    template <typename T>
-    void SetSegmentFileSize(int shdr_index, T t);
-    template <typename T>
-    void SetSegmentMemorySize(int shdr_index, T t);
-    template <typename T>
-    void SetSegmentAlignment(int shdr_index, T t);
-
-    void SetSegmentHeader(int phdr_index, phdr_t *new_phdr);
-    void SetSegmentData(int phdr_index, void *data);
-
-    void *ElfRead(off_t readoff, size_t size) const;
-    void ElfWrite(void *buffer, off_t writeoff, size_t size) const;
-
-private:
-    void autoSaveMemMap(void) const;
-};
-};  // namespace ZkElf
-*/
 
 #endif  // ZKELF_HH

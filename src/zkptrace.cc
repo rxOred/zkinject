@@ -57,8 +57,7 @@ zkprocess::Ptrace<T>::Ptrace(char *const *path,
     if (path == nullptr) {
         throw std::invalid_argument("path is invalid");
     }
-    // TODO call internal functions like start_process , attach_process
-    // ptrace_init_from_file(path, flags.value_or(PTRACE_DISABLE_ASLR));
+
     start_process(path);
 }
 
@@ -109,8 +108,6 @@ void zkprocess::Ptrace<T>::seize_process() {
     p_state = PROCESS_STATE_CONTINUED;
 }
 
-// FIXME error is here : Text file busy
-// TODO remove noexcept from this one
 template <typename T>
 void zkprocess::Ptrace<T>::start_process(char *const pathname[]) {
     p_pid = fork();
@@ -138,7 +135,6 @@ void zkprocess::Ptrace<T>::start_process(char *const pathname[]) {
 
 template <typename T>
 void zkprocess::Ptrace<T>::detach_from_process() {
-    printf("calling this function\n");
     if (p_state == PROCESS_STATE_EXITED ||
         p_state == PROCESS_STATE_FAILED ||
         p_state == PROCESS_NOT_STARTED) {
