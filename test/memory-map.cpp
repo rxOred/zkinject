@@ -22,21 +22,19 @@ int main(int argc, char* argv[]) {
     auto proc = zkprocess::load_process_from_file(s, std::nullopt);
     if (proc->get_process_arch() == zkelf::ei_class::ELFCLASS64) {
         std::cout << "architecture : x64\n";
-        auto mm =
-            proc->get_memory_map_if_x64();
-        if (mm == nullptr) {
-            std::cout << "memory map is null" << std::endl;
-            return -1;
-        }
-        else {
-            std::cout << "memory map is not null" << std::endl;
-        }
-        std::cout << "base address is " << std::hex << mm->get_base_address() << std::endl;
+        auto mm = proc->get_memory_map_if_x64();
+        mm->parse_memory_map();
+        
+        std::cout << "base address is " << std::hex
+                  << mm->get_base_address() << std::endl;
 
         auto begin_page = mm->get_base_page();
-        std::cout << "begin page load address is " << std::hex << begin_page.get_page_start_address() << std::endl;
-        std::cout << "begin page end address is " << std::hex << begin_page.get_page_end_address() << std::endl;
-        std::cout << "begin page name " << begin_page.get_page_name() << std::endl;
+        std::cout << "begin page load address is " << std::hex
+                  << begin_page.get_page_start_address() << std::endl;
+        std::cout << "begin page end address is " << std::hex
+                  << begin_page.get_page_end_address() << std::endl;
+        std::cout << "begin page name " << begin_page.get_page_name()
+                  << std::endl;
 
         std::cout << "page name\tpage start address\tpage end "
                      "address\tpage permissions\n";
@@ -50,8 +48,7 @@ int main(int argc, char* argv[]) {
         }
     } else {
         std::cout << "architecture : x86\n";
-        auto mm =
-            proc->get_memory_map_if_x86();
+        auto mm = proc->get_memory_map_if_x86();
         for (auto page = mm->get_iterator_begin();
              page != mm->get_iterator_end(); page++) {
             printf("%s\t%x\t%x\t%s\n", page->get_page_name().c_str(),
