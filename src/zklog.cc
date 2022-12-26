@@ -13,9 +13,9 @@ void zklog::ZkLog::clear_log(void) {
 }
 
 void zklog::ZkLog::push_log(std::string log_string, log_level level,
-                          std::optional<log_error_code> error_code) {
-    l_log.emplace(log_string, level, error_code.value_or(
-        log_error_code::LOG_ERROR_NONE));
+                            std::optional<log_error_code> error_code) {
+    l_log.emplace(log_string, level,
+                  error_code.value_or(log_error_code::LOG_ERROR_NONE));
 }
 
 std::tuple<std::string, zklog::log_level, zklog::log_error_code>

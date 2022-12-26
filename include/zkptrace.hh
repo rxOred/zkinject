@@ -118,16 +118,19 @@ public:
     ~Ptrace();
 
     explicit Ptrace(char *const *path,
-           std::optional<zktypes::u8_t> flags = PTRACE_START_NOW |
-                                                PTRACE_DISABLE_ASLR,
-           std::optional<zklog::ZkLog *> log = std::nullopt);
+                    std::optional<zktypes::u8_t> flags =
+                        PTRACE_START_NOW | PTRACE_DISABLE_ASLR,
+                    std::optional<zklog::ZkLog *> log = std::nullopt);
     explicit Ptrace(pid_t pid,
-           std::optional<zktypes::u8_t> flags = PTRACE_ATTACH_NOW,
-           std::optional<zklog::ZkLog *> log = std::nullopt);
+                    std::optional<zktypes::u8_t> flags = PTRACE_ATTACH_NOW,
+                    std::optional<zklog::ZkLog *> log = std::nullopt);
 
     [[nodiscard]] inline pid_t get_pid() const { return p_pid; }
-    [[nodiscard]] inline PROCESS_STATE get_process_state() const { return p_state; }
-    [[nodiscard]] inline PROCESS_STATE_INFO get_process_state_info() const {
+    [[nodiscard]] inline PROCESS_STATE get_process_state() const {
+        return p_state;
+    }
+    [[nodiscard]] inline PROCESS_STATE_INFO get_process_state_info()
+        const {
         return p_state_info;
     }
 

@@ -18,7 +18,9 @@ zkprocess::ZkProcess::ZkProcess(
     std::variant<std::shared_ptr<Ptrace<x64>>,
                  std::shared_ptr<Ptrace<x86>>>
         p,
-    std::variant<std::shared_ptr<MemoryMap<x64>>, std::shared_ptr<MemoryMap<x86>>> mm)
+    std::variant<std::shared_ptr<MemoryMap<x64>>,
+                 std::shared_ptr<MemoryMap<x86>>>
+        mm)
     : p_elf(std::move(elf)),
       p_ptrace(std::move(p)),
       p_memory_map(std::move(mm)) {}
@@ -32,14 +34,16 @@ std::shared_ptr<zkprocess::ZkProcess> zkprocess::load_process_from_file(
     if (arch == zkelf::ei_class::ELFCLASS64) {
         auto p_ptrace =
             std::make_shared<Ptrace<x64>>(path, PTRACE_DISABLE_ASLR, log);
-        auto p_memory_map = std::make_shared<MemoryMap<x64>>(p_ptrace->get_pid());
+        auto p_memory_map =
+            std::make_shared<MemoryMap<x64>>(p_ptrace->get_pid());
         auto ptr =
             std::make_shared<ZkProcess>(p_elf, p_ptrace, p_memory_map);
         return ptr;
     } else if (arch == zkelf::ei_class::ELFCLASS32) {
         auto p_ptrace =
             std::make_shared<Ptrace<x86>>(path, PTRACE_DISABLE_ASLR, log);
-        auto p_memory_map = std::make_shared<MemoryMap<x86>>(p_ptrace->get_pid());
+        auto p_memory_map =
+            std::make_shared<MemoryMap<x86>>(p_ptrace->get_pid());
         auto ptr =
             std::make_shared<ZkProcess>(p_elf, p_ptrace, p_memory_map);
         return ptr;

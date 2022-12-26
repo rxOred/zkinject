@@ -27,7 +27,7 @@ public:
     snapshot_t(zktypes::u8_t flags, registers_t *regs, void *stack,
                void *instr);
     snapshot_t(const snapshot_t &) = default;
-    snapshot_t(snapshot_t &&) = default; 
+    snapshot_t(snapshot_t &&) = default;
 
     ~snapshot_t();
 
@@ -51,8 +51,8 @@ public:
              std::optional<zktypes::u8_t> count = DEFAULT_SNAPSHOT_COUNT,
              std::optional<zklog::ZkLog *> log = std::nullopt);
     Snapshot(const Snapshot &) = default;
-    Snapshot(Snapshot &&) = default; 
-	
+    Snapshot(Snapshot &&) = default;
+
     ~Snapshot() = default;
     bool save_snapshot(zktypes::u8_t flags);
     bool restore_snapshot(void);

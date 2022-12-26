@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
         std::cout << "architecture : x64\n";
         auto mm = proc->get_memory_map_if_x64();
         mm->parse_memory_map();
-        
+
         std::cout << "base address is " << std::hex
                   << mm->get_base_address() << std::endl;
 

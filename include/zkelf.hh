@@ -445,8 +445,7 @@ public:
 
     [[nodiscard]] void *get_memory_map() const;
     [[nodiscard]] std::size_t get_map_size() const;
-    [[nodiscard]] std::variant<const char *, pid_t> get_elf_source(
-        ) const;
+    [[nodiscard]] std::variant<const char *, pid_t> get_elf_source() const;
 
     [[nodiscard]] ehdr_t<T> *get_elf_header() const;
     [[nodiscard]] phdr_t<T> *get_program_header_table() const;
@@ -521,9 +520,10 @@ enum class elf_options : zktypes::u8_t {
 // ElfObj by default
 class ZkElf {
 public:
-    ZkElf(std::variant<ElfObj<x64>, ElfObj<x86>> obj, 
-        std::variant<elf_read_only, elf_read_write> options = elf_read_only{},
-        std::optional<zklog::ZkLog *> log = std::nullopt);
+    ZkElf(std::variant<ElfObj<x64>, ElfObj<x86>> obj,
+          std::variant<elf_read_only, elf_read_write> options =
+              elf_read_only{},
+          std::optional<zklog::ZkLog *> log = std::nullopt);
     ZkElf(const ZkElf &) = delete;
     ZkElf(ZkElf &&) = delete;
 
@@ -855,7 +855,7 @@ public:
     friend std::shared_ptr<ZkElf> load_elf_writable_from_file(
         const char *path, std::optional<elf_save_options> save_options,
         std::optional<zklog::ZkLog *> log);
-    
+
     friend void load_elf_from_memory();
 
 private:
@@ -868,7 +868,9 @@ std::shared_ptr<ZkElf> load_elf_from_file(
     const char *path, std::optional<zklog::ZkLog *> log = std::nullopt);
 
 std::shared_ptr<ZkElf> load_elf_writable_from_file(
-    const char *path, std::optional<elf_save_options> save_options = elf_save_options::ELF_AUTO_SAVE,
+    const char *path,
+    std::optional<elf_save_options> save_options =
+        elf_save_options::ELF_AUTO_SAVE,
     std::optional<zklog::ZkLog *> log = std::nullopt);
 
 void load_elf_from_memory();

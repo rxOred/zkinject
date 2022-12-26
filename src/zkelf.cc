@@ -20,7 +20,7 @@
 #include "zktypes.hh"
 #include "zkutils.hh"
 
-// default is to load elf with elf_read_only 
+// default is to load elf with elf_read_only
 std::shared_ptr<zkelf::ZkElf> zkelf::load_elf_from_file(
     const char *path, std::optional<zklog::ZkLog *> log) {
     auto pair = zkutils::open_file(path, false);
@@ -35,25 +35,21 @@ std::shared_ptr<zkelf::ZkElf> zkelf::load_elf_from_file(
     if (core->ei_class == (zktypes::u8_t)ei_class::ELFCLASS32) {
         std::shared_ptr<ZkElf> ptr = std::make_shared<ZkElf>(
             ElfObj<x86>((void *)pair.first, pair.second, path),
-            elf_read_only{},
-            log
-        );
+            elf_read_only{}, log);
         return ptr;
     } else if (core->ei_class == (zktypes::u8_t)ei_class::ELFCLASS64) {
         std::shared_ptr<ZkElf> ptr = std::make_shared<ZkElf>(
             ElfObj<x64>((void *)pair.first, pair.second, path),
-            elf_read_only{},
-            log
-        );
+            elf_read_only{}, log);
         return ptr;
     } else {
         throw zkexcept::invalid_file_type_error();
     }
 }
 
-// default is to load elf with elf_read_write and ELF_AUTO_SAVE 
+// default is to load elf with elf_read_write and ELF_AUTO_SAVE
 std::shared_ptr<zkelf::ZkElf> zkelf::load_elf_writable_from_file(
-    const char *path, std::optional<elf_save_options> save_options, 
+    const char *path, std::optional<elf_save_options> save_options,
     std::optional<zklog::ZkLog *> log) {
     auto pair = zkutils::open_file(path, false);
     auto *core = (elf_core *)pair.first;
@@ -67,22 +63,17 @@ std::shared_ptr<zkelf::ZkElf> zkelf::load_elf_writable_from_file(
     if (core->ei_class == (zktypes::u8_t)ei_class::ELFCLASS32) {
         std::shared_ptr<ZkElf> ptr = std::make_shared<ZkElf>(
             ElfObj<x86>((void *)pair.first, pair.second, path),
-            elf_read_write { elf_save_options::ELF_AUTO_SAVE },
-            log
-        );
+            elf_read_write{elf_save_options::ELF_AUTO_SAVE}, log);
         return ptr;
     } else if (core->ei_class == (zktypes::u8_t)ei_class::ELFCLASS64) {
         std::shared_ptr<ZkElf> ptr = std::make_shared<ZkElf>(
             ElfObj<x64>((void *)pair.first, pair.second, path),
-            elf_read_write {elf_save_options::ELF_AUTO_SAVE},
-            log
-        );
+            elf_read_write{elf_save_options::ELF_AUTO_SAVE}, log);
         return ptr;
     } else {
         throw zkexcept::invalid_file_type_error();
     }
 }
-
 
 void zkelf::load_elf_from_memory() {
     // load from memory using ptrace
@@ -93,16 +84,18 @@ zkelf::ElfObj<T>::ElfObj(void *map, std::size_t size,
                          std::variant<const char *, pid_t> s)
     : e_memory_map(map), e_map_size(size), e_source(s) {
     e_ehdr = (ehdr_t<T> *)e_memory_map;
-    e_phdrtab = (phdr_t<T> *)((zktypes::u8_t *)e_memory_map + e_ehdr->elf_phoff);
-    e_shdrtab = (shdr_t<T> *)((zktypes::u8_t *)e_memory_map + e_ehdr->elf_shoff);
+    e_phdrtab =
+        (phdr_t<T> *)((zktypes::u8_t *)e_memory_map + e_ehdr->elf_phoff);
+    e_shdrtab =
+        (shdr_t<T> *)((zktypes::u8_t *)e_memory_map + e_ehdr->elf_shoff);
     if (e_ehdr->elf_shstrndx ==
             static_cast<zktypes::u16_t>(sh_n::SHN_UNDEF) ||
         e_ehdr->elf_shstrndx > e_ehdr->elf_shnum ||
         e_shdrtab[e_ehdr->elf_shstrndx].sh_offset > size) {
         e_is_stripped = true;
     } else {
-        e_shstrtab =
-            (strtab_t)e_memory_map + e_shdrtab[e_ehdr->elf_shstrndx].sh_offset;
+        e_shstrtab = (strtab_t)e_memory_map +
+                     e_shdrtab[e_ehdr->elf_shstrndx].sh_offset;
     }
 }
 
@@ -121,8 +114,9 @@ std::size_t zkelf::ElfObj<T>::get_map_size() const {
     return e_map_size;
 }
 
-template<typename T>
-std::variant<const char *, pid_t> zkelf::ElfObj<T>::get_elf_source() const {
+template <typename T>
+std::variant<const char *, pid_t> zkelf::ElfObj<T>::get_elf_source()
+    const {
     return e_source;
 }
 
@@ -142,8 +136,7 @@ zkelf::shdr_t<T> *zkelf::ElfObj<T>::get_section_header_table() const {
 }
 
 template <typename T>
-zkelf::strtab_t zkelf::ElfObj<T>::get_section_header_string_table(
-    ) const {
+zkelf::strtab_t zkelf::ElfObj<T>::get_section_header_string_table() const {
     return e_shstrtab;
 }
 
@@ -163,8 +156,7 @@ zkelf::symtab_t<T> *zkelf::ElfObj<T>::get_symbol_table() const {
 }
 
 template <typename T>
-zkelf::symtab_t<T> *zkelf::ElfObj<T>::get_dynamic_symbol_table(
-    ) const {
+zkelf::symtab_t<T> *zkelf::ElfObj<T>::get_dynamic_symbol_table() const {
     return e_dynsym;
 }
 
@@ -216,12 +208,11 @@ void zkelf::ElfObj<T>::set_program_header_table(void *new_phdr) {
 template <typename T>
 void zkelf::ElfObj<T>::set_section_header_string_table(void *new_tab) {
     if (e_shstrtab != nullptr) {
-        memcpy(
-            (void *)&((zktypes::u8_t *)get_memory_map())
-                [e_shdrtab[e_ehdr->elf_shstrndx].sh_offset],
-            new_tab,
-            ((zktypes::u8_t *)
-                 get_memory_map())[e_shdrtab[e_ehdr->elf_shstrndx].sh_size]);
+        memcpy((void *)&((zktypes::u8_t *)get_memory_map())
+                   [e_shdrtab[e_ehdr->elf_shstrndx].sh_offset],
+               new_tab,
+               ((zktypes::u8_t *)get_memory_map())
+                   [e_shdrtab[e_ehdr->elf_shstrndx].sh_size]);
     } else {
         e_shstrtab = (strtab_t)new_tab;
     }
@@ -257,10 +248,10 @@ void zkelf::ElfObj<T>::set_note_section(void *new_note) {
     e_nhdr = (nhdr_t<T> *)new_note;
 }
 
-zkelf::ZkElf::ZkElf(std::variant<ElfObj<x64>, ElfObj<x86>> obj, 
-    std::variant<elf_read_only, elf_read_write> options, 
-    std::optional<zklog::ZkLog *> log)
-  : elf_file_options(options), elf_object(obj), elf_log(log) {}
+zkelf::ZkElf::ZkElf(std::variant<ElfObj<x64>, ElfObj<x86>> obj,
+                    std::variant<elf_read_only, elf_read_write> options,
+                    std::optional<zklog::ZkLog *> log)
+    : elf_file_options(options), elf_object(obj), elf_log(log) {}
 
 bool zkelf::ZkElf::load_symbol_data() {
     std::array<zktypes::u8_t, ELF_INDEX_ARRAY_SIZE> indexes{};
@@ -490,7 +481,9 @@ zkelf::e_type zkelf::ZkElf::get_elf_type(void) const {
     if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
         return elf->get_elf_header()->elf_type;
     }
-    return std::get_if<ElfObj<x86>>(&elf_object)->get_elf_header()->elf_type;
+    return std::get_if<ElfObj<x86>>(&elf_object)
+        ->get_elf_header()
+        ->elf_type;
 }
 
 zkelf::e_machine zkelf::ZkElf::get_elf_machine(void) const {
@@ -515,28 +508,36 @@ zktypes::u64_t zkelf::ZkElf::get_elf_entry_point(void) const {
     if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
         return elf->get_elf_header()->elf_entry;
     }
-    return std::get_if<ElfObj<x86>>(&elf_object)->get_elf_header()->elf_entry;
+    return std::get_if<ElfObj<x86>>(&elf_object)
+        ->get_elf_header()
+        ->elf_entry;
 }
 
 zktypes::u64_t zkelf::ZkElf::get_elf_phdr_offset(void) const {
     if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
         return elf->get_elf_header()->elf_phoff;
     }
-    return std::get_if<ElfObj<x86>>(&elf_object)->get_elf_header()->elf_phoff;
+    return std::get_if<ElfObj<x86>>(&elf_object)
+        ->get_elf_header()
+        ->elf_phoff;
 }
 
 zktypes::u64_t zkelf::ZkElf::get_elf_shdr_offset(void) const {
     if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
         return elf->get_elf_header()->elf_shoff;
     }
-    return std::get_if<ElfObj<x86>>(&elf_object)->get_elf_header()->elf_shoff;
+    return std::get_if<ElfObj<x86>>(&elf_object)
+        ->get_elf_header()
+        ->elf_shoff;
 }
 
 zktypes::u32_t zkelf::ZkElf::get_elf_flags(void) const {
     if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
         return elf->get_elf_header()->elf_flags;
     }
-    return std::get_if<ElfObj<x86>>(&elf_object)->get_elf_header()->elf_flags;
+    return std::get_if<ElfObj<x86>>(&elf_object)
+        ->get_elf_header()
+        ->elf_flags;
 }
 
 zktypes::u16_t zkelf::ZkElf::get_elf_header_size(void) const {
@@ -561,7 +562,9 @@ zktypes::u16_t zkelf::ZkElf::get_elf_phdr_entry_count(void) const {
     if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
         return elf->get_elf_header()->elf_phnum;
     }
-    return std::get_if<ElfObj<x86>>(&elf_object)->get_elf_header()->elf_phnum;
+    return std::get_if<ElfObj<x86>>(&elf_object)
+        ->get_elf_header()
+        ->elf_phnum;
 }
 
 zktypes::u16_t zkelf::ZkElf::get_elf_shdr_entry_size(void) const {
@@ -577,7 +580,9 @@ zktypes::u16_t zkelf::ZkElf::get_elf_shdr_entry_count(void) const {
     if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
         return elf->get_elf_header()->elf_shnum;
     }
-    return std::get_if<ElfObj<x86>>(&elf_object)->get_elf_header()->elf_shnum;
+    return std::get_if<ElfObj<x86>>(&elf_object)
+        ->get_elf_header()
+        ->elf_shnum;
 }
 
 zktypes::u16_t zkelf::ZkElf::get_elf_shdr_string_table_index(void) const {

@@ -21,13 +21,13 @@ public:
     page_t(typename T::addr_t saddr, typename T::addr_t eaddr,
            std::string permissions,
            std::optional<std::string> name = std::nullopt)
-		:page_saddr(saddr),
-		 page_eaddr(eaddr),
-		 page_permissions(std::move(permissions)),
-		 page_name(std::move(name)) {}
-	
+        : page_saddr(saddr),
+          page_eaddr(eaddr),
+          page_permissions(std::move(permissions)),
+          page_name(std::move(name)) {}
+
     page_t(const page_t&) = default;
-    page_t(page_t&&)  noexcept = default;
+    page_t(page_t&&) noexcept = default;
 
     inline typename T::addr_t get_page_start_address() const {
         return page_saddr;
@@ -39,8 +39,8 @@ public:
         return page_permissions;
     }
     [[nodiscard]] inline std::string get_page_name() const {
-		return page_name.value_or("");
-	}
+        return page_name.value_or("");
+    }
 
 private:
     typename T::addr_t page_saddr;
@@ -54,7 +54,7 @@ class MemoryMap {
 public:
     explicit MemoryMap(pid_t pid);
     void parse_memory_map();
-	std::vector<page_t<T>> get_memory_map() const;
+    std::vector<page_t<T>> get_memory_map() const;
     std::optional<typename T::addr_t> get_module_start_address(
         const char* module_name) const;
     std::optional<typename T::addr_t> get_module_end_address(
@@ -70,8 +70,8 @@ public:
     inline const page_t<T>& get_end_page() const {
         return *mm_pageinfo.end();
     }
-    inline typename std::vector<page_t<T>>::const_iterator get_iterator_begin(
-        ) const {
+    inline typename std::vector<page_t<T>>::const_iterator
+    get_iterator_begin() const {
         return mm_pageinfo.begin();
     }
 

@@ -1,7 +1,6 @@
 #include <zkinject/zkprocess.hh>
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char* argv[]) {
     if (argc < 2) {
         printf("Expected a process\n");
         return -1;
@@ -12,5 +11,4 @@ int main(int argc, char *argv[])
     s[1] = nullptr;
 
     auto proc = zkprocess::load_process_from_file(s, std::nullopt);
-
 }

@@ -104,7 +104,7 @@ bool zkprocess::Snapshot<T>::save_snapshot(zktypes::u8_t flags) {
         }
         try {
             s_ptrace.read_process_memory(stack, regs->rsp,
-                                 DEFAULT_SNAPSHOT_STACK_SZ);
+                                         DEFAULT_SNAPSHOT_STACK_SZ);
         } catch (zkexcept::ptrace_error &e) {
             std::cerr << e.what();
             std::exit(1);
@@ -115,7 +115,8 @@ bool zkprocess::Snapshot<T>::save_snapshot(zktypes::u8_t flags) {
             throw std::runtime_error("failed to allocate memory\n");
         }
         try {
-            s_ptrace.read_process_memory(instr, regs->rip, DEFAULT_SNAPSHOT_INSTR);
+            s_ptrace.read_process_memory(instr, regs->rip,
+                                         DEFAULT_SNAPSHOT_INSTR);
         } catch (zkexcept::ptrace_error &e) {
             std::cerr << e.what();
             std::exit(1);
@@ -148,13 +149,15 @@ bool zkprocess::Snapshot<T>::save_snapshot(zktypes::u8_t flags) {
             throw std::runtime_error("failed to allocate memory\n");
         }
         try {
-            s_ptrace.read_process_memory(instr, regs->rip, DEFAULT_SNAPSHOT_INSTR);
+            s_ptrace.read_process_memory(instr, regs->rip,
+                                         DEFAULT_SNAPSHOT_INSTR);
         } catch (zkexcept::ptrace_error &e) {
             std::cerr << e.what();
             std::exit(1);
         }
     }
-    s_snapshots.push(std::make_unique<snapshot_t>(flags, regs, stack, instr));
+    s_snapshots.push(
+        std::make_unique<snapshot_t>(flags, regs, stack, instr));
 
     return true;
 }
@@ -174,15 +177,16 @@ bool zkprocess::Snapshot<T>::restore_snapshot(void) {
     if (ZK_CHECK_FLAGS(
             static_cast<zktypes::u8_t>(snapshot_flags::PROCESS_SNAP_ALL),
             s_snapshots.top()->get_flags())) {
-        s_ptrace.write_process_memory(s_snapshots.top()->get_stack(), regs->rsp,
-                              DEFAULT_SNAPSHOT_STACK_SZ);
+        s_ptrace.write_process_memory(s_snapshots.top()->get_stack(),
+                                      regs->rsp,
+                                      DEFAULT_SNAPSHOT_STACK_SZ);
     } else {
         int stack_frame_sz = regs->rbp - regs->rsp;
-        s_ptrace.write_process_memory(s_snapshots.top()->get_stack(), regs->rsp,
-                              stack_frame_sz);
+        s_ptrace.write_process_memory(s_snapshots.top()->get_stack(),
+                                      regs->rsp, stack_frame_sz);
     }
-    s_ptrace.write_process_memory(s_snapshots.top()->get_instructions(), regs->rip,
-                          DEFAULT_SNAPSHOT_INSTR);
+    s_ptrace.write_process_memory(s_snapshots.top()->get_instructions(),
+                                  regs->rip, DEFAULT_SNAPSHOT_INSTR);
 
     s_snapshots.top().reset();
     s_snapshots.pop();

@@ -1,9 +1,7 @@
 #include <memory>
-
 #include <zkinject/zkelf.hh>
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     if (argc < 2) {
         printf("Expected a program");
         return -1;
@@ -14,26 +12,29 @@ int main(int argc, char *argv[])
     printf("parsing elf binary");
 
     printf("is stripped: %lx\n", elf->is_stripped());
-    printf("elf size:  %lx\n",  elf->get_map_size());
+    printf("elf size:  %lx\n", elf->get_map_size());
     printf("elf class: %lx\n", elf->get_elf_class());
-    printf("elf encoding: %lx\n",  elf->get_elf_encoding());
-    printf("elf osabi: %lx\n",  elf->get_elf_osabi());
-    printf("elf types: %lx\n",  elf->get_elf_type());
-    printf("elf machine: %lx\n",  elf->get_elf_machine());
-    printf("elf version: %lx\n",  elf->get_elf_version());
-    printf("elf entry: %lx\n",  elf->get_elf_entry_point());
-    printf("elf phdr offset: %lx\n",  elf->get_elf_phdr_offset());
-    printf("elf shdr offset: %lx\n",  elf->get_elf_shdr_offset());
-    printf("elf flags: %lx\n",  elf->get_elf_flags());
-    printf("elf header size: %lx\n",  elf->get_elf_header_size());
+    printf("elf encoding: %lx\n", elf->get_elf_encoding());
+    printf("elf osabi: %lx\n", elf->get_elf_osabi());
+    printf("elf types: %lx\n", elf->get_elf_type());
+    printf("elf machine: %lx\n", elf->get_elf_machine());
+    printf("elf version: %lx\n", elf->get_elf_version());
+    printf("elf entry: %lx\n", elf->get_elf_entry_point());
+    printf("elf phdr offset: %lx\n", elf->get_elf_phdr_offset());
+    printf("elf shdr offset: %lx\n", elf->get_elf_shdr_offset());
+    printf("elf flags: %lx\n", elf->get_elf_flags());
+    printf("elf header size: %lx\n", elf->get_elf_header_size());
     printf("elf phdr entry count: %lx\n", elf->get_elf_phdr_entry_count());
-    printf("elf phdr entry size: %lx\n",  elf->get_elf_phdr_entry_size());
+    printf("elf phdr entry size: %lx\n", elf->get_elf_phdr_entry_size());
     printf("elf shdr entry count: %lx\n", elf->get_elf_shdr_entry_count());
-    printf("elf shdr entry size: %lx\n",  elf->get_elf_shdr_entry_size());
-    printf("elf string table index: %lx\n",  elf->get_elf_shdr_string_table_index());
+    printf("elf shdr entry size: %lx\n", elf->get_elf_shdr_entry_size());
+    printf("elf string table index: %lx\n",
+           elf->get_elf_shdr_string_table_index());
 
     printf("program header table");
-    printf("type\toffset\tvaddress\tpaddress\tflags\tfilesize\tmemorysize\talignment\t");
+    printf(
+        "type\toffset\tvaddress\tpaddress\tflags\tfilesize\tmemorysize\tal"
+        "ignment\t");
     for (std::size_t i = 0; i < elf->get_elf_phdr_entry_count(); i++) {
         printf("%lx\t", elf->get_segment_type(i));
         printf("%lx\t", elf->get_segment_offset(i));
@@ -47,7 +48,9 @@ int main(int argc, char *argv[])
     puts("");
 
     printf("section header table ");
-    printf("nameindex\t type \t flags \t address \t offset \t size \t addralign \t entrysz \t link \t info");
+    printf(
+        "nameindex\t type \t flags \t address \t offset \t size \t "
+        "addralign \t entrysz \t link \t info");
     for (std::size_t i = 0; i < elf->get_elf_shdr_entry_count(); i++) {
         printf("%lx\t", elf->get_section_name_index(i));
         printf("%lx\t", elf->get_section_type(i));

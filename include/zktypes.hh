@@ -37,8 +37,8 @@ struct x64 : public zktypes {
     using off_t = std::uint64_t;
 };
 
-using eventcodes_t      = __ptrace_eventcodes;
+using eventcodes_t = __ptrace_eventcodes;
 // TODO make this independant
-using registers_t       = struct user_regs_struct;
+using registers_t = struct user_regs_struct;
 
 #endif  // ZKTYPES_HH

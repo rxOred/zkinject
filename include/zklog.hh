@@ -34,9 +34,7 @@ public:
 
     inline std::string get_log_message(void) { return l_string; }
     inline log_level get_log_level(void) { return l_level; }
-    inline log_error_code get_log_error_code(void) {
-        return l_error_code;
-    }
+    inline log_error_code get_log_error_code(void) { return l_error_code; }
 
 private:
     std::string l_string;
@@ -56,7 +54,7 @@ public:
     void push_log(std::string log_string, log_level level,
                   std::optional<log_error_code> error_code =
                       log_error_code::LOG_ERROR_NONE);
-	std::tuple<std::string, log_level, log_error_code> pop_log(void);
+    std::tuple<std::string, log_level, log_error_code> pop_log(void);
     log_level peek_log_level(void);
 
 private:

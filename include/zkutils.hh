@@ -21,17 +21,17 @@
 
 namespace zkutils {
 
-std::pair<void *, std::size_t> open_file(const char *path, bool should_writable = false);
+std::pair<void *, std::size_t> open_file(const char *path,
+                                         bool should_writable = false);
 
 template <typename T, int size>
-bool validate_magic_number(T a[size], T b[size])
-{
-	for (int i = 0; i < size; ++i) {
- 		if (a[i] != b[i]) {
-			return false;
-		}
-	}
-	return true;
+bool validate_magic_number(T a[size], T b[size]) {
+    for (int i = 0; i < size; ++i) {
+        if (a[i] != b[i]) {
+            return false;
+        }
+    }
+    return true;
 }
 
 inline void save_memory_map(const char *path, void *memory_map,
@@ -48,8 +48,8 @@ inline void save_memory_map(const char *path, void *memory_map,
     }
 }
 
-inline void save_buffer_to_file(const char *path, off_t offset, void *buffer,
-                               int buffer_size) noexcept {
+inline void save_buffer_to_file(const char *path, off_t offset,
+                                void *buffer, int buffer_size) noexcept {
     int fd = open(path, O_CREAT | O_WRONLY, 0666);
     if (fd < 0) {
         throw zkexcept::file_not_found_error();
@@ -63,8 +63,8 @@ inline void save_buffer_to_file(const char *path, off_t offset, void *buffer,
 }
 
 template <typename T = x64>
-int patch_address(typename T::u8_t *buffer, size_t len, typename T::addr_t addr,
-                  typename T::u8_t *magic) {
+int patch_address(typename T::u8_t *buffer, size_t len,
+                  typename T::addr_t addr, typename T::u8_t *magic) {
     int count = 0;
     for (int i = 0; i < len; i++) {
         printf("%x\n", buffer[i]);
