@@ -3,8 +3,6 @@
 
 #include <stdexcept>
 
-// TODO remove some of these useless exceptions and replace them with errors
-
 namespace zkexcept {
 struct not_exec_error : public std::runtime_error {
     not_exec_error() : runtime_error("not an executable file") {}

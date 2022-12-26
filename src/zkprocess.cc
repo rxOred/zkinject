@@ -27,7 +27,7 @@ std::shared_ptr<zkprocess::ZkProcess> zkprocess::load_process_from_file(
     char* const* path, std::optional<zklog::ZkLog*> log) {
     // parse the elf binary and get the required architecture
     auto p_elf = zkelf::load_elf_from_file(
-        path[0], zkelf::elf_flags::ELF_NO_SAVE, log);
+        path[0], zkelf::elf_options::ELF_NO_SAVE, log);
     // if ELFCLASS is (64, 32), create process components for (x64, x86)
     zkelf::ei_class arch = p_elf->get_elf_class();
     if (arch == zkelf::ei_class::ELFCLASS64) {

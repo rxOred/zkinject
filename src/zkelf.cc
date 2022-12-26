@@ -20,41 +20,15 @@
 #include "zktypes.hh"
 #include "zkutils.hh"
 
-// this is the default and elf binary is not writable. any set_* methods will do nothing to the actual file
-// wrong above. TODO keep a class variable
+// by default elf binary is not writable
 std::shared_ptr<zkelf::ZkElf> zkelf::load_elf_from_file(
-    const char *path, elf_flags flags, std::optional<zklog::ZkLog *> log) {
-    auto pair = zkutils::open_file(path, false);
-    auto *core = (elf_core *)pair.first;
-    // check the magic number to validate the file
-    zktypes::u8_t magic[4] = {0x7f, 0x45, 0x4c, 0x46};
-    if (!zkutils::validate_magic_number<zktypes::u8_t, 4>(core->ei_magic,
-                                                          magic)) {
-        throw zkexcept::invalid_file_format_error();
-    }
-
-    if (core->ei_class == (zktypes::u8_t)ei_class::ELFCLASS32) {
-        std::shared_ptr<ZkElf> ptr = std::make_shared<ZkElf>(
-            flags, 
-            ElfObj<x86>((void *)pair.first, pair.second, path), 
-            log
-        );
-        return ptr;
-    } else if (core->ei_class == (zktypes::u8_t)ei_class::ELFCLASS64) {
-        std::shared_ptr<ZkElf> ptr = std::make_shared<ZkElf>(
-            flags, 
-            ElfObj<x64>((void *)pair.first, pair.second, path), 
-            log
-        );
-        return ptr;
+    const char *path, elf_options options, std::optional<zklog::ZkLog *> log) {
+    std::pair<void *, size_t> pair;
+    if (ZK_CHECK_FLAGS(static_cast<zktypes::u8_t>(options), static_cast<zktypes::u8_t>(elf_options::ELF_READ_AND_WRITE))) {
+        pair = zkutils::open_file(path, true);
     } else {
-        throw zkexcept::invalid_file_type_error();
+        pair = zkutils::open_file(path, false);
     }
-}
-
-std::shared_ptr<zkelf::ZkElf> zkelf::load_elf_with_writable_from_file(
-    const char *path, elf_flags flags, std::optional<zklog::ZkLog *> log) {
-    auto pair = zkutils::open_file(path, true);
     auto *core = (elf_core *)pair.first;
     // check the magic number to validate the file
     zktypes::u8_t magic[4] = {0x7f, 0x45, 0x4c, 0x46};
@@ -65,25 +39,22 @@ std::shared_ptr<zkelf::ZkElf> zkelf::load_elf_with_writable_from_file(
 
     if (core->ei_class == (zktypes::u8_t)ei_class::ELFCLASS32) {
         std::shared_ptr<ZkElf> ptr = std::make_shared<ZkElf>(
-            flags,
+            options,
             ElfObj<x86>((void *)pair.first, pair.second, path),
             log
         );
-        ptr->is_writable = true;
         return ptr;
     } else if (core->ei_class == (zktypes::u8_t)ei_class::ELFCLASS64) {
         std::shared_ptr<ZkElf> ptr = std::make_shared<ZkElf>(
-            flags,
+            options,
             ElfObj<x64>((void *)pair.first, pair.second, path),
             log
         );
-        ptr->is_writable = true;
         return ptr;
     } else {
         throw zkexcept::invalid_file_type_error();
     }
 }
-
 
 void zkelf::load_elf_from_memory() {
     // load from memory using ptrace
@@ -122,9 +93,8 @@ std::size_t zkelf::ElfObj<T>::get_map_size() const {
     return e_map_size;
 }
 
-template <typename T>
-std::variant<const char *, pid_t> zkelf::ElfObj<T>::get_elf_source(
-    ) const {
+template<typename T>
+std::variant<const char *, pid_t> zkelf::ElfObj<T>::get_elf_source() const {
     return e_source;
 }
 
@@ -259,10 +229,10 @@ void zkelf::ElfObj<T>::set_note_section(void *new_note) {
     e_nhdr = (nhdr_t<T> *)new_note;
 }
 
-zkelf::ZkElf::ZkElf(zkelf::elf_flags flags,
+zkelf::ZkElf::ZkElf(zkelf::elf_options flags,
                     std::variant<ElfObj<x64>, ElfObj<x86>> obj,
                     std::optional<zklog::ZkLog *> log)
-    : elf_flag(flags), elf_obj(obj), elf_log(log) {}
+    : elf_option(flags), elf_obj(obj), elf_log(log) {}
 
 bool zkelf::ZkElf::load_symbol_data() {
     std::array<zktypes::u8_t, ELF_INDEX_ARRAY_SIZE> indexes{};
@@ -1017,11 +987,11 @@ struct save {
     }
 };
 
-// make this static or something idk
+// TODO make this static or something idk
 void zkelf::ZkElf::save_source(void) const noexcept {
     if (ZK_CHECK_FLAGS(
-            static_cast<zktypes::u8_t>(elf_flag),
-            static_cast<zktypes::u8_t>(elf_flags::ELF_AUTO_SAVE))) {
+            static_cast<zktypes::u8_t>(elf_option),
+            static_cast<zktypes::u8_t>(elf_options::ELF_AUTO_SAVE))) {
         // std::visit(save{}, elf_source);
     }
 }
@@ -1083,565 +1053,3 @@ void zkelf::ElfObj<T>::set_section_data(int section_index, void *new_data,
 
 template class zkelf::ElfObj<x86>;
 template class zkelf::ElfObj<x64>;
-
-/*
-void ZkElf::Elf::autoSaveMemMap(void) const {
-    if (elf_flags == ELF_AUTO_SAVE) {
-    remove(GetPathname());
-    ZkUtils::save_memory_map(GetPathname(), GetMemoryMap(),
-                    GetElfSize());
-    }
-}
-*/
-/*
-// TODO narrow down errno to report user about the error that caused
-expection
-// TODO replace asserts with return codes
-
-ZkElf::Elf::Elf(ZkElf::ELF_FLAGS flags)
-    :elf_flags(flags), elf_log(nullptr)
-{}
-
-ZkElf::Elf::Elf(const char *pathname, ZkElf::ELF_FLAGS flags,
-std::optinal <ZkLog::Log *>log) :elf_pathname(pathname),
-elf_flags(flags), elf_log(log)
-{
-    try{
-        OpenElf();
-        return;
-    } catch (std::exception& e) {
-        std::cerr << e.what();
-        std::exit(1);
-    }
-}
-
-
-ZkElf::Elf::~Elf()
-{
-    if (elf_flags == ELF_SAVE_AT_EXIT) {
-        ZkUtils::save_memory_map(GetPathname(), GetMemoryMap(),
-                GetElfSize());
-    }
-    try{
-        RemoveMap();
-    } catch(std::exception& e){
-        std::cout << e.what();
-        std::abort();
-    }
-}
-
-bool ZkElf::Elf::OpenElf(void)
-{
-    assert(elf_pathname != nullptr && "pathname is not specified");
-    if (elf_pathname == nullptr) {
-        if (elf_log.has_value())
-            elf_log.value()->PushLog("pathname is not specified",
-                             ZkLog::LOG_LEVEL_ERROR);
-        return false;
-    }
-
-    int fd = open(elf_pathname, O_RDONLY);
-    if(fd < 0)
-        throw ZkExcept::file_not_found_error();
-
-    struct stat st;
-    if(fstat(fd, &st) < 0)
-        throw std::runtime_error("fstat failed");
-
-    SetElfSize(st.st_size);
-    try {
-        loadFile(fd);
-    } catch (std::exception& ex) {
-        std::cerr << ex.what() << std::endl;
-        std::exit(1);
-    }
-
-    return true;
-}
-
-// load the elf binary into memory, parse most essential headers
-void ZkElf::Elf::loadFile(int fd)
-{
-    elf_memmap = mmap(nullptr, GetElfSize(), PROT_READ | PROT_WRITE,
-            MAP_PRIVATE, fd, 0);
-    if(elf_memmap == MAP_FAILED){
-        throw std::runtime_error("mmap failed\n");
-    }
-    if (close(fd) < 0) {
-        throw std::runtime_error("close failed\n");
-    }
-    elf_ehdr = (ehdr_t *)elf_memmap;
-    assert(VerifyElf() != true && "File is not an Elf binary");
-
-    u8_t *m = (u8_t *)elf_memmap;
-    assert(elf_ehdr->e_phoff < elf_size &&
-            "Anomaly detected in program header offset");
-    elf_phdr = (phdr_t *)&m[elf_ehdr->e_phoff];
-        assert(elf_ehdr->e_shoff < elf_size &&
-            "Anomaly detected in section header offset");
-    elf_shdr = (shdr_t *)&m[elf_ehdr->e_shoff];
-
-
-    int symtab_index = 0;
-    try{
-        symtab_index = GetSectionIndexbyName(".symtab");
-        elf_section_indexes[ELF_SYMTAB_INDEX] = symtab_index;
-    } catch (ZkExcept::section_not_found_error& e){
-        std::cerr << e.what();
-        std::exit(1);
-    }
-    u8_t *memmap = (u8_t *)elf_memmap;
-    elf_symtab = (symtab_t *)&memmap[elf_shdr[symtab_index].sh_offset];
-    elf_section_indexes[ELF_STRTAB_INDEX] =
-elf_shdr[symtab_index].sh_link; elf_strtab =
-(strtab_t)&memmap[elf_shdr[elf_section_indexes
-        [ELF_STRTAB_INDEX]].sh_offset];
-}
-
-bool ZkElf::Elf::LoadDynamicData(void)
-{
-    if (GetElfType() != ET_DYN) {
-        if (elf_log.has_value())
-            elf_log.value()->PushLog("file does not have dynamic data",
-                         ZkLog::LOG_LEVEL_ERROR);
-        return false;
-    }
-    int dynamic_index = 0;
-    try{
-        dynamic_index = GetSectionIndexbyName(".dynamic");
-        elf_section_indexes[ELF_DYNAMIC_INDEX] = dynamic_index;
-    } catch (ZkExcept::section_not_found_error& e){
-        std::cerr << e.what();
-        std::exit(1);
-    }
-
-    u8_t *memmap = (u8_t *)elf_memmap;
-    elf_dynamic = (dynamic_t
-*)&memmap[elf_shdr[dynamic_index].sh_offset];
-    elf_section_indexes[ELF_DYNSTR_INDEX] = elf_shdr[dynamic_index].
-        sh_link;
-    elf_dynstr = (strtab_t) &memmap[elf_shdr[elf_section_indexes
-        [ELF_DYNSTR_INDEX]]
-        .sh_offset];
-    int dynsym_index = 0;
-    try{
-        dynsym_index = GetSectionIndexbyName(".dynsym");
-        elf_section_indexes[ELF_DYNSYM_INDEX] = dynsym_index;
-    } catch (ZkExcept::section_not_found_error& e){
-        std::cerr << e.what();
-        std::exit(1);
-    }
-
-    elf_dynsym = (symtab_t *)&memmap[elf_shdr[dynsym_index].sh_offset];
-    return true;
-}
-
-bool ZkElf::Elf::VerifyElf(void) const
-{
-    if(elf_ehdr->e_ident[0] != 0x7f || elf_ehdr->e_ident[1] != 0x45 ||
-            elf_ehdr->e_ident[2] != 0x4c || elf_ehdr->e_ident[4] !=
-0x46)
-    {
-        return false;
-    }
-
-#ifdef __BITS_64__
-    if(elf_ehdr->e_ident[EI_CLASS] == ELFCLASS32) {
-        return false;
-    }
-
-#elif __BITS32__
-    if(elf_ehdr->e_ident[EI_CLASS] == ELFCLASS64) {
-        return false;
-    }
-#endif
-    return true;
-}
-
-void ZkElf::Elf::RemoveMap(void)
-{
-    assert(elf_memmap != nullptr && "memory is not mapped to unmap");
-    if(munmap(elf_memmap, elf_size) < 0)
-        throw std::runtime_error("munmap failed");
-
-    elf_memmap = nullptr;
-}
-
-int ZkElf::Elf::GetSegmentIndexbyAttr(u32_t type, u32_t flags, u32_t
-        prev_flags) const
-{
-    for(int i = 0; i < elf_ehdr->e_phnum; i++){
-        if(elf_phdr[i].p_type == type && elf_phdr[i].p_flags == flags){
-            if(prev_flags != 0){
-                if(elf_phdr[i - 1].p_flags == prev_flags)
-                    return i;
-            } else
-                return i;
-        }
-    }
-    throw ZkExcept::segment_not_found_error();
-}
-
-int ZkElf::Elf::GetSectionIndexbyAttr(u32_t type, u32_t flags) const
-{
-    for(int i = 0; i < elf_ehdr->e_shnum; i++){
-        if(elf_shdr[i].sh_type == type && elf_shdr[i].sh_flags ==
-                flags) {
-            return i;
-        }
-    }
-    throw ZkExcept::section_not_found_error();
-}
-
-// duh you cant get a segment by name
-
-int ZkElf::Elf::GetSectionIndexbyName(const char *name) const
-{
-    if(elf_ehdr->e_shstrndx == 0) {
-        throw ZkExcept::stripped_binary_error("section header string \
-                table not found");
-    }
-    strtab_t memmap = (strtab_t)elf_memmap;
-    strtab_t shstrtab =
-&memmap[elf_shdr[elf_ehdr->e_shstrndx].sh_offset]; for(int i = 0; i<
-elf_ehdr->e_shnum; i++){ if(strcmp(&shstrtab[elf_shdr[i].sh_name],
-name) == 0){ return i;
-        }
-    }
-    throw ZkExcept::section_not_found_error();
-}
-
-int ZkElf::Elf::GetSymbolIndexbyName(const char *name)
-    const
-{
-    int index = elf_section_indexes[ELF_SYMTAB_INDEX];
-    for(int i = 0; i < elf_shdr[index].sh_size / sizeof(symtab_t);
-i++){ if(strcmp(&elf_strtab[elf_symtab[i].st_name], name) == 0){ return
-i;
-        }
-    }
-    throw ZkExcept::symbol_not_found_error();
-}
-
-int ZkElf::Elf::GetDynSymbolIndexbyName(const char *name)
-    const
-{
-    assert(elf_section_indexes[ELF_DYNSYM_INDEX] != 0 &&
-            "dynamic sections are not parsed\n");
-    int index = elf_section_indexes[ELF_DYNSTR_INDEX];
-    for(int i = 0; i < elf_shdr[index].sh_size / sizeof(symtab_t);
-i++){ if(strcmp(&elf_dynstr[elf_dynsym[i].st_name], name) == 0){ return
-i;
-        }
-    }
-    throw ZkExcept::symbol_not_found_error();
-}
-
-
-
-void ZkElf::Elf::SetElfType(u16_t new_type)
-{
-    elf_ehdr->e_type = new_type;
-    autoSaveMemMap();
-}
-
-void ZkElf::Elf::SetElfMachine(u16_t new_machine)
-{
-    elf_ehdr->e_machine = new_machine;
-    autoSaveMemMap();
-}
-
-void ZkElf::Elf::SetElfVersion(u32_t new_version)
-{
-    elf_ehdr->e_version = new_version;
-    autoSaveMemMap();
-}
-
-void ZkElf::Elf::SetElfEntryPoint(addr_t new_entry)
-{
-    elf_ehdr->e_entry = new_entry;
-    autoSaveMemMap();
-}
-
-void ZkElf::Elf::SetElfPhdrOffset(off_t new_offset)
-{
-    elf_ehdr->e_phoff = new_offset;
-    autoSaveMemMap();
-}
-
-void ZkElf::Elf::SetElfShdrOffset(off_t new_offset)
-{
-    elf_ehdr->e_shoff = new_offset;
-    autoSaveMemMap();
-}
-
-void ZkElf::Elf::SetElfFlags(u32_t new_flags)
-{
-    elf_ehdr->e_flags = new_flags;
-    autoSaveMemMap();
-}
-
-void ZkElf::Elf::SetPhdrCount(u16_t new_count)
-{
-    elf_ehdr->e_phnum = new_count;
-    autoSaveMemMap();
-}
-
-void ZkElf::Elf::SetShdrCount(u16_t new_count)
-{
-    elf_ehdr->e_shnum = new_count;
-    autoSaveMemMap();
-}
-
-void ZkElf::Elf::SetShstrndx(u16_t new_index)
-{
-    elf_ehdr->e_shstrndx = new_index;
-    autoSaveMemMap();
-}
-
-void ZkElf::Elf::SetElfHeader(ehdr_t *new_ehdr)
-{
-    memcpy(elf_ehdr, new_ehdr, GetElfHeaderSize());
-    autoSaveMemMap();
-}
-
-void ZkElf::Elf::SetSectionNameIndex(int shdr_index, int new_index)
-{
-    elf_shdr[shdr_index].sh_name = new_index;
-    autoSaveMemMap();
-}
-void ZkElf::Elf::SetSectionType(int shdr_index, u32_t new_type)
-{
-    elf_shdr[shdr_index].sh_type = new_type;
-    autoSaveMemMap();
-}
-void ZkElf::Elf::SetSectionAddress(int shdr_index, addr_t new_addr)
-{
-    elf_shdr[shdr_index].sh_addr = new_addr;
-    autoSaveMemMap();
-}
-void ZkElf::Elf::SetSectionOffset(int shdr_index, off_t new_offset)
-{
-    elf_shdr[shdr_index].sh_offset = new_offset;
-    autoSaveMemMap();
-}
-
-template <typename T>
-void ZkElf::Elf::SetSectionSize(int shdr_index, T t)
-{
-    if constexpr (std::is_same<u64_t, T>::value ||
-            std::is_same<u32_t, T>::value) {
-        elf_shdr[shdr_index].sh_size = t;
-        autoSaveMemMap();
-    }
-}
-
-template <typename T>
-void ZkElf::Elf::SetSectionAddressAlign(int shdr_index, T t)
-{
-    if (std::is_same<u64_t, T>::value ||
-            std::is_same<u32_t, T>::value ) {
-        elf_shdr[shdr_index].sh_addralign = t;
-        autoSaveMemMap();
-    }
-}
-
-template <typename T>
-void ZkElf::Elf::SetSectionEntrySize(int shdr_index, T t)
-{
-    if (std::is_same<u64_t, T>::value ||
-            std::is_same<u32_t, T>::value) {
-        elf_shdr[shdr_index].sh_entsize = t;
-        autoSaveMemMap();
-    }
-}
-// remove tjos
-#ifdef __x86_64__
-void ZkElf::Elf::SetSectionSize(int shdr_index, u64_t new_size)
-{
-    elf_shdr[shdr_index].sh_size = new_size;
-    autoSaveMemoryMap();
-}
-void ZkElf::Elf::SetSectionAddressAlign(int shdr_index, u64_t
-new_address_align)
-{
-    elf_shdr[shdr_index].sh_addralign = new_address_align;
-    autoSaveMemoryMap();
-}
-void ZkElf::Elf::SetSectionEntrySize(int shdr_index, u64_t new_size)
-{
-    elf_shdr[shdr_index].sh_entsize = new_size;
-    autoSaveMemoryMap();
-}
-
-#elif __i386__
-void ZkElf::Elf::SetSectionSize(int shdr_index, u32 new_size)
-{
-    elf_shdr[shdr_index].sh_size = new_size;
-    autoSaveMemoryMap();
-}
-void ZkElf::Elf::SetSectionAddressAlign(int shdr_index, u32
-new_address_align)
-{
-    elf_shdr[shdr_index].sh_addralign = new_address_align;
-    autoSaveMemoryMap();
-}
-void ZkElf::Elf::SetSectionEntrySize(int shdr_index, u32 new_size)
-{
-    elf_shdr[shdr_index].sh_entsize = new_size;
-    autoSaveMemoryMap();
-}
-
-#endif
-// remove this
-
-void ZkElf::Elf::SetSectionHeader(int shdr_index, shdr_t *new_shdr)
-{
-    memcpy(&elf_shdr[shdr_index], new_shdr, GetElfShdrEntrySize());
-    autoSaveMemMap();
-}
-
-void ZkElf::Elf::SetSectionData(int shdr_index, void *data)
-{
-    auto offset = GetSectionOffset(shdr_index);
-    memcpy(((u8_t *)GetMemoryMap() + offset), data, GetSectionSize(
-                shdr_index));
-    autoSaveMemMap();
-}
-
-void ZkElf::Elf::SetSegmentType(int phdr_index, u32_t new_type)
-{
-    elf_phdr[phdr_index].p_type = new_type;
-    autoSaveMemMap();
-
-}
-void ZkElf::Elf::SetSegmentOffset(int phdr_index, off_t new_offset)
-{
-    elf_phdr[phdr_index].p_offset = new_offset;
-    autoSaveMemMap();
-}
-void ZkElf::Elf::SetSegmentVAddress(int phdr_index, addr_t new_address)
-{
-    elf_phdr[phdr_index].p_vaddr = new_address;
-    autoSaveMemMap();
-}
-void ZkElf::Elf::SetSegmentPAddress(int phdr_index, addr_t new_address)
-{
-    elf_phdr[phdr_index].p_paddr = new_address;
-    autoSaveMemMap();
-}
-void ZkElf::Elf::SetSegmentFlags(int phdr_index, u32_t new_flags)
-{
-    elf_phdr[phdr_index].p_flags = new_flags;
-    autoSaveMemMap();
-}
-
-template <typename T>
-void ZkElf::Elf::SetSegmentFileSize(int phdr_index, T t)
-{
-    if (std::is_same<u64_t, T>::value || std::is_same<u32_t, T>::value)
-{ elf_phdr[phdr_index].p_filesz = t; autoSaveMemMap();
-    }
-}
-
-template <typename T>
-void ZkElf::Elf::SetSegmentMemorySize(int phdr_index, T t)
-{
-    if (std::is_same<u64_t, T>::value || std::is_same<u32_t, T>::value)
-{ elf_phdr[phdr_index].p_memsz = t; autoSaveMemMap();
-    }
-}
-
-template <typename T>
-void ZkElf::Elf::SetSegmentAlignment(int phdr_index, T t)
-{
-    if (std::is_same<u64_t, T>::value || std::is_same<u32_t, T>::value)
-{ elf_phdr[phdr_index].p_align = t; autoSaveMemMap();
-    }
-}
-
-// remove this
-#ifdef __x86_64__
-void ZkElf::Elf::SetSegmentFileSize(int phdr_index, u64_t new_size)
-{
-    elf_phdr[phdr_index].p_filesz = new_size;
-    autoSaveMemMap();
-}
-void ZkElf::Elf::SetSegmentMemorySize(int phdr_index, u64_t new_size)
-{
-    elf_phdr[phdr_index].p_memsz = new_size;
-    autoSaveMemMap();
-}
-void ZkElf::Elf::SetSegmentAlignment(int phdr_index, u64_t
-new_alignment)
-{
-    elf_phdr[phdr_index].p_align = new_alignment;
-    autoSaveMemMap();
-}
-#elif __i386__
-void ZkElf::Elf::SetSegmentFileSize(int phdr_index, u32 new_size)
-{
-    elf_phdr[phdr_index].p_filesz = new_size;
-    autoSaveMemoryMap();
-}
-void ZkElf::Elf::SetSegmentMemorySize(int phdr_index, u32 new_size)
-{
-    elf_phdr[phdr_index].p_memsz = new_size;
-    autoSaveMemoryMap();
-}
-void ZkElf::Elf::SetSegmentAlignment(int phdr_index, u32 new_alignment)
-{
-    elf_phdr[phdr_index].p_align = new_alignment;
-    autoSaveMemoryMap();
-}
-#endif
-// remove
-
-
-void ZkElf::Elf::SetSegmentHeader(int phdr_index, phdr_t *new_phdr)
-{
-    memcpy(&elf_phdr[phdr_index], new_phdr, sizeof(phdr_t));
-    autoSaveMemMap();
-}
-
-void ZkElf::Elf::SetSegmentData(int phdr_index, void *data)
-{
-    auto offset = GetSegmentOffset(phdr_index);
-    memcpy(((u8_t *)GetMemoryMap() + offset), data,
-            GetSegmentFileSize(phdr_index));
-    autoSaveMemMap();
-}
-
-void *ZkElf::Elf::ElfRead(off_t readoff, size_t size) const
-{
-    u8_t *buffer = (u8_t *)calloc(size, sizeof(u8_t));
-    if(buffer == nullptr)
-        throw std::bad_alloc();
-
-    u8_t *memmap = (u8_t *)elf_memmap;
-    for(int i = readoff; i < readoff + size; i++){
-        buffer[i] = memmap[i];
-    }
-    return buffer;
-}
-
-void ZkElf::Elf::ElfWrite(void *buffer, off_t writeoff, size_t size)
-    const
-{
-    u8_t *memmap = (u8_t *)elf_memmap;
-    u8_t *_buffer = (u8_t *)buffer;
-    for(int i = 0; i < writeoff + size; i++){
-        _buffer[i] = memmap[i];
-    }
-    autoSaveMemMap();
-}
-
-void ZkElf::Elf::autoSaveMemMap(void) const
-{
-    if (elf_flags == ELF_AUTO_SAVE) {
-        remove(GetPathname());
-        ZkUtils::save_memory_map(GetPathname(), GetMemoryMap(),
-                GetElfSize());
-    }
-}
-*/

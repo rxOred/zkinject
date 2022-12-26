@@ -1,7 +1,0 @@
-/home/rxored/repos/zkinject/cmake-build-debug/CMakeFiles/zkinject.dir
-/home/rxored/repos/zkinject/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/rxored/repos/zkinject/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/rxored/repos/zkinject/cmake-build-debug/CMakeFiles/list_install_components.dir
-/home/rxored/repos/zkinject/cmake-build-debug/CMakeFiles/install.dir
-/home/rxored/repos/zkinject/cmake-build-debug/CMakeFiles/install/local.dir
-/home/rxored/repos/zkinject/cmake-build-debug/CMakeFiles/install/strip.dir

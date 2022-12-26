@@ -445,7 +445,7 @@ public:
     [[nodiscard]] void *get_memory_map() const;
     [[nodiscard]] std::size_t get_map_size() const;
     [[nodiscard]] std::variant<const char *, pid_t> get_elf_source(
-        void) const;
+        ) const;
 
     [[nodiscard]] ehdr_t<T> *get_elf_header() const;
     [[nodiscard]] phdr_t<T> *get_program_header_table() const;
@@ -497,9 +497,13 @@ private:
     std::array<zktypes::u8_t, ELF_INDEX_ARRAY_SIZE> e_section_indexes;
 };
 
-enum class elf_flags : zktypes::u8_t {
+// by default elf binary is not writable
+// in order to make it so, provide one of options other than
+// ELF_READONLY
+enum class elf_options : zktypes::u8_t {
+    ELF_READONLY = 0,
     ELF_AUTO_SAVE = 1,
-    ElF_SAVE_AT_EXIT,
+    ELF_SAVE_AT_EXIT = 2,
     ELF_NO_SAVE
 };
 
@@ -508,7 +512,7 @@ enum class elf_flags : zktypes::u8_t {
 // ElfObj by default
 class ZkElf {
 public:
-    ZkElf(elf_flags flags, std::variant<ElfObj<x64>, ElfObj<x86>> obj,
+    ZkElf(elf_options flags, std::variant<ElfObj<x64>, ElfObj<x86>> obj,
           std::optional<zklog::ZkLog *> log = std::nullopt);
     ZkElf(const ZkElf &) = delete;
     ZkElf(ZkElf &&) = delete;
@@ -517,7 +521,6 @@ public:
     bool load_dynamic_data();
     bool load_symbol_data();
 
-    // getters, some of these may return uint64_t (or try decltype(auto)
     // TODO we can return void *
     [[nodiscard]] void *get_memory_map() const;
     [[nodiscard]] std::size_t get_map_size() const;
@@ -574,7 +577,7 @@ public:
     int get_symbol_index_by_name(const char *symbol_name);
     int get_dynamic_symbol_index_by_name(const char *symbol_name);
 
-    // TODO get symbol and note table stubb
+    // TODO get symbol and note table stub
     // TODO get headers
 
     // setters
@@ -832,30 +835,25 @@ public:
     void elf_write(void *buffer, off_t write_offset,
                    std::size_t size) const noexcept;
 
+    // TODO
     void save_source() const noexcept;
 
     friend std::shared_ptr<ZkElf> load_elf_from_file(
-        const char *path, elf_flags flags,
-        std::optional<zklog::ZkLog *> log);
-    friend std::shared_ptr<ZkElf> load_elf_with_writable_from_file(
-        const char *path, elf_flags flags,
+        const char *path, elf_options options,
         std::optional<zklog::ZkLog *> log);
     friend void load_elf_from_memory();
 
 private:
-    elf_flags elf_flag;
+    elf_options elf_option;
     std::optional<zklog::ZkLog *> elf_log;
     std::variant<ElfObj<x64>, ElfObj<x86>> elf_obj;
     bool is_writable = false;
 };
 
 std::shared_ptr<ZkElf> load_elf_from_file(
-    const char *path, elf_flags flags,
+    const char *path, elf_options options,
     std::optional<zklog::ZkLog *> log = std::nullopt);
 
-std::shared_ptr<ZkElf> load_elf_with_writable_from_file(
-    const char *path, elf_flags flags,
-    std::optional<zklog::ZkLog *> log = std::nullopt);
 
 void load_elf_from_memory();
 };  // namespace zkelf
@@ -867,7 +865,7 @@ enum ELF_FLAGS : u8_t { ELF_AUTO_SAVE, ELF_SAVE_AT_EXIT, ELF_NO_SAVE };
 
 class Elf {
 protected:
-    ELF_FLAGS elf_flags;
+    ELF_FLAGS elf_options;
     std::optional<ZkLog::Log *> elf_log;
 
     const char *elf_pathname;

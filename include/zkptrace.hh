@@ -117,30 +117,30 @@ class Ptrace {
 public:
     ~Ptrace();
 
-    Ptrace(char *const *path,
+    explicit Ptrace(char *const *path,
            std::optional<zktypes::u8_t> flags = PTRACE_START_NOW |
                                                 PTRACE_DISABLE_ASLR,
            std::optional<zklog::ZkLog *> log = std::nullopt);
-    Ptrace(pid_t pid,
+    explicit Ptrace(pid_t pid,
            std::optional<zktypes::u8_t> flags = PTRACE_ATTACH_NOW,
            std::optional<zklog::ZkLog *> log = std::nullopt);
 
-    inline pid_t get_pid(void) const { return p_pid; }
-    inline PROCESS_STATE get_process_state(void) const { return p_state; }
-    inline PROCESS_STATE_INFO get_process_state_info(void) const {
+    [[nodiscard]] inline pid_t get_pid() const { return p_pid; }
+    [[nodiscard]] inline PROCESS_STATE get_process_state() const { return p_state; }
+    [[nodiscard]] inline PROCESS_STATE_INFO get_process_state_info() const {
         return p_state_info;
     }
 
-    void attach_to_process(void);
+    void attach_to_process();
     void start_process(char *const *pathname);
-    void detach_from_process(void);
-    void seize_process(void);
+    void detach_from_process();
+    void seize_process();
     // dont want these to terminate after exception
     // because user should be able to handle those
 
-    void kill_process(void);
+    void kill_process();
     bool continue_process(bool pass_signal);
-    bool is_ptrace_stop(void) const;
+    [[nodiscard]] bool is_ptrace_stop() const;
 
     PROCESS_STATE wait_for_process(int options);
 
