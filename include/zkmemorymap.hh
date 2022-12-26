@@ -65,7 +65,7 @@ public:
     get_module_page(const char* module_name) const;
 
     inline const page_t<T>& get_base_page() const {
-        return mm_pageinfo[0];
+        return *mm_pageinfo.begin();
     }
     inline const page_t<T>& get_end_page() const {
         return *mm_pageinfo.end();
@@ -85,9 +85,15 @@ public:
         return std::make_pair(mm_pageinfo.begin(), mm_pageinfo.end());
     }
     inline typename T::addr_t get_base_address() const {
+        if (mm_pageinfo.empty()) {
+            return 0;
+        }
         return mm_pageinfo[0].get_page_start_address();
     }
     inline typename T::addr_t get_base_end_address() const {
+        if (mm_pageinfo.empty()) {
+            return 0;
+        }
         return mm_pageinfo[0].get_page_end_address();
     }
     inline typename std::vector<page_t<T>> get_memory_pages() const {

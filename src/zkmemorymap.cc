@@ -53,9 +53,7 @@ std::vector<zkprocess::page_t<T>> zkprocess::MemoryMap<T>::get_memory_map()
 }
 
 template <typename T>
-zkprocess::MemoryMap<T>::MemoryMap(pid_t pid) : mm_pid(pid) {
-    std::cout << "calling memory map constructor" << std::endl;
-}
+zkprocess::MemoryMap<T>::MemoryMap(pid_t pid) : mm_pid(pid) {}
 
 template <typename T>
 std::optional<std::tuple<typename T::addr_t, typename T::addr_t,

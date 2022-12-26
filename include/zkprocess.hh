@@ -74,7 +74,6 @@ public:
     [[nodiscard]] MemoryMap<x64>* get_memory_map_if_x64() const {
         if (auto m = std::get_if<std::shared_ptr<MemoryMap<x64>>>(
                 &p_memory_map)) {
-            puts("is 64");
             return m->get();
         } else {
             return nullptr;
@@ -84,7 +83,6 @@ public:
     [[nodiscard]] MemoryMap<x86>* get_memory_map_if_x86() const {
         if (auto m = std::get_if<std::shared_ptr<MemoryMap<x86>>>(
                 &p_memory_map)) {
-            puts("is 86");
             return m->get();
         } else {
             return nullptr;

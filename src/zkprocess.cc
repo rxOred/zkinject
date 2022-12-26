@@ -32,18 +32,15 @@ std::shared_ptr<zkprocess::ZkProcess> zkprocess::load_process_from_file(
     zkelf::ei_class arch = p_elf->get_elf_class();
     if (arch == zkelf::ei_class::ELFCLASS64) {
         auto p_ptrace =
-            std::make_shared<Ptrace<x86>>(path, PTRACE_DISABLE_ASLR, log);
-        auto p_memory_map = std::make_shared<MemoryMap<x86>>(p_ptrace->get_pid());
-        //if (p_memory_map == nullptr) {
-        //    std::cout << "memory map  is empty somehow" << std::endl;2
-        //}
+            std::make_shared<Ptrace<x64>>(path, PTRACE_DISABLE_ASLR, log);
+        auto p_memory_map = std::make_shared<MemoryMap<x64>>(p_ptrace->get_pid());
         auto ptr =
             std::make_shared<ZkProcess>(p_elf, p_ptrace, p_memory_map);
         return ptr;
     } else if (arch == zkelf::ei_class::ELFCLASS32) {
         auto p_ptrace =
-            std::make_shared<Ptrace<x64>>(path, PTRACE_DISABLE_ASLR, log);
-        auto p_memory_map = std::make_shared<MemoryMap<x64>>(p_ptrace->get_pid());
+            std::make_shared<Ptrace<x86>>(path, PTRACE_DISABLE_ASLR, log);
+        auto p_memory_map = std::make_shared<MemoryMap<x86>>(p_ptrace->get_pid());
         auto ptr =
             std::make_shared<ZkProcess>(p_elf, p_ptrace, p_memory_map);
         return ptr;
