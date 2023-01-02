@@ -37,16 +37,6 @@ public:
         p_memory_map;
     // std::variant<Snapshot<x64>, Snapshot<x86>> p_snapshot;
 
-    void parse_memory_map() {
-        if (auto mm = std::get_if<std::shared_ptr<MemoryMap<x64>>>(
-                &p_memory_map)) {
-            mm->get()->parse_memory_map();
-        } else if (auto mm = std::get_if<std::shared_ptr<MemoryMap<x86>>>(
-                       &p_memory_map)) {
-            mm->get()->parse_memory_map();
-        }
-    }
-
     [[nodiscard]] zkelf::ZkElf* get_elf() const { return p_elf.get(); }
 
     [[nodiscard]] zkelf::ei_class get_process_arch() const {

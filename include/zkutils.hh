@@ -35,7 +35,7 @@ bool validate_magic_number(T a[size], T b[size]) {
 }
 
 inline void save_memory_map(const char *path, void *memory_map,
-                            int map_size) noexcept {
+                            int map_size) {
     int fd = open(path, O_CREAT | O_TRUNC | O_WRONLY, 0666);
     if (fd < 0) {
         throw std::runtime_error("open failed");
@@ -49,7 +49,7 @@ inline void save_memory_map(const char *path, void *memory_map,
 }
 
 inline void save_buffer_to_file(const char *path, off_t offset,
-                                void *buffer, int buffer_size) noexcept {
+                                void *buffer, int buffer_size) {
     int fd = open(path, O_CREAT | O_WRONLY, 0666);
     if (fd < 0) {
         throw zkexcept::file_not_found_error();

@@ -26,10 +26,14 @@
 #include "zktypes.hh"
 #include "zkutils.hh"
 
-/*
-#define CHECKFLAGS_AND_SAVE                  \
-  if (!ZK_CHECK_FLAGS(
-*/
+#define CHECKFLAGS_AND_SAVE                                               \
+    if (auto p = std::get_if<zkelf::elf_read_write>(&elf_file_options)) { \
+        if (ZK_CHECK_FLAGS(static_cast<zktypes::u8_t>(                    \
+                               zkelf::elf_save_options::ELF_AUTO_SAVE),   \
+                           static_cast<zktypes::u8_t>(p->save_options))) {\
+            save_source();                                                \
+        }                                                                 \
+    }
 
 namespace zkelf {
 
@@ -527,11 +531,19 @@ public:
     ZkElf(const ZkElf &) = delete;
     ZkElf(ZkElf &&) = delete;
 
+    ~ZkElf() {
+        if (auto p = std::get_if<elf_read_write>(&elf_file_options)) {
+            if (p->save_options == elf_save_options::ELF_SAVE_AT_EXIT) {
+                save_source();
+            }
+        }
+    }
+
     // internals
     bool load_dynamic_data();
     bool load_symbol_data();
 
-    // TODO we can return void *
+    // we can return void *
     [[nodiscard]] void *get_memory_map() const;
     [[nodiscard]] std::size_t get_map_size() const;
     [[nodiscard]] bool is_stripped() const;
@@ -651,6 +663,21 @@ public:
             elf->set_elf_header(new_ehdr);
         } else {
             elf->set_elf_header(new_ehdr);
+        }
+        if (auto p = std::get_if<elf_read_write>(&elf_file_options)) {
+            if (p->save_options == elf_save_options::ELF_AUTO_SAVE) {
+                // auto save
+            }
+            if (elf_log.has_value()) {
+                elf_log.value()->push_log(
+                    "auto saving..", zklog::log_level::LOG_LEVEL_DEBUG);
+            }
+        } else {
+            if (elf_log.has_value()) {
+                elf_log.value()->push_log(
+                    "cannot save file opened for read only",
+                    zklog::log_level::LOG_LEVEL_DEBUG);
+            }
         }
     }
 
@@ -845,7 +872,6 @@ public:
     void elf_write(void *buffer, off_t write_offset,
                    std::size_t size) const noexcept;
 
-    // TODO
     void save_source() const noexcept;
 
     friend std::shared_ptr<ZkElf> load_elf_from_file(

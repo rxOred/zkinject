@@ -1,15 +1,16 @@
 #include <memory>
 #include <zkinject/zkelf.hh>
+#include "zkelf.hh"
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        printf("Expected a program");
+        printf("Expected a program\n");
         return -1;
     }
 
     using namespace zkelf;
-    auto elf = load_elf_writable_from_file(argv[1]);
-    printf("parsing elf binary");
+    auto elf = load_elf_from_file(argv[1]);
+    printf("parsing elf binary\n");
 
     printf("is stripped: %lx\n", elf->is_stripped());
     printf("elf size:  %lx\n", elf->get_map_size());

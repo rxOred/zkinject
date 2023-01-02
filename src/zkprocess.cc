@@ -25,6 +25,8 @@ zkprocess::ZkProcess::ZkProcess(
       p_ptrace(std::move(p)),
       p_memory_map(std::move(mm)) {}
 
+// Reads the given elf file and parses it. uses returning data to 
+// create a new process which is both readable and writable.
 std::shared_ptr<zkprocess::ZkProcess> zkprocess::load_process_from_file(
     char* const* path, std::optional<zklog::ZkLog*> log) {
     // parse the elf binary and get the required architecture
