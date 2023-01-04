@@ -51,7 +51,7 @@ std::shared_ptr<zkelf::ZkElf> zkelf::load_elf_from_file(
 std::shared_ptr<zkelf::ZkElf> zkelf::load_elf_writable_from_file(
     const char *path, std::optional<elf_save_options> save_options,
     std::optional<zklog::ZkLog *> log) {
-    auto pair = zkutils::open_file(path, false);
+    auto pair = zkutils::open_file(path, true);
     auto *core = (elf_core *)pair.first;
     // check the magic number to validate the file
     zktypes::u8_t magic[4] = {0x7f, 0x45, 0x4c, 0x46};
@@ -1019,29 +1019,40 @@ void zkelf::ZkElf::elf_write(void *buffer, off_t write_offset,
         }
     };
     std::visit(e_write, elf_object);
-	CHECKFLAGS_AND_SAVE
+    CHECKFLAGS_AND_SAVE
 }
 
 struct save {
-    void *memory_map;
-    std::size_t size;
+    void *memory_map = nullptr;
+    std::size_t size = 0;
+
+    save(void *m, std::size_t s) : memory_map(m), size(s) {}
 
     void operator()(const char *path) {
         remove(path);
         zkutils::save_memory_map(path, memory_map, size);
     }
     void operator()(pid_t pid) {
-        // TODO write to the process somehow lol
-        // we could call corresponding function in zkptrace
-        //
+        // TODO write to a running process somehow lol
+        // options available :
+        // use zkptrace::write_process -- requires zkptrace instance
     }
 };
 
+template <class... Ts>
+struct overload : Ts... {
+    using Ts::operator()...;
+};
+template <class... Ts>
+overload(Ts...) -> overload<Ts...>;
+
 void zkelf::ZkElf::save_source() const noexcept {
     if (auto elf = std::get_if<zkelf::ElfObj<x64>>(&elf_object)) {
-        std::visit(save{}, elf->get_elf_source());
+        std::visit(save{elf->get_memory_map(), elf->get_map_size()},
+                   elf->get_elf_source());
     } else {
-        std::visit(save{}, elf->get_elf_source());
+        std::visit(save{elf->get_memory_map(), elf->get_map_size()},
+                   elf->get_elf_source());
     }
 }
 

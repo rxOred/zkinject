@@ -1,6 +1,5 @@
 #include <memory>
 #include <zkinject/zkelf.hh>
-#include "zkelf.hh"
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {

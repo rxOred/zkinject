@@ -1,6 +1,7 @@
 #include "zkutils.hh"
 
 #include <cstring>
+#include <errno.h>
 #include <iostream>
 
 #include "zkexcept.hh"
@@ -20,6 +21,9 @@ std::pair<void *, std::size_t> zkutils::open_file(const char *path,
     if (fstat(fd, &st) < 0) {
         throw std::runtime_error("fstat failed");
     }
+	if (st.st_size == 0) {
+		throw std::runtime_error("file is empty");
+	}
     void *map = MAP_FAILED;
     if (should_writable) {
         map = mmap(nullptr, st.st_size, PROT_READ | PROT_WRITE, MAP_SHARED,
@@ -28,6 +32,8 @@ std::pair<void *, std::size_t> zkutils::open_file(const char *path,
         map = mmap(nullptr, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
     }
     if (map == MAP_FAILED) {
+		auto errstr = std::strerror(errno);
+		std::cerr << errstr << std::endl;
         throw std::runtime_error("mmap failed");
     }
     if (close(fd) == -1) {

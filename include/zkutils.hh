@@ -37,6 +37,8 @@ bool validate_magic_number(T a[size], T b[size]) {
 inline void save_memory_map(const char *path, void *memory_map,
                             int map_size) {
     int fd = open(path, O_CREAT | O_TRUNC | O_WRONLY, 0666);
+	// files are saving as empty ones
+	puts(path);
     if (fd < 0) {
         throw std::runtime_error("open failed");
     }

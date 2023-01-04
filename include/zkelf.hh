@@ -28,10 +28,21 @@
 
 #define CHECKFLAGS_AND_SAVE                                               \
     if (auto p = std::get_if<zkelf::elf_read_write>(&elf_file_options)) { \
-        if (ZK_CHECK_FLAGS(static_cast<zktypes::u8_t>(                    \
-                               zkelf::elf_save_options::ELF_AUTO_SAVE),   \
-                           static_cast<zktypes::u8_t>(p->save_options))) {\
+        if (ZK_CHECK_FLAGS(                                               \
+                static_cast<zktypes::u8_t>(                               \
+                    zkelf::elf_save_options::ELF_AUTO_SAVE),              \
+                static_cast<zktypes::u8_t>(p->save_options))) {           \
             save_source();                                                \
+            if (elf_log.has_value()) {                                    \
+                elf_log.value()->push_log(                                \
+                    "auto saving...", zklog::log_level::LOG_LEVEL_DEBUG); \
+            }                                                             \
+        }                                                                 \
+    } else {                                                              \
+        if (elf_log.has_value()) {                                        \
+            elf_log.value()->push_log(                                    \
+                "changes will not be reflected in the file",              \
+                zklog::log_level::LOG_LEVEL_DEBUG);                       \
         }                                                                 \
     }
 
@@ -245,7 +256,6 @@ enum class s_type : zktypes::u32_t {
     SHT_HIPROC = 0x7fffffff,
     SHT_LOUSER = 0x80000000,
     SHT_HIUSER = 0x8fffffff,
-
 };
 
 enum class sh_flags : zktypes::u16_t {
@@ -611,7 +621,12 @@ public:
     void set_elf_version(e_version new_version);
     void set_elf_flags(zktypes::u32_t new_flags);
 
-    template <typename T = x64::addr_t>
+	// okay this is kinda stupid
+	// TODO replace this with a function that checks get_if for elf_obj 
+    template <typename T = x64::addr_t,
+              std::enable_if_t<std::is_same<T, x64::addr_t>::value ||
+                                 std::is_same<T, x86::addr_t>::value,
+                             bool> = true>
     void set_elf_entry_point(T new_entry) {
         static_assert(std::is_integral_v<T>,
                       "new entry point should be an integral");
@@ -619,12 +634,19 @@ public:
             std::get_if<ElfObj<x64>>(&elf_object)
                 ->get_elf_header()
                 ->elf_entry = new_entry;
+            puts("here its x64");
+            puts("again");
         } else if constexpr (std::is_same_v<T, x86::addr_t>) {
             std::get_if<ElfObj<x86>>(&elf_object)
                 ->get_elf_header()
                 ->elf_entry = new_entry;
+            puts("hhere it is x32");
+        } else {
+            puts("invalid type");
         }
+        CHECKFLAGS_AND_SAVE
     }
+
     template <typename T = x64::off_t>
     void set_elf_phdr_offset(T new_offset) {
         static_assert(std::is_integral_v<T>,
@@ -638,7 +660,9 @@ public:
                 ->get_elf_header()
                 ->elf_phoff = new_offset;
         }
+        CHECKFLAGS_AND_SAVE
     }
+
     template <typename T = x64::off_t>
     void set_elf_shdr_offset(T new_offset) {
         static_assert(std::is_integral_v<T>,
@@ -652,6 +676,7 @@ public:
                 ->get_elf_header()
                 ->elf_shoff = new_offset;
         }
+        CHECKFLAGS_AND_SAVE
     }
     void set_elf_phdr_entry_count(zktypes::u16_t new_count);
     void set_elf_shdr_entry_count(zktypes::u16_t new_count);
@@ -664,21 +689,7 @@ public:
         } else {
             elf->set_elf_header(new_ehdr);
         }
-        if (auto p = std::get_if<elf_read_write>(&elf_file_options)) {
-            if (p->save_options == elf_save_options::ELF_AUTO_SAVE) {
-                // auto save
-            }
-            if (elf_log.has_value()) {
-                elf_log.value()->push_log(
-                    "auto saving..", zklog::log_level::LOG_LEVEL_DEBUG);
-            }
-        } else {
-            if (elf_log.has_value()) {
-                elf_log.value()->push_log(
-                    "cannot save file opened for read only",
-                    zklog::log_level::LOG_LEVEL_DEBUG);
-            }
-        }
+        CHECKFLAGS_AND_SAVE
     }
 
     void set_section_name_index(int shdr_index, zktypes::u32_t new_index);
@@ -699,6 +710,7 @@ public:
                 .sh_addr = new_addr;
             new_addr;
         }
+        CHECKFLAGS_AND_SAVE
     }
     template <typename T = x64::off_t>
     void set_section_offset(int shdr_index, T new_offset) {
@@ -713,6 +725,7 @@ public:
                 ->get_section_header_table()[shdr_index]
                 .sh_offset = new_offset;
         }
+        CHECKFLAGS_AND_SAVE
     }
 
     template <typename T = zktypes::u64_t>
@@ -728,6 +741,7 @@ public:
                 ->get_section_header_table()[shdr_index]
                 .sh_size = new_size;
         }
+        CHECKFLAGS_AND_SAVE
     }
 
     template <typename T = zktypes::u64_t>
@@ -743,11 +757,13 @@ public:
                 ->get_section_header_table()[shdr_index]
                 .sh_addralign = new_addralign;
         }
+        CHECKFLAGS_AND_SAVE
     }
 
     void set_section_link(int shdr_index, zktypes::u32_t new_link);
     void set_section_info(int shdr_index, zktypes::u32_t new_info);
 
+    // probably use templates xd
     void set_section_header_table(void *new_shdr) {
         if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
             elf->set_section_header_table(new_shdr);
