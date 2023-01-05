@@ -729,7 +729,6 @@ public:
     void set_section_link(int shdr_index, zktypes::u32_t new_link);
     void set_section_info(int shdr_index, zktypes::u32_t new_info);
 
-    // probably use templates xd
     template <typename T,
               std::enable_if_t<std::is_same<shdr_t<x64>, T>::value ||
                                    std::is_same<shdr_t<x86>, T>::value,
@@ -778,23 +777,21 @@ public:
             elf->get_program_header_table()[phdr_index].ph_vaddr =
                 new_address;
         }
-		CHECKFLAGS_AND_SAVE
+        CHECKFLAGS_AND_SAVE
     }
-
-	// TODO from here
+ 
     template <typename T = x64::addr_t>
     void set_segment_paddress(int phdr_index, T new_address) {
         static_assert(std::is_integral_v<T>,
-                      "new ph offset should be an integral");
-        if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_object)
-                ->get_program_header_table()[phdr_index]
-                .ph_paddr = new_address;
-        } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_object)
-                ->get_program_header_table()[phdr_index]
-                .ph_paddr = new_address;
+                      "new segment address should be an integral");
+        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
+            elf->get_program_header_table()[phdr_index].ph_paddr =
+                new_address;
+        } else {
+            elf->get_program_header_table()[phdr_index].ph_paddr =
+                new_address;
         }
+		CHECKFLAGS_AND_SAVE
     }
 
     void set_segment_flags(int phdr_index, zktypes::u32_t new_flags);
@@ -803,47 +800,49 @@ public:
     void set_segment_file_size(int phdr_index, T new_filesz) {
         static_assert(std::is_integral_v<T>,
                       "new filesz should be an integral");
-        if constexpr (std::is_same_v<T, x64::u64_t>) {
-            std::get_if<ElfObj<x64>>(&elf_object)
-                ->get_program_header_table()[phdr_index]
-                .ph_filesz = new_filesz;
-        } else if constexpr (std::is_same_v<T, x86::u32_t>) {
-            std::get_if<ElfObj<x64>>(&elf_object)
-                ->get_program_header_table()[phdr_index]
-                .ph_filesz = new_filesz;
+        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
+            elf->get_program_header_table()[phdr_index].ph_filesz =
+                new_filesz;
+        } else {
+            elf->get_program_header_table()[phdr_index].ph_filesz =
+                new_filesz;
         }
+		CHECKFLAGS_AND_SAVE
     }
     template <typename T>
     void set_segment_memory_size(int phdr_index, T new_memsz) {
         static_assert(std::is_integral_v<T>,
                       "new memsz should be an integral");
-        if constexpr (std::is_same_v<T, x64::u64_t>) {
-            std::get_if<ElfObj<x64>>(&elf_object)
-                ->get_program_header_table()[phdr_index]
-                .ph_memsz = new_memsz;
-        } else if constexpr (std::is_same_v<T, x86::u32_t>) {
-            std::get_if<ElfObj<x86>>(&elf_object)
-                ->get_program_header_table()[phdr_index]
-                .ph_memsz = new_memsz;
+        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
+            elf->get_program_header_table()[phdr_index].ph_memsz =
+                new_memsz;
+        } else {
+            elf->get_program_header_table()[phdr_index].ph_memsz =
+                new_memsz;
         }
+		CHECKFLAGS_AND_SAVE
     }
 
     template <typename T>
     void set_segment_alignment(int phdr_index, T new_alignment) {
         static_assert(std::is_integral_v<T>,
                       "new memsz should be an integral");
-        if constexpr (std::is_same_v<T, x64::u64_t>) {
-            std::get_if<ElfObj<x64>>(&elf_object)
+        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
+            elf
                 ->get_program_header_table()[phdr_index]
                 .ph_align = new_alignment;
-        } else if constexpr (std::is_same_v<T, x86::u32_t>) {
-            std::get_if<ElfObj<x86>>(&elf_object)
+        } else {
+            elf
                 ->get_program_header_table()[phdr_index]
                 .ph_align = new_alignment;
         }
+		CHECKFLAGS_AND_SAVE
     }
 
-    void set_program_header_table(void *new_phdr) {
+	template <typename T,
+			  std::enable_if_t<std::is_same<phdr_t<x64>, T>::value ||
+							   std::is_same<phdr_t<x86>, T>::value, bool> = true>
+    void set_program_header_table(T *new_phdr) {
         if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
             elf->set_program_header_table(new_phdr);
         } else {
