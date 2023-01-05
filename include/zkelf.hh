@@ -621,28 +621,14 @@ public:
     void set_elf_version(e_version new_version);
     void set_elf_flags(zktypes::u32_t new_flags);
 
-	// okay this is kinda stupid
-	// TODO replace this with a function that checks get_if for elf_obj 
-    template <typename T = x64::addr_t,
-              std::enable_if_t<std::is_same<T, x64::addr_t>::value ||
-                                 std::is_same<T, x86::addr_t>::value,
-                             bool> = true>
+    template <typename T = x64::addr_t>
     void set_elf_entry_point(T new_entry) {
         static_assert(std::is_integral_v<T>,
-                      "new entry point should be an integral");
-        if constexpr (std::is_same_v<T, x64::addr_t>) {
-            std::get_if<ElfObj<x64>>(&elf_object)
-                ->get_elf_header()
-                ->elf_entry = new_entry;
-            puts("here its x64");
-            puts("again");
-        } else if constexpr (std::is_same_v<T, x86::addr_t>) {
-            std::get_if<ElfObj<x86>>(&elf_object)
-                ->get_elf_header()
-                ->elf_entry = new_entry;
-            puts("hhere it is x32");
+                      "new entry should be an integer");
+        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
+            elf->get_elf_header()->elf_entry = new_entry;
         } else {
-            puts("invalid type");
+            elf->get_elf_header()->elf_entry = new_entry;
         }
         CHECKFLAGS_AND_SAVE
     }
@@ -651,14 +637,10 @@ public:
     void set_elf_phdr_offset(T new_offset) {
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
-        if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_object)
-                ->get_elf_header()
-                ->elf_phoff = new_offset;
-        } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_object)
-                ->get_elf_header()
-                ->elf_phoff = new_offset;
+        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
+            elf->get_elf_header()->elf_phoff = new_offset;
+        } else {
+            elf->get_elf_header()->elf_phoff = new_offset;
         }
         CHECKFLAGS_AND_SAVE
     }
@@ -666,15 +648,11 @@ public:
     template <typename T = x64::off_t>
     void set_elf_shdr_offset(T new_offset) {
         static_assert(std::is_integral_v<T>,
-                      "new ph offset should be an integral");
-        if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_object)
-                ->get_elf_header()
-                ->elf_shoff = new_offset;
-        } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_object)
-                ->get_elf_header()
-                ->elf_shoff = new_offset;
+                      "new sh offset should be an integral");
+        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
+            elf->get_elf_header()->elf_shoff = new_offset;
+        } else {
+            elf->get_elf_header()->elf_shoff = new_offset;
         }
         CHECKFLAGS_AND_SAVE
     }
@@ -698,16 +676,12 @@ public:
     template <typename T = x64::addr_t>
     void set_section_address(int shdr_index, T new_addr) {
         static_assert(std::is_integral_v<T>,
-                      "new ph offset should be an integral");
-        if constexpr (std::is_same_v<T, x64::addr_t>) {
-            std::get_if<ElfObj<x64>>(&elf_object)
-                ->get_section_header_table()[shdr_index]
-                .sh_addr = new_addr;
+                      "new section address should be an integral");
+        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
+            elf->get_section_header_table()[shdr_index].sh_addr = new_addr;
             new_addr;
-        } else if constexpr (std::is_same_v<T, x86::addr_t>) {
-            std::get_if<ElfObj<x86>>(&elf_object)
-                ->get_section_header_table()[shdr_index]
-                .sh_addr = new_addr;
+        } else {
+            elf->get_section_header_table()[shdr_index].sh_addr = new_addr;
             new_addr;
         }
         CHECKFLAGS_AND_SAVE
@@ -715,15 +689,13 @@ public:
     template <typename T = x64::off_t>
     void set_section_offset(int shdr_index, T new_offset) {
         static_assert(std::is_integral_v<T>,
-                      "new ph offset should be an integral");
-        if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_object)
-                ->get_section_header_table()[shdr_index]
-                .sh_offset = new_offset;
-        } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_object)
-                ->get_section_header_table()[shdr_index]
-                .sh_offset = new_offset;
+                      "new section offset should be an integral");
+        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
+            elf->get_section_header_table()[shdr_index].sh_offset =
+                new_offset;
+        } else {
+            elf->get_section_header_table()[shdr_index].sh_offset =
+                new_offset;
         }
         CHECKFLAGS_AND_SAVE
     }
@@ -731,15 +703,11 @@ public:
     template <typename T = zktypes::u64_t>
     void set_section_size(int shdr_index, T new_size) {
         static_assert(std::is_integral_v<T>,
-                      "new ph offset should be an integral");
-        if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_object)
-                ->get_section_header_table()[shdr_index]
-                .sh_size = new_size;
-        } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_object)
-                ->get_section_header_table()[shdr_index]
-                .sh_size = new_size;
+                      "new section size should be an integral");
+        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
+            elf->get_section_header_table()[shdr_index].sh_size = new_size;
+        } else {
+            elf->get_section_header_table()[shdr_index].sh_size = new_size;
         }
         CHECKFLAGS_AND_SAVE
     }
@@ -748,14 +716,12 @@ public:
     void set_section_address_alignment(int shdr_index, T new_addralign) {
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
-        if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_object)
-                ->get_section_header_table()[shdr_index]
-                .sh_addralign = new_addralign;
-        } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_object)
-                ->get_section_header_table()[shdr_index]
-                .sh_addralign = new_addralign;
+        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
+            elf->get_section_header_table()[shdr_index].sh_addralign =
+                new_addralign;
+        } else {
+            elf->get_section_header_table()[shdr_index].sh_addralign =
+                new_addralign;
         }
         CHECKFLAGS_AND_SAVE
     }
@@ -764,12 +730,19 @@ public:
     void set_section_info(int shdr_index, zktypes::u32_t new_info);
 
     // probably use templates xd
-    void set_section_header_table(void *new_shdr) {
-        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
-            elf->set_section_header_table(new_shdr);
-        } else {
-            elf->set_section_header_table(new_shdr);
+    template <typename T,
+              std::enable_if_t<std::is_same<shdr_t<x64>, T>::value ||
+                                   std::is_same<shdr_t<x86>, T>::value,
+                               bool> = true>
+    void set_section_header_table(T *new_shdr) {
+        if constexpr (std::is_same_v<T, shdr_t<x64>>) {
+            std::get_if<ElfObj<x64>>(&elf_object)
+                ->set_section_header_table(new_shdr);
+        } else if constexpr (std::is_same_v<T, shdr_t<x86>>) {
+            std::get_if<ElfObj<x86>>(&elf_object)
+                ->set_section_header_table(new_shdr);
         }
+        CHECKFLAGS_AND_SAVE
     }
 
     // TODO
@@ -783,33 +756,32 @@ public:
     template <typename T = x64::off_t>
     void set_segment_offset(int phdr_index, T new_offset) {
         static_assert(std::is_integral_v<T>,
-                      "new ph offset should be an integral");
-        if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_object)
-                ->get_program_header_table()[phdr_index]
-                .ph_offset = new_offset;
-        } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_object)
-                ->get_program_header_table()[phdr_index]
-                .ph_offset = new_offset;
+                      "new segment offset should be an integral");
+        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
+            elf->get_program_header_table()[phdr_index].ph_offset =
+                new_offset;
+        } else {
+            elf->get_program_header_table()[phdr_index].ph_offset =
+                new_offset;
         }
+        CHECKFLAGS_AND_SAVE
     }
 
     template <typename T = x64::addr_t>
     void set_segment_vaddress(int phdr_index, T new_address) {
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
-        if constexpr (std::is_same_v<T, x64::off_t>) {
-            std::get_if<ElfObj<x64>>(&elf_object)
-                ->get_program_header_table()[phdr_index]
-                .ph_vaddr = new_address;
-        } else if constexpr (std::is_same_v<T, x86::off_t>) {
-            std::get_if<ElfObj<x86>>(&elf_object)
-                ->get_program_header_table()[phdr_index]
-                .ph_vaddr = new_address;
+        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
+            elf->get_program_header_table()[phdr_index].ph_vaddr =
+                new_address;
+        } else {
+            elf->get_program_header_table()[phdr_index].ph_vaddr =
+                new_address;
         }
+		CHECKFLAGS_AND_SAVE
     }
 
+	// TODO from here
     template <typename T = x64::addr_t>
     void set_segment_paddress(int phdr_index, T new_address) {
         static_assert(std::is_integral_v<T>,
