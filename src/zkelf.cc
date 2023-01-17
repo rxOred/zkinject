@@ -982,13 +982,49 @@ void zkelf::ZkElf::set_segment_type(int phdr_index, p_type new_type) {
 }
 
 void zkelf::ZkElf::set_segment_flags(int phdr_index,
-                                     zktypes::u32_t new_flags) {
-    if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
-        elf->get_program_header_table()[phdr_index].ph_flags = new_flags;
-    } else {
-        elf->get_program_header_table()[phdr_index].ph_flags = new_flags;
-    }
-    CHECKFLAGS_AND_SAVE
+									zktypes::u32_t new_flags) {
+	if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
+		elf->get_program_header_table()[phdr_index].ph_flags = new_flags;
+	} else {
+		elf->get_program_header_table()[phdr_index].ph_flags = new_flags;
+	}
+	CHECKFLAGS_AND_SAVE
+}
+
+void zkelf::ZkElf::set_segment_file_size(int phdr_index, uint new_filesz) {
+	if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
+		elf->get_program_header_table()[phdr_index].ph_filesz =
+			x64::u64_t(new_filesz);
+	} else {
+		elf->get_program_header_table()[phdr_index].ph_filesz =
+			x86::u32_t(new_filesz);
+	}
+	CHECKFLAGS_AND_SAVE
+}
+
+// remove templates and move to a cc file
+void zkelf::ZkElf::set_segment_memory_size(int phdr_index, uint new_memsz) {
+	if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
+		elf->get_program_header_table()[phdr_index].ph_memsz =
+			x64::u64_t(new_memsz);
+	} else {
+		elf->get_program_header_table()[phdr_index].ph_memsz =
+			x86::u32_t(new_memsz);
+	}
+	CHECKFLAGS_AND_SAVE
+}
+
+void zkelf::ZkElf::set_segment_alignment(int phdr_index, uint new_alignment) {
+	if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
+		elf
+			->get_program_header_table()[phdr_index]
+			.ph_align = x64::u64_t(new_alignment);
+	} else {
+		elf
+			->get_program_header_table()[phdr_index]
+			.ph_align = x86::u32_t(new_alignment);
+	}
+	CHECKFLAGS_AND_SAVE
 }
 
 void *zkelf::ZkElf::elf_read(off_t read_offset,

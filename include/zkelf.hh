@@ -203,7 +203,6 @@ struct phdr_t<x86> {
 };
 
 enum class sh_n : zktypes::u16_t {
-
     SHN_UNDEF = 0,
     SHN_LORESERVE = 0xff00,
     SHN_LOPROC = 0xff00,
@@ -660,7 +659,6 @@ public:
     void set_elf_shdr_entry_count(zktypes::u16_t new_count);
     void set_elf_shdr_string_table_index(zktypes::u16_t new_index);
 
-    // maybe pass a void parameter instead of templates
     void set_elf_header(void *new_ehdr) {
         if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
             elf->set_elf_header(new_ehdr);
@@ -700,7 +698,7 @@ public:
         CHECKFLAGS_AND_SAVE
     }
 
-    template <typename T = zktypes::u64_t>
+    template <typename T = x64::addr_t>
     void set_section_size(int shdr_index, T new_size) {
         static_assert(std::is_integral_v<T>,
                       "new section size should be an integral");
@@ -712,7 +710,7 @@ public:
         CHECKFLAGS_AND_SAVE
     }
 
-    template <typename T = zktypes::u64_t>
+    template <typename T = x64::addr_t>
     void set_section_address_alignment(int shdr_index, T new_addralign) {
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
@@ -795,50 +793,10 @@ public:
     }
 
     void set_segment_flags(int phdr_index, zktypes::u32_t new_flags);
-
-    template <typename T>
-    void set_segment_file_size(int phdr_index, T new_filesz) {
-        static_assert(std::is_integral_v<T>,
-                      "new filesz should be an integral");
-        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
-            elf->get_program_header_table()[phdr_index].ph_filesz =
-                new_filesz;
-        } else {
-            elf->get_program_header_table()[phdr_index].ph_filesz =
-                new_filesz;
-        }
-		CHECKFLAGS_AND_SAVE
-    }
-    template <typename T>
-    void set_segment_memory_size(int phdr_index, T new_memsz) {
-        static_assert(std::is_integral_v<T>,
-                      "new memsz should be an integral");
-        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
-            elf->get_program_header_table()[phdr_index].ph_memsz =
-                new_memsz;
-        } else {
-            elf->get_program_header_table()[phdr_index].ph_memsz =
-                new_memsz;
-        }
-		CHECKFLAGS_AND_SAVE
-    }
-
-    template <typename T>
-    void set_segment_alignment(int phdr_index, T new_alignment) {
-        static_assert(std::is_integral_v<T>,
-                      "new memsz should be an integral");
-        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
-            elf
-                ->get_program_header_table()[phdr_index]
-                .ph_align = new_alignment;
-        } else {
-            elf
-                ->get_program_header_table()[phdr_index]
-                .ph_align = new_alignment;
-        }
-		CHECKFLAGS_AND_SAVE
-    }
-
+    void set_segment_file_size(int phdr_index, uint new_filesz);
+    void set_segment_memory_size(int phdr_index, uint new_memsz); 
+    void set_segment_alignment(int phdr_index, uint new_alignment);
+		
 	template <typename T,
 			  std::enable_if_t<std::is_same<phdr_t<x64>, T>::value ||
 							   std::is_same<phdr_t<x86>, T>::value, bool> = true>
