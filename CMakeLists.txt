@@ -24,6 +24,8 @@ set_target_properties(zkinject PROPERTIES PUBLIC_HEADER "${LIBZKINJECT_INCLUDE_F
 
 configure_file(libzkinject.pc.in libzkinject.pc @ONLY)
 
+add_compile_definitions(ZKINJECT_DEBUG)
+
 install (TARGETS zkinject
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION /usr/lib/
