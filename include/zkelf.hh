@@ -452,7 +452,16 @@ public:
     ElfObj() = delete;
     ElfObj(void *map, std::size_t size,
            std::variant<const char *, pid_t> s);
-    ~ElfObj() = default;
+
+    ~ElfObj() {
+        debug_line("calling elfobj destructor");
+        if (e_memory_map) {  
+            debug_line("freeing memory map");
+            munmap(e_memory_map, e_map_size); 
+        }
+        e_memory_map = nullptr;
+        e_map_size = 0x0;
+    }
 
     [[nodiscard]] bool is_stripped() const;
 
@@ -533,7 +542,7 @@ enum class elf_options : zktypes::u8_t {
 // ElfObj by default
 class ZkElf {
 public:
-    ZkElf(std::variant<ElfObj<x64>, ElfObj<x86>> obj,
+    ZkElf(std::variant<std::shared_ptr<ElfObj<x64>>, std::shared_ptr<ElfObj<x86>>> obj,
           std::variant<elf_read_only, elf_read_write> options =
               elf_read_only{},
           std::optional<zklog::ZkLog *> log = std::nullopt);
@@ -541,8 +550,10 @@ public:
     ZkElf(ZkElf &&) = delete;
 
     ~ZkElf() {
+        debug_line("calling zkelf destructor");
         if (auto p = std::get_if<elf_read_write>(&elf_file_options)) {
             if (p->save_options == elf_save_options::ELF_SAVE_AT_EXIT) {
+                debug_line("saving source at exit");
                 save_source();
             }
         }
@@ -624,10 +635,10 @@ public:
     void set_elf_entry_point(T new_entry) {
         static_assert(std::is_integral_v<T>,
                       "new entry should be an integer");
-        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
-            elf->get_elf_header()->elf_entry = new_entry;
+        if (auto elf = std::get_if<std::shared_ptr<ElfObj<x64>>>(&elf_object)) {
+            elf->get()->get_elf_header()->elf_entry = new_entry;
         } else {
-            elf->get_elf_header()->elf_entry = new_entry;
+            elf->get()->get_elf_header()->elf_entry = new_entry;
         }
         CHECKFLAGS_AND_SAVE
     }
@@ -636,10 +647,10 @@ public:
     void set_elf_phdr_offset(T new_offset) {
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
-        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
-            elf->get_elf_header()->elf_phoff = new_offset;
+        if (auto elf = std::get_if<std::shared_ptr<ElfObj<x64>>>(&elf_object)) {
+            elf->get()->get_elf_header()->elf_phoff = new_offset;
         } else {
-            elf->get_elf_header()->elf_phoff = new_offset;
+            elf->get()->get_elf_header()->elf_phoff = new_offset;
         }
         CHECKFLAGS_AND_SAVE
     }
@@ -648,10 +659,10 @@ public:
     void set_elf_shdr_offset(T new_offset) {
         static_assert(std::is_integral_v<T>,
                       "new sh offset should be an integral");
-        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
-            elf->get_elf_header()->elf_shoff = new_offset;
+        if (auto elf = std::get_if<std::shared_ptr<ElfObj<x64>>>(&elf_object)) {
+            elf->get()->get_elf_header()->elf_shoff = new_offset;
         } else {
-            elf->get_elf_header()->elf_shoff = new_offset;
+            elf->get()->get_elf_header()->elf_shoff = new_offset;
         }
         CHECKFLAGS_AND_SAVE
     }
@@ -660,10 +671,10 @@ public:
     void set_elf_shdr_string_table_index(zktypes::u16_t new_index);
 
     void set_elf_header(void *new_ehdr) {
-        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
-            elf->set_elf_header(new_ehdr);
+        if (auto elf = std::get_if<std::shared_ptr<ElfObj<x64>>>(&elf_object)) {
+            elf->get()->set_elf_header(new_ehdr);
         } else {
-            elf->set_elf_header(new_ehdr);
+            elf->get()->set_elf_header(new_ehdr);
         }
         CHECKFLAGS_AND_SAVE
     }
@@ -675,11 +686,11 @@ public:
     void set_section_address(int shdr_index, T new_addr) {
         static_assert(std::is_integral_v<T>,
                       "new section address should be an integral");
-        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
-            elf->get_section_header_table()[shdr_index].sh_addr = new_addr;
+        if (auto elf = std::get_if<std::shared_ptr<ElfObj<x64>>>(&elf_object)) {
+            elf->get()->get_section_header_table()[shdr_index].sh_addr = new_addr;
             new_addr;
         } else {
-            elf->get_section_header_table()[shdr_index].sh_addr = new_addr;
+            elf->get()->get_section_header_table()[shdr_index].sh_addr = new_addr;
             new_addr;
         }
         CHECKFLAGS_AND_SAVE
@@ -688,11 +699,11 @@ public:
     void set_section_offset(int shdr_index, T new_offset) {
         static_assert(std::is_integral_v<T>,
                       "new section offset should be an integral");
-        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
-            elf->get_section_header_table()[shdr_index].sh_offset =
+        if (auto elf = std::get_if<std::shared_ptr<ElfObj<x64>>>(&elf_object)) {
+            elf->get()->get_section_header_table()[shdr_index].sh_offset =
                 new_offset;
         } else {
-            elf->get_section_header_table()[shdr_index].sh_offset =
+            elf->get()->get_section_header_table()[shdr_index].sh_offset =
                 new_offset;
         }
         CHECKFLAGS_AND_SAVE
@@ -702,10 +713,10 @@ public:
     void set_section_size(int shdr_index, T new_size) {
         static_assert(std::is_integral_v<T>,
                       "new section size should be an integral");
-        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
-            elf->get_section_header_table()[shdr_index].sh_size = new_size;
+        if (auto elf = std::get_if<std::shared_ptr<ElfObj<x64>>>(&elf_object)) {
+            elf->get()->get_section_header_table()[shdr_index].sh_size = new_size;
         } else {
-            elf->get_section_header_table()[shdr_index].sh_size = new_size;
+            elf->get()->get_section_header_table()[shdr_index].sh_size = new_size;
         }
         CHECKFLAGS_AND_SAVE
     }
@@ -714,11 +725,11 @@ public:
     void set_section_address_alignment(int shdr_index, T new_addralign) {
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
-        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
-            elf->get_section_header_table()[shdr_index].sh_addralign =
+        if (auto elf = std::get_if<std::shared_ptr<ElfObj<x64>>>(&elf_object)) {
+            elf->get()->get_section_header_table()[shdr_index].sh_addralign =
                 new_addralign;
         } else {
-            elf->get_section_header_table()[shdr_index].sh_addralign =
+            elf->get()->get_section_header_table()[shdr_index].sh_addralign =
                 new_addralign;
         }
         CHECKFLAGS_AND_SAVE
@@ -733,10 +744,10 @@ public:
                                bool> = true>
     void set_section_header_table(T *new_shdr) {
         if constexpr (std::is_same_v<T, shdr_t<x64>>) {
-            std::get_if<ElfObj<x64>>(&elf_object)
+            std::get_if<std::shared_ptr<ElfObj<x64>>>(&elf_object)->get()
                 ->set_section_header_table(new_shdr);
         } else if constexpr (std::is_same_v<T, shdr_t<x86>>) {
-            std::get_if<ElfObj<x86>>(&elf_object)
+            std::get_if<std::shared_ptr<ElfObj<x86>>>(&elf_object)->get()
                 ->set_section_header_table(new_shdr);
         }
         CHECKFLAGS_AND_SAVE
@@ -754,11 +765,11 @@ public:
     void set_segment_offset(int phdr_index, T new_offset) {
         static_assert(std::is_integral_v<T>,
                       "new segment offset should be an integral");
-        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
-            elf->get_program_header_table()[phdr_index].ph_offset =
+        if (auto elf = std::get_if<std::shared_ptr<ElfObj<x64>>>(&elf_object)) {
+            elf->get()->get_program_header_table()[phdr_index].ph_offset =
                 new_offset;
         } else {
-            elf->get_program_header_table()[phdr_index].ph_offset =
+            elf->get()->get_program_header_table()[phdr_index].ph_offset =
                 new_offset;
         }
         CHECKFLAGS_AND_SAVE
@@ -768,11 +779,11 @@ public:
     void set_segment_vaddress(int phdr_index, T new_address) {
         static_assert(std::is_integral_v<T>,
                       "new ph offset should be an integral");
-        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
-            elf->get_program_header_table()[phdr_index].ph_vaddr =
+        if (auto elf = std::get_if<std::shared_ptr<ElfObj<x64>>>(&elf_object)) {
+            elf->get()->get_program_header_table()[phdr_index].ph_vaddr =
                 new_address;
         } else {
-            elf->get_program_header_table()[phdr_index].ph_vaddr =
+            elf->get()->get_program_header_table()[phdr_index].ph_vaddr =
                 new_address;
         }
         CHECKFLAGS_AND_SAVE
@@ -782,11 +793,11 @@ public:
     void set_segment_paddress(int phdr_index, T new_address) {
         static_assert(std::is_integral_v<T>,
                       "new segment address should be an integral");
-        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
-            elf->get_program_header_table()[phdr_index].ph_paddr =
+        if (auto elf = std::get_if<std::shared_ptr<ElfObj<x64>>>(&elf_object)) {
+            elf->get()->get_program_header_table()[phdr_index].ph_paddr =
                 new_address;
         } else {
-            elf->get_program_header_table()[phdr_index].ph_paddr =
+            elf->get()->get_program_header_table()[phdr_index].ph_paddr =
                 new_address;
         }
 		CHECKFLAGS_AND_SAVE
@@ -801,10 +812,10 @@ public:
 			  std::enable_if_t<std::is_same<phdr_t<x64>, T>::value ||
 							   std::is_same<phdr_t<x86>, T>::value, bool> = true>
     void set_program_header_table(T *new_phdr) {
-        if (auto elf = std::get_if<ElfObj<x64>>(&elf_object)) {
-            elf->set_program_header_table(new_phdr);
+        if (auto elf = std::get_if<std::shared_ptr<ElfObj<x64>>>(&elf_object)) {
+            elf->get()->set_program_header_table(new_phdr);
         } else {
-            elf->set_program_header_table(new_phdr);
+            elf->get()->set_program_header_table(new_phdr);
         }
     }
 
@@ -832,7 +843,7 @@ public:
 private:
     std::variant<elf_read_only, elf_read_write> elf_file_options;
     std::optional<zklog::ZkLog *> elf_log;
-    std::variant<ElfObj<x64>, ElfObj<x86>> elf_object;
+    std::variant<std::shared_ptr<ElfObj<x64>>, std::shared_ptr<ElfObj<x86>>> elf_object;
 };
 
 std::shared_ptr<ZkElf> load_elf_from_file(
