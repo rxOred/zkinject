@@ -19,6 +19,12 @@
 #define ZK_PAGE_ALIGN_UP(x) ((x) & ~(4095))
 #define ZK_PAGE_SIZE sysconf(_SC_PAGESIZE)
 
+#ifdef ZKINJECT_DEBUG
+    #define debug_line(x) puts(x)
+#else
+    #define debug_line(x) do { } while(0)
+#endif
+
 namespace zkutils {
 
 std::pair<void *, std::size_t> open_file(const char *path,
