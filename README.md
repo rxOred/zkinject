@@ -13,4 +13,4 @@ Todo
 
 * Process snapshots -- partially done
 * Create threads in remote processes
-* Python3 bindings -- partially done (refer to pyzkinject)
+* Python3 bindings -- partially done (pyzkinject)

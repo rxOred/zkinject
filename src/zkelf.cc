@@ -33,16 +33,13 @@ std::shared_ptr<zkelf::ZkElf> zkelf::load_elf_from_file(
     }
 
     if (core->ei_class == (zktypes::u8_t)ei_class::ELFCLASS32) {
-        std::shared_ptr<ZkElf> ptr = std::make_shared<ZkElf>(
+        return std::make_shared<ZkElf>(
             std::make_shared<ElfObj<x86>>(pair.first, pair.second, path),
             elf_read_only{}, log);
-        return ptr;
     } else if (core->ei_class == (zktypes::u8_t)ei_class::ELFCLASS64) {
-        std::shared_ptr<ZkElf> ptr = std::make_shared<ZkElf>(
-                // if that fails too remove these smart pointers and pass the raw object 
+        return std::make_shared<ZkElf>(
             std::make_shared<ElfObj<x64>>(pair.first, pair.second, path),
             elf_read_only{}, log);
-        return ptr;
     } else {
         throw zkexcept::invalid_file_type_error();
     }
@@ -62,15 +59,13 @@ std::shared_ptr<zkelf::ZkElf> zkelf::load_elf_writable_from_file(
     }
 
     if (core->ei_class == (zktypes::u8_t)ei_class::ELFCLASS32) {
-        std::shared_ptr<ZkElf> ptr = std::make_shared<ZkElf>(
+        return std::make_shared<ZkElf>(
             std::make_shared<ElfObj<x86>>((void *)pair.first, pair.second, path),
             elf_read_write{elf_save_options::ELF_AUTO_SAVE}, log);
-        return ptr;
     } else if (core->ei_class == (zktypes::u8_t)ei_class::ELFCLASS64) {
-        std::shared_ptr<ZkElf> ptr = std::make_shared<ZkElf>(
+        return std::make_shared<ZkElf>(
             std::make_shared<ElfObj<x64>>((void *)pair.first, pair.second, path),
             elf_read_write{elf_save_options::ELF_AUTO_SAVE}, log);
-        return ptr;
     } else {
         throw zkexcept::invalid_file_type_error();
     }
